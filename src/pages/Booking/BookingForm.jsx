@@ -6,7 +6,7 @@ import projectImage from "../../assets/project.webp";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
-const BOOK_API_PREFIX = "/book";cd
+const BOOK_API_PREFIX = "/book";
 
 const DOC_TYPES = [
   { value: "AGREEMENT_PDF", label: "Agreement PDF" },
