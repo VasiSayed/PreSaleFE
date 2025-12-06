@@ -963,3 +963,180 @@
     display: none !important;
   }
 }
+
+/* ========================================================================
+   COST BREAKDOWN STYLES - Add to BookingForm.css
+   ======================================================================== */
+
+/* Cost Breakdown Section Container */
+.cost-breakdown-section {
+  margin-bottom: 20px;
+}
+
+/* Section Headers */
+.cost-breakdown-header {
+  font-weight: 600;
+  font-size: 14px;
+  color: #374151;
+  margin-bottom: 12px;
+  padding: 8px 12px;
+  background-color: #f3f4f6;
+  border-radius: 4px;
+}
+
+/* Line-by-line rows */
+.cost-breakdown-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 12px;
+  font-size: 13px;
+  color: #4b5563;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.cost-breakdown-row:last-child {
+  border-bottom: none;
+}
+
+.cost-breakdown-row span:first-child {
+  flex: 1;
+}
+
+.cost-breakdown-row span:last-child {
+  font-weight: 500;
+  text-align: right;
+  min-width: 150px;
+}
+
+/* ================== SECTION COLORS ================== */
+
+/* Unit Cost Section - Light Purple */
+.cost-breakdown-unit {
+  background-color: #f5f3ff;
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid #e9d5ff;
+}
+
+.cost-breakdown-unit .cost-breakdown-header {
+  background-color: transparent;
+  padding-left: 0;
+}
+
+/* Possession Section - Light Yellow */
+.cost-breakdown-possession {
+  background-color: #fef9c3;
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid #fde047;
+}
+
+.cost-breakdown-possession .cost-breakdown-header {
+  background-color: transparent;
+  padding-left: 0;
+}
+
+/* Summary Section - Light Green */
+.cost-breakdown-summary {
+  background-color: #dcfce7;
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid #86efac;
+}
+
+/* ================== TOTAL ROWS ================== */
+
+/* Total Row (in Unit Cost) - Purple highlight */
+.cost-breakdown-total {
+  background-color: #e9d5ff !important;
+  font-weight: 600 !important;
+  border-radius: 4px;
+  margin-top: 8px;
+  font-size: 14px !important;
+  color: #374151 !important;
+}
+
+/* Subtotal Row (in Possession) - Yellow highlight */
+.cost-breakdown-subtotal {
+  background-color: #fde047 !important;
+  font-weight: 600 !important;
+  border-radius: 4px;
+  margin-top: 8px;
+  font-size: 14px !important;
+  color: #374151 !important;
+}
+
+/* ================== GRAND TOTAL BANNER ================== */
+
+/* Grand Total - Purple Banner */
+.cost-breakdown-grand-total {
+  background: linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%);
+  color: white;
+  padding: 20px 16px;
+  border-radius: 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 18px;
+  font-weight: 700;
+  margin-top: 20px;
+  box-shadow: 0 4px 6px -1px rgba(124, 58, 237, 0.3);
+}
+
+.cost-breakdown-grand-total span:first-child {
+  letter-spacing: 0.5px;
+}
+
+.cost-breakdown-grand-total span:last-child {
+  font-size: 22px;
+}
+
+/* ================== RESPONSIVE ================== */
+
+@media (max-width: 768px) {
+  .cost-breakdown-grand-total {
+    font-size: 16px;
+    padding: 16px 12px;
+  }
+  
+  .cost-breakdown-grand-total span:last-child {
+    font-size: 18px;
+  }
+  
+  .cost-breakdown-row {
+    font-size: 12px;
+    padding: 8px 10px;
+  }
+  
+  .cost-breakdown-row span:last-child {
+    min-width: 120px;
+  }
+}
+
+@media (max-width: 480px) {
+  .cost-breakdown-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+  
+  .cost-breakdown-row span:last-child {
+    text-align: left;
+    min-width: auto;
+  }
+}
+
+/* ================== PRINT STYLES ================== */
+
+@media print {
+  .cost-breakdown-section {
+    page-break-inside: avoid;
+  }
+  
+  .cost-breakdown-grand-total {
+    background: #7c3aed !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}

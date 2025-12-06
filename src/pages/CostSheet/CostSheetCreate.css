@@ -1,76 +1,71 @@
+/* ============================================
+   COST SHEET CREATE - CLEAN WHITE THEME
+   Primary Color: #102a54 (Dark Blue)
+   ============================================ */
+
+/* Page Container */
 .cs-page {
-  padding: 24px;
-  background: #f5f7fb;
+  background-color: #f8f9fa;
   min-height: 100vh;
-  box-sizing: border-box;
+  padding: 24px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 }
 
 .cs-page-inner {
-  max-width: 1200px;
+  max-width: 1400px;
   margin: 0 auto;
 }
 
-.cs-page-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 16px;
-  gap: 16px;
-}
-
 .cs-page-title {
-  font-size: 1.6rem;
+  font-size: 24px;
   font-weight: 600;
-  margin: 0;
-  color: #1a1a1a;
+  color: #102a54;
+  margin: 0 0 24px 0;
 }
 
-.cs-page-subtitle {
-  margin: 4px 0 0;
-  font-size: 0.9rem;
-  color: #666;
-}
-
-.cs-header-actions {
-  display: flex;
-  gap: 8px;
-}
-
+/* Section Cards */
 .cs-card {
   background: #ffffff;
-  border-radius: 10px;
-  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.06);
-  margin-bottom: 16px;
-  overflow: hidden;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  margin-bottom: 20px;
+  box-shadow: 0 1px 3px rgba(16, 42, 84, 0.05);
 }
 
 .cs-card-header {
   width: 100%;
-  padding: 12px 16px;
-  background: #f1f5f9;
+  padding: 16px 20px;
   border: none;
-  outline: none;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+  background: none;
   cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.cs-card-open .cs-card-header {
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.cs-card-closed .cs-card-header {
+  border-bottom: none;
 }
 
 .cs-section-title {
-  font-size: 1rem;
+  font-size: 16px;
   font-weight: 600;
+  color: #102a54;
   margin: 0;
-  color: #0f172a;
 }
 
 .cs-chevron {
-  display: inline-block;
-  width: 10px;
-  height: 10px;
-  border-right: 2px solid #64748b;
-  border-bottom: 2px solid #64748b;
+  width: 20px;
+  height: 20px;
+  border-right: 2px solid #102a54;
+  border-bottom: 2px solid #102a54;
   transform: rotate(45deg);
-  transition: transform 0.2s ease;
+  transition: transform 0.2s;
 }
 
 .cs-chevron-open {
@@ -78,30 +73,20 @@
 }
 
 .cs-card-body {
-  padding: 16px;
+  padding: 20px;
 }
 
+/* Form Elements */
 .cs-grid-3 {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px 16px;
-}
-
-@media (max-width: 900px) {
-  .cs-grid-3 {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
-@media (max-width: 640px) {
-  .cs-grid-3 {
-    grid-template-columns: 1fr;
-  }
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
 }
 
 .cs-field {
   display: flex;
   flex-direction: column;
+  gap: 6px;
 }
 
 .cs-field--full {
@@ -109,570 +94,219 @@
 }
 
 .cs-label {
-  font-size: 0.8rem;
+  font-size: 14px;
   font-weight: 500;
-  color: #475569;
-  margin-bottom: 4px;
+  color: #374151;
+}
+
+.cs-hint {
+  font-size: 12px;
+  color: #6b7280;
+  font-weight: 400;
+  display: block;
+  margin-top: 2px;
 }
 
 .cs-input,
-.cs-select,
-.cs-textarea {
-  width: 100%;
-  border-radius: 6px;
-  border: 1px solid #d4d4d8;
-  padding: 7px 10px;
-  font-size: 0.9rem;
-  outline: none;
-  background-color: #ffffff;
-  transition: border-color 0.15s ease, box-shadow 0.15s ease,
-    background-color 0.15s ease;
+.cs-select {
+  padding: 10px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 14px;
+  background: #ffffff;
+  color: #111827;
+  transition: border-color 0.2s, box-shadow 0.2s;
 }
 
 .cs-input:focus,
-.cs-select:focus,
-.cs-textarea:focus {
-  border-color: #2563eb;
-  box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.15);
+.cs-select:focus {
+  outline: none;
+  border-color: #102a54;
+  box-shadow: 0 0 0 3px rgba(16, 42, 84, 0.1);
 }
 
-.cs-input-readonly {
-  background-color: #f8fafc;
+.cs-input:disabled,
+.cs-select:disabled {
+  background: #f3f4f6;
   cursor: not-allowed;
 }
 
-.cs-textarea {
-  resize: vertical;
-  min-height: 80px;
-}
-
-.cs-help-text {
-  margin-top: 3px;
-  font-size: 0.75rem;
-  color: #6b7280;
-}
-
-.cs-button {
-  border-radius: 6px;
-  border: 1px solid transparent;
-  padding: 7px 14px;
-  font-size: 0.9rem;
+.cs-input--currency {
+  font-variant-numeric: tabular-nums;
   font-weight: 500;
-  cursor: pointer;
-  transition: background-color 0.15s ease, color 0.15s ease,
-    border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
-.cs-button-primary {
-  background: #1d4ed8;
-  color: #ffffff;
+/* Radio Buttons */
+.cs-radio-group {
+  display: flex;
+  gap: 16px;
+  align-items: center;
 }
 
-.cs-button-primary:disabled {
-  opacity: 0.7;
-  cursor: default;
-}
-
-.cs-button-primary:hover:not(:disabled) {
-  background: #1e40af;
-}
-
-.cs-button-light {
-  background: #e5e7eb;
-  color: #111827;
-}
-
-.cs-button-light:hover {
-  background: #d4d4d8;
-}
-
-.cs-button-outline {
-  background: transparent;
-  color: #1d4ed8;
-  border-color: #bfdbfe;
-}
-
-.cs-button-outline:hover {
-  background: #eff6ff;
-}
-
-.cs-button + .cs-button {
-  margin-left: 4px;
-}
-
-.cs-center {
+.cs-radio {
   display: flex;
   align-items: center;
-  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  color: #374151;
 }
 
-/* table */
+.cs-radio input[type="radio"] {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: #102a54;
+}
 
+/* Checkbox */
+.cs-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  color: #374151;
+}
+
+.cs-checkbox input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: #102a54;
+}
+
+/* Tables */
 .cs-table {
+  display: grid;
+  gap: 8px;
   width: 100%;
-  border-collapse: collapse;
-  border-radius: 8px;
-  overflow: hidden;
-  border: 1px solid #e5e7eb;
-  margin-bottom: 8px;
 }
 
 .cs-table-row {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 0;
-  border-bottom: 1px solid #e5e7eb;
+  grid-template-columns: 2fr 1fr 1fr 1.5fr;
+  gap: 12px;
+  align-items: center;
+  padding: 10px;
+  background: #f9fafb;
+  border-radius: 6px;
 }
 
-.cs-table-row > div {
-  padding: 6px 8px;
-  display: flex;
-  align-items: center;
+.cs-table-row--5 {
+  grid-template-columns: 2fr 1fr 1.5fr 1.5fr 60px;
 }
 
 .cs-table-header {
-  background: #f9fafb;
-  font-size: 0.8rem;
+  background: #102a54;
+  color: #ffffff;
   font-weight: 600;
-  color: #4b5563;
-}
-
-.cs-table-header > div {
-  border-right: 1px solid #e5e7eb;
-}
-
-.cs-table-header > div:last-child {
-  border-right: none;
-}
-
-/* 6-column variant is handled by grid automatically */
-.cs-table-row .cs-input,
-.cs-table-row .cs-select {
-  width: 100%;
-}
-
-/* 5-column variant used for Payment Plan (last col = delete icon) */
-.cs-table-row--5 {
-  grid-template-columns: 2fr 1fr 1.2fr 1.2fr 40px;
+  font-size: 13px;
 }
 
 .cs-table-cell-actions {
   display: flex;
-  align-items: center;
-  justify-content: center;
+  justify-content: flex-end;
 }
-
-/* taxes */
-
-.cs-taxes-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 16px;
-  align-items: flex-start;
-}
-
-.cs-taxes-list {
-  flex: 1 1 260px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.cs-checkbox {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 0.85rem;
-  color: #374151;
-}
-
-.cs-checkbox input {
-  transform: translateY(1px);
-}
-
-.cs-checkbox-inline {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 0.8rem;
-}
-
-.cs-taxes-total {
-  min-width: 180px;
-  padding: 10px 14px;
-  border-radius: 8px;
-  border: 1px solid #e5e7eb;
-  background: #f9fafb;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.cs-taxes-label {
-  font-size: 0.8rem;
-  color: #6b7280;
-}
-
-.cs-taxes-amount {
-  font-size: 1rem;
-  font-weight: 600;
-  color: #111827;
-}
-
-/* payment */
-
-.cs-payment-header {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 16px;
-  margin-bottom: 10px;
-}
-
-/* summary */
-
-.cs-summary-card {
-  border-radius: 10px;
-  border: 1px solid #e5e7eb;
-  background: #f9fafb;
-  padding: 12px 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.cs-summary-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  font-size: 0.9rem;
-  color: #374151;
-}
-
-.cs-summary-row-final {
-  margin-top: 4px;
-  padding-top: 6px;
-  border-top: 1px dashed #d1d5db;
-  font-weight: 600;
-}
-
-.cs-summary-amount {
-  font-variant-numeric: tabular-nums;
-}
-
-/* errors / loader */
-
-.cs-error-banner {
-  background: #fee2e2;
-  color: #991b1b;
-  border: 1px solid #fecaca;
-  border-radius: 6px;
-  padding: 8px 10px;
-  font-size: 0.85rem;
-  margin-bottom: 12px;
-}
-
-.cs-error-text {
-  margin-top: 4px;
-  font-size: 0.8rem;
-  color: #b91c1c;
-}
-
-.cs-total-percentage {
-  margin-top: 8px;
-  font-size: 0.85rem;
-  color: #b91c1c; /* red – error */
-}
-
-.cs-total-percentage--warn {
-  color: #b91c1c;
-}
-
-.cs-loader {
-  width: 20px;
-  height: 20px;
-  border-radius: 999px;
-  border: 3px solid #cbd5f5;
-  border-top-color: #1d4ed8;
-  animation: cs-spin 0.6s linear infinite;
-  margin-bottom: 8px;
-}
-
-@keyframes cs-spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-.cs-muted {
-  font-size: 0.85rem;
-  color: #6b7280;
-}
-
-/* page center */
-
-.cs-page-inner.cs-center {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  min-height: 40vh;
-}
-
-/* template chip */
-
-.cs-template-chip {
-  font-size: 0.85rem;
-  padding: 6px 10px;
-  border-radius: 999px;
-  background: #eef2ff;
-  color: #3730a3;
-  display: inline-block;
-}
-
-/* buttons / icons */
 
 .cs-icon-button {
+  width: 32px;
+  height: 32px;
   border: none;
-  background: transparent;
-  cursor: pointer;
-  font-size: 1rem;
+  background: #ef4444;
+  color: #ffffff;
+  border-radius: 6px;
+  font-size: 20px;
   line-height: 1;
-  padding: 2px 4px;
-  color: #9ca3af;
+  cursor: pointer;
+  transition: background 0.2s;
 }
 
 .cs-icon-button:hover {
-  color: #ef4444;
+  background: #dc2626;
 }
 
-/* offers */
-
-.cs-offer-list {
-  margin: 6px 0 0;
-  padding-left: 18px;
-  font-size: 0.85rem;
-  color: #374151;
-}
-
-.cs-offer-list li + li {
-  margin-top: 2px;
-}
-
-
-/* ===== Payment plan toggle – pill style ===== */
-
-.cs-radio-group {
-  display: inline-flex;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.cs-radio {
-  display: inline-flex;
-  align-items: center;
-  border-radius: 999px;
-  border: 1px solid #e5e7eb;
-  background: #f9fafb;
-  padding: 2px;
-  cursor: pointer;
-  font-size: 0.85rem;
-}
-
-.cs-radio input {
-  display: none;
-}
-
-.cs-radio span {
-  display: block;
-  padding: 6px 14px;
-  border-radius: 999px;
-  color: #4b5563;
-  font-weight: 500;
-}
-
-.cs-radio input:checked + span {
-  background: #1d4ed8;
-  color: #ffffff;
-  box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.3);
-}
-
-/* small gap for actions column in plan table */
-
-.cs-table-actions {
-  justify-content: center;
-}
-
-/* ===== Attachments dropzone ===== */
-
-.cs-attachments-dropzone {
-  border-radius: 12px;
-  border: 2px dashed #e5e7eb;
-  background: #f9fafb;
-  padding: 32px 16px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  margin-bottom: 12px;
-  cursor: pointer;
-}
-
-.cs-attachments-icon {
-  font-size: 2rem;
-  line-height: 1;
-  color: #9ca3af;
-}
-
-.cs-attachments-text {
-  margin: 0;
-  font-size: 0.9rem;
-  color: #6b7280;
-}
-
-.cs-attachments-checkbox {
-  margin-top: 8px;
-}
-
-.cs-attachments-list {
-  margin: 10px 0 0;
-  padding-left: 18px;
-  font-size: 0.85rem;
-  color: #374151;
-}
-
-/* Small helper hint text */
-.cs-hint {
-  font-size: 0.78rem;
-  color: #6b7280;
-  margin-left: 4px;
-}
-
-/* Statutory charges card (parking, dev, etc.) */
-.cs-statutory-box {
-  margin-top: 12px;
-  padding: 12px 14px;
-  border-radius: 10px;
-  border: 1px dashed #e5e7eb;
-  background: #fdfdfb;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-/* Inline field layout inside statutory box */
-.cs-field-inline {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 6px;
-}
-
-.cs-field-inline .cs-label {
-  margin-bottom: 0;
-  white-space: nowrap;
-}
-
-/* Bullet list for statutory line items */
-.cs-bullet-list {
-  list-style: none;
-  margin: 6px 0 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  font-size: 0.85rem;
-  color: #374151;
-}
-
-.cs-bullet-item {
-  padding: 4px 0;
-  border-bottom: 1px dashed #e5e7eb;
-}
-
-.cs-bullet-item:last-child {
-  border-bottom: none;
-}
-
-.cs-bullet-line {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.cs-bullet-label {
-  font-weight: 500;
-}
-
-.cs-bullet-amount {
-  font-variant-numeric: tabular-nums;
-  font-weight: 600;
-}
-
-.cs-bullet-hint {
-  margin-top: 2px;
-  font-size: 0.75rem;
-  color: #6b7280;
-}
-
-/* Final amount – big & green */
-.cs-final-amount {
-  margin-top: 10px;
-  padding: 10px 12px;
-  border-radius: 10px;
-  background: #ecfdf3;
-  color: #166534;
-  font-size: 1.15rem;
-  font-weight: 700;
-  text-align: right;
-}
-
-/* ===== Terms & Conditions preview ===== */
-
-.cs-tnc-preview {
-  margin-top: 8px;
-  padding: 10px 12px;
+/* Buttons */
+.cs-button {
+  padding: 10px 20px;
+  border: none;
   border-radius: 8px;
-  border: 1px solid #e5e7eb;
-  background: #f9fafb;
-  /* full text – no scroll */
-  max-height: none;
-  overflow: visible;
-}
-
-.cs-tnc-preview-title {
-  font-size: 0.8rem;
+  font-size: 14px;
   font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.cs-button-primary {
+  background: #102a54;
+  color: #ffffff;
+}
+
+.cs-button-primary:hover {
+  background: #0d1f3f;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(16, 42, 84, 0.3);
+}
+
+.cs-button-primary:disabled {
+  background: #9ca3af;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.cs-button-secondary {
+  background: #ffffff;
+  color: #102a54;
+  border: 2px solid #102a54;
+}
+
+.cs-button-secondary:hover {
+  background: #f9fafb;
+}
+
+.cs-button-outline {
+  background: #ffffff;
+  color: #102a54;
+  border: 1px solid #d1d5db;
+}
+
+.cs-button-outline:hover {
+  background: #f9fafb;
+  border-color: #102a54;
+}
+
+.cs-button-light {
+  background: #f3f4f6;
   color: #374151;
-  margin-bottom: 6px;
 }
 
-.cs-tnc-list {
-  margin: 0;
-  padding-left: 18px;
-  font-size: 0.78rem;   /* small, neat */
-  line-height: 1.4;
-  color: #111827;
+.cs-button-light:hover {
+  background: #e5e7eb;
 }
 
-.cs-tnc-empty {
-  margin: 0;
-  font-size: 0.8rem;
-  color: #6b7280;
+/* Payment Plan Total */
+.cs-total-percentage {
+  font-size: 14px;
+  font-weight: 600;
+  color: #dc2626;
+  margin-top: 8px;
+  padding: 8px 12px;
+  background: #fee2e2;
+  border-radius: 6px;
 }
 
-/* ✅ NEW COST BREAKDOWN STYLES */
+/* ============ COST BREAKDOWN STYLES ============ */
 
 .cs-cost-section {
   margin-bottom: 24px;
 }
 
 .cs-cost-section-title {
-  font-size: 1rem;
+  font-size: 14px;
   font-weight: 600;
-  color: #0f172a;
+  color: #102a54;
   margin: 0 0 12px 0;
-  padding-bottom: 6px;
+  padding-bottom: 8px;
   border-bottom: 2px solid #e5e7eb;
 }
 
@@ -684,98 +318,567 @@
 
 .cs-cost-line {
   display: flex;
-  align-items: center;
   justify-content: space-between;
-  padding: 8px 12px;
-  background: #f9fafb;
-  border-radius: 6px;
-  font-size: 0.9rem;
+  align-items: center;
+  padding: 12px 16px;
+  background-color: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 14px;
+}
+
+.cs-cost-line span:first-child {
   color: #374151;
+  font-weight: 500;
 }
 
 .cs-cost-amount {
   font-weight: 600;
-  font-variant-numeric: tabular-nums;
   color: #111827;
+  font-variant-numeric: tabular-nums;
 }
 
 .cs-cost-subtotal {
-  background: #eff6ff;
-  border: 1px solid #bfdbfe;
+  background-color: #f0f9ff;
+  border: 1px solid #bae6fd;
+  margin-top: 4px;
+}
+
+.cs-cost-subtotal span:first-child {
+  color: #102a54;
   font-weight: 600;
-  color: #1e40af;
 }
 
 .cs-cost-subtotal .cs-cost-amount {
-  color: #1e40af;
-  font-size: 1.05rem;
+  color: #102a54;
+  font-size: 15px;
 }
 
+/* Possession Section - Clean White */
 .cs-possession-section {
-  background: #fefce8;
+  background-color: #ffffff;
   padding: 16px;
-  border-radius: 10px;
-  border: 1px solid #fde047;
+  border-radius: 12px;
+  border: 2px solid #102a54;
 }
 
 .cs-possession-section .cs-cost-section-title {
-  border-bottom-color: #fde047;
+  color: #102a54;
+  border-bottom-color: #102a54;
 }
 
-.cs-cost-final {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 16px 20px;
-  background: #dcfce7;
-  border: 2px solid #22c55e;
-  border-radius: 10px;
-  font-size: 1.2rem;
-  font-weight: 700;
-  color: #166534;
+.cs-possession-section .cs-cost-line {
+  background-color: #f8f9fa;
+  border-color: #d1d5db;
+}
+
+.cs-possession-section .cs-cost-subtotal {
+  background-color: #e8eef5;
+  border-color: #102a54;
+}
+
+.cs-possession-section .cs-cost-subtotal span:first-child {
+  color: #102a54;
+}
+
+.cs-possession-section .cs-cost-subtotal .cs-cost-amount {
+  color: #102a54;
+}
+
+/* Summary */
+.cs-cost-summary {
   margin-top: 20px;
+  padding: 16px;
+  background-color: #f8f9fa;
+  border-radius: 12px;
+  border: 1px solid #d1d5db;
+}
+
+.cs-cost-summary-line {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  font-size: 14px;
+  color: #374151;
+  font-weight: 500;
+}
+
+.cs-cost-summary-line .cs-cost-amount {
+  color: #111827;
+  font-weight: 600;
+}
+
+.cs-cost-summary-line:not(:last-child) {
+  border-bottom: 1px solid #e5e7eb;
+}
+
+/* Grand Total - Dark Blue Theme */
+.cs-cost-final {
+  margin-top: 20px;
+  padding: 20px;
+  background: linear-gradient(135deg, #102a54, #1a3d6f);
+  border-radius: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 10px 25px rgba(16, 42, 84, 0.25);
+}
+
+.cs-cost-final span:first-child {
+  font-size: 16px;
+  font-weight: 700;
+  color: #ffffff;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .cs-cost-final .cs-cost-amount {
-  font-size: 1.4rem;
-  color: #166534;
+  font-size: 22px;
+  font-weight: 700;
+  color: #ffffff;
 }
 
-/* ✅ PARKING SECTION STYLES */
-
+/* Parking Section */
 .cs-parking-section {
-  margin: 12px 0;
+  margin: 16px 0;
+  padding: 16px;
+  background: #ffffff;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
 }
 
 .cs-parking-header {
   display: flex;
   align-items: center;
-  gap: 16px;
-  padding: 12px;
-  background: #f0f9ff;
-  border-radius: 8px;
-  border: 1px solid #bae6fd;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
 }
 
 .cs-parking-controls {
   display: flex;
   align-items: center;
-  gap: 10px;
-  flex: 1;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 
 .cs-parking-count {
-  min-width: 90px;
+  width: 100px;
 }
 
 .cs-parking-price {
-  min-width: 150px;
+  width: 180px;
 }
 
+/* Terms & Conditions Preview */
+.cs-tnc-preview {
+  padding: 16px;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+}
+
+.cs-tnc-preview-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #102a54;
+  margin-bottom: 12px;
+}
+
+.cs-tnc-list {
+  margin: 0;
+  padding-left: 20px;
+  font-size: 13px;
+  color: #4b5563;
+  line-height: 1.6;
+}
+
+.cs-tnc-list li {
+  margin-bottom: 8px;
+}
+
+.cs-tnc-empty {
+  color: #9ca3af;
+  font-style: italic;
+  margin: 0;
+}
+
+/* Attachments */
+.cs-attachments-dropzone {
+  padding: 32px;
+  border: 2px dashed #d1d5db;
+  border-radius: 12px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: #f9fafb;
+}
+
+.cs-attachments-dropzone:hover {
+  border-color: #102a54;
+  background: #ffffff;
+}
+
+.cs-attachments-icon {
+  font-size: 32px;
+  margin-bottom: 8px;
+}
+
+.cs-attachments-text {
+  color: #6b7280;
+  font-size: 14px;
+  margin: 8px 0;
+}
+
+.cs-attachments-list {
+  list-style: none;
+  padding: 0;
+  margin: 16px 0 0 0;
+}
+
+.cs-attachments-list li {
+  padding: 8px 12px;
+  background: #f3f4f6;
+  border-radius: 6px;
+  margin-bottom: 6px;
+  font-size: 13px;
+  color: #374151;
+}
+
+.cs-attachments-checkbox {
+  margin-top: 12px;
+}
+
+/* Actions */
 .cs-actions {
   display: flex;
   justify-content: flex-end;
-  margin-top: 24px;
-  padding-top: 16px;
-  border-top: 1px solid #e5e7eb;
+  gap: 12px;
+  margin-top: 32px;
+  padding-top: 24px;
+  border-top: 2px solid #e5e7eb;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .cs-page {
+    padding: 16px;
+  }
+
+  .cs-grid-3 {
+    grid-template-columns: 1fr;
+  }
+
+  .cs-table-row {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .cs-table-row--5 {
+    grid-template-columns: 1fr;
+  }
+
+  .cs-parking-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .cs-parking-controls {
+    width: 100%;
+    flex-direction: column;
+  }
+
+  .cs-parking-count,
+  .cs-parking-price {
+    width: 100%;
+  }
+
+  .cs-actions {
+    flex-direction: column;
+  }
+
+  .cs-button {
+    width: 100%;
+  }
+
+  .cs-cost-final {
+    flex-direction: column;
+    gap: 8px;
+    text-align: center;
+  }
+}
+
+/* ========================================================================
+   COST BREAKDOWN STYLES - CLEAN WHITE THEME
+   Primary Color: #102a54 (Dark Blue)
+   ======================================================================== */
+
+/* Cost Breakdown Section Container */
+.cost-breakdown-section {
+  margin-bottom: 20px;
+  background-color: #ffffff;
+  padding: 16px;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+}
+
+/* Section Headers */
+.cost-breakdown-header {
+  font-size: 14px;
+  font-weight: 600;
+  color: #102a54;
+  margin: 0 0 12px 0;
+  padding-bottom: 8px;
+  border-bottom: 2px solid #e5e7eb;
+}
+
+/* Line-by-line rows */
+.cost-breakdown-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  font-size: 14px;
+  background-color: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  margin-bottom: 8px;
+}
+
+.cost-breakdown-row:last-child {
+  margin-bottom: 0;
+}
+
+.cost-breakdown-row span:first-child {
+  flex: 1;
+  color: #374151;
+  font-weight: 500;
+}
+
+.cost-breakdown-row span:last-child {
+  font-weight: 600;
+  color: #111827;
+  text-align: right;
+  min-width: 150px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ================== SECTION STYLES ================== */
+
+/* Unit Cost Section - Clean White with Blue Accent */
+.cost-breakdown-unit {
+  background-color: #ffffff;
+  border: 2px solid #102a54;
+}
+
+.cost-breakdown-unit .cost-breakdown-header {
+  color: #102a54;
+  border-bottom-color: #102a54;
+}
+
+.cost-breakdown-unit .cost-breakdown-row {
+  background-color: #f8f9fa;
+  border-color: #d1d5db;
+}
+
+/* Possession Section - Clean White with Blue Accent */
+.cost-breakdown-possession {
+  background-color: #ffffff;
+  border: 2px solid #102a54;
+}
+
+.cost-breakdown-possession .cost-breakdown-header {
+  color: #102a54;
+  border-bottom-color: #102a54;
+}
+
+.cost-breakdown-possession .cost-breakdown-row {
+  background-color: #f8f9fa;
+  border-color: #d1d5db;
+}
+
+/* Summary Section - Light Gray Background */
+.cost-breakdown-summary {
+  background-color: #f8f9fa;
+  border: 1px solid #d1d5db;
+}
+
+.cost-breakdown-summary .cost-breakdown-row {
+  background-color: #ffffff;
+  border-color: #e5e7eb;
+}
+
+/* ================== TOTAL ROWS ================== */
+
+/* Total Row (in Unit Cost) - Blue highlight */
+.cost-breakdown-total {
+  background-color: #e8eef5 !important;
+  border: 1px solid #102a54 !important;
+  font-weight: 600 !important;
+  margin-top: 8px;
+  font-size: 15px !important;
+}
+
+.cost-breakdown-total span:first-child {
+  color: #102a54 !important;
+  font-weight: 600 !important;
+}
+
+.cost-breakdown-total span:last-child {
+  color: #102a54 !important;
+  font-weight: 700 !important;
+}
+
+/* Subtotal Row (in Possession) - Blue highlight */
+.cost-breakdown-subtotal {
+  background-color: #e8eef5 !important;
+  border: 1px solid #102a54 !important;
+  font-weight: 600 !important;
+  margin-top: 8px;
+  font-size: 15px !important;
+}
+
+.cost-breakdown-subtotal span:first-child {
+  color: #102a54 !important;
+  font-weight: 600 !important;
+}
+
+.cost-breakdown-subtotal span:last-child {
+  color: #102a54 !important;
+  font-weight: 700 !important;
+}
+
+/* ================== GRAND TOTAL BANNER ================== */
+
+/* Grand Total - Dark Blue Banner */
+.cost-breakdown-grand-total {
+  background: linear-gradient(135deg, #102a54 0%, #1a3d6f 100%);
+  color: #ffffff;
+  padding: 20px;
+  border-radius: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 16px;
+  font-weight: 700;
+  margin-top: 20px;
+  box-shadow: 0 10px 25px rgba(16, 42, 84, 0.25);
+}
+
+.cost-breakdown-grand-total span:first-child {
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #ffffff;
+}
+
+.cost-breakdown-grand-total span:last-child {
+  font-size: 22px;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+/* ================== RESPONSIVE ================== */
+
+@media (max-width: 768px) {
+  .cost-breakdown-section {
+    padding: 12px;
+  }
+
+  .cost-breakdown-grand-total {
+    font-size: 14px;
+    padding: 16px 12px;
+    flex-direction: column;
+    gap: 8px;
+    text-align: center;
+  }
+  
+  .cost-breakdown-grand-total span:last-child {
+    font-size: 18px;
+  }
+  
+  .cost-breakdown-row {
+    font-size: 13px;
+    padding: 10px 12px;
+  }
+  
+  .cost-breakdown-row span:last-child {
+    min-width: 120px;
+  }
+}
+
+@media (max-width: 480px) {
+  .cost-breakdown-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+  
+  .cost-breakdown-row span:last-child {
+    text-align: left;
+    min-width: auto;
+    font-size: 15px;
+  }
+
+  .cost-breakdown-header {
+    font-size: 13px;
+  }
+}
+
+/* ================== PRINT STYLES ================== */
+
+@media print {
+  .cost-breakdown-section {
+    page-break-inside: avoid;
+    border-color: #102a54 !important;
+  }
+  
+  .cost-breakdown-grand-total {
+    background: #102a54 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .cost-breakdown-row {
+    border-color: #e5e7eb !important;
+  }
+}
+
+/* ================== HOVER EFFECTS ================== */
+
+.cost-breakdown-row:hover {
+  background-color: #f3f4f6;
+  transition: background-color 0.2s ease;
+}
+
+.cost-breakdown-total:hover,
+.cost-breakdown-subtotal:hover {
+  background-color: #d6e0f0 !important;
+}
+
+/* ================== ADDITIONAL UTILITIES ================== */
+
+/* Parking line special styling */
+.cost-breakdown-row.parking-line {
+  background-color: #f0f9ff;
+  border-color: #bae6fd;
+}
+
+.cost-breakdown-row.parking-line span:first-child {
+  color: #0369a1;
+}
+
+/* GST line special styling */
+.cost-breakdown-row.gst-line span:first-child {
+  font-style: italic;
+  color: #6b7280;
+}
+
+/* Empty state */
+.cost-breakdown-empty {
+  padding: 24px;
+  text-align: center;
+  color: #9ca3af;
+  font-style: italic;
+  font-size: 14px;
 }

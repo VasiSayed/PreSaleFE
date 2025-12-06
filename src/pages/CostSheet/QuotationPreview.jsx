@@ -573,7 +573,6 @@ const QuotationPreview = () => {
     const netPayable =
       qdata.net_payable_amount != null ? Number(qdata.net_payable_amount) : 0;
 
-    // ✅ Always prefer custom_payment_plan
     if (
       Array.isArray(qdata.custom_payment_plan) &&
       qdata.custom_payment_plan.length > 0
@@ -680,26 +679,20 @@ const QuotationPreview = () => {
 
   // ============ CALCULATIONS ============
 
-  // Net base value
   const nbv = Number(net_base_value || 0) || 0;
   const addTotal = Number(additional_charges_total || 0) || 0;
 
-  // Parking
   const parkingAmt = Number(parking_amount || 0) || 0;
   const parkingCountNum = Number(parking_count || 0) || 0;
   const perParkingPrice = Number(per_parking_price || 0) || 0;
 
-  // Base for taxes = nbv + additional + parking
   const baseForTaxes = nbv + addTotal + parkingAmt;
 
-  // Stamp & GST
   const stampAmt = Number(stamp_duty_amount || 0) || 0;
   const gstAmt = Number(gst_amount || 0) || 0;
 
-  // Main Cost Total (1)
   const mainCostTotal = baseForTaxes + stampAmt + gstAmt;
 
-  // Possession charges
   const isPossessionCharges =
     share_application_money_membership_amount != null ||
     legal_compliance_charges_amount != null ||
@@ -727,13 +720,10 @@ const QuotationPreview = () => {
 
   const possessionTotal = possessionSubtotal + possessionGstAmt;
 
-  // Registration
   const registrationAmt = Number(registration_amount || 0) || 0;
 
-  // Final total
   const finalAmount = mainCostTotal + possessionTotal + registrationAmt;
 
-  // Get template values for display
   const devPsf = template.development_charges_psf
     ? Number(template.development_charges_psf)
     : 0;
@@ -742,7 +732,6 @@ const QuotationPreview = () => {
     : 0;
   const provisionalMonths = template.provisional_maintenance_months || 0;
 
-  // Calculate per sqft price
   const carpetArea = base_area_sqft ? Number(base_area_sqft) : 0;
   const perSqftPrice = carpetArea && nbv ? (nbv / carpetArea).toFixed(2) : 0;
 
@@ -751,7 +740,6 @@ const QuotationPreview = () => {
     window.print();
   };
 
-  // Check if payment plan exists
   const hasPaymentPlan = paymentRows.length > 0;
 
   return (
@@ -854,30 +842,12 @@ const QuotationPreview = () => {
           </div>
         </section>
 
-        {/* ============= UNIT DETAILS (show only in print) ============= */}
-        <section className="qp-section qp-print-only">
-          <h2 className="qp-section-title">Unit Details</h2>
-          <div className="qp-unit-details">
-            <div className="qp-unit-detail-row">
-              <span className="qp-label">Unit No:</span>
-              <span className="qp-value">{unit_no || "-"}</span>
-            </div>
-            <div className="qp-unit-detail-row">
-              <span className="qp-label">Carpet Area:</span>
-              <span className="qp-value">
-                {base_area_sqft ? `${fmt(base_area_sqft)} sq. ft.` : "-"}
-              </span>
-            </div>
-            <div className="qp-unit-detail-row">
-              <span className="qp-label">Per Sq. Ft. Price:</span>
-              <span className="qp-value">
-                {perSqftPrice > 0 ? `₹ ${fmt(perSqftPrice)}` : "-"}
-              </span>
-            </div>
-          </div>
+        {/* ============= UNIT NUMBER (show only in print) ============= */}
+        <section className="qp-section qp-print-only qp-unit-print-header">
+          <div className="qp-unit-number">Unit No: {unit_no || "-"}</div>
         </section>
 
-        {/* ============= COST BREAKDOWN (NEW FORMAT) ============= */}
+        {/* ============= COST BREAKDOWN ============= */}
         <section className="qp-section">
           <h2 className="qp-section-title">Cost Breakdown</h2>
 
@@ -1028,9 +998,9 @@ const QuotationPreview = () => {
           </div>
         </section>
 
-        {/* ============= PAYMENT PLAN SCHEDULE (conditional) ============= */}
+        {/* ============= PAYMENT PLAN SCHEDULE (hide in print) ============= */}
         {hasPaymentPlan && (
-          <section className="qp-section">
+          <section className="qp-section qp-print-hide">
             <h2 className="qp-section-title">Payment Plan Schedule</h2>
 
             {payment_plan_detail && (

@@ -1993,14 +1993,13 @@
 //     </div>
 //   );
 // };
-// src/pages/CostSheet/CostSheetCreate.jsx
+
 import React, { useEffect, useMemo, useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import api from "../../api/axiosInstance";
 import { toast } from "react-hot-toast";
 import "./CostSheetCreate.css";
 import { formatINR } from "../../utils/number";
-import { toSentenceCase } from "../../utils/text";
 
 // Generic collapsible section with chevron
 const SectionCard = ({ title, children, defaultOpen = true }) => {
@@ -2023,7 +2022,7 @@ const SectionCard = ({ title, children, defaultOpen = true }) => {
 };
 
 const CostSheetCreate = () => {
-  const { leadId } = useParams(); // route: /cost-sheets/create/:leadId
+  const { leadId } = useParams();
   const navigate = useNavigate();
 
   const [loading, setLoading] = useState(true);
@@ -2049,12 +2048,11 @@ const CostSheetCreate = () => {
   };
   const [discountFocused, setDiscountFocused] = useState(false);
 
-  const [towers, setTowers] = useState([]); // nested tower -> floor -> inventories
-  const [inventoryMap, setInventoryMap] = useState({}); // inventory_id -> inventory
+  const [towers, setTowers] = useState([]);
+  const [inventoryMap, setInventoryMap] = useState({});
 
-  // dates from backend
-  const [apiToday, setApiToday] = useState(""); // "today" from init API
-  const [validTillLimit, setValidTillLimit] = useState(""); // max allowed valid_till
+  const [apiToday, setApiToday] = useState("");
+  const [validTillLimit, setValidTillLimit] = useState("");
 
   // ----------- Header form -----------
   const [quotationDate, setQuotationDate] = useState("");
@@ -2082,21 +2080,22 @@ const CostSheetCreate = () => {
   const [unitNo, setUnitNo] = useState("");
 
   // ----------- Base pricing -----------
-  const [areaBasis, setAreaBasis] = useState("RERA"); // RERA / CARPET / SALEABLE
+  // ✅ FIXED: Support all area combinations
+  const [areaBasis, setAreaBasis] = useState("RERA");
+  // Options: RERA, CARPET, SALEABLE, BUILTUP, RERA+BALCONY, CARPET+BALCONY
   const [baseAreaSqft, setBaseAreaSqft] = useState("");
-  const [baseRatePsf, setBaseRatePsf] = useState(""); // editable – from inventory/project
+  const [baseRatePsf, setBaseRatePsf] = useState("");
 
-  // 💡 New discount logic
-  const [discountType, setDiscountType] = useState("Fixed"); // "Percentage" | "Fixed"
-  const [discountValue, setDiscountValue] = useState(""); // user input
+  // Discount logic
+  const [discountType, setDiscountType] = useState("Fixed");
+  const [discountValue, setDiscountValue] = useState("");
 
   const baseValue = useMemo(() => {
     const a = parseFloat(baseAreaSqft) || 0;
     const r = parseFloat(baseRatePsf) || 0;
-    return a * r; // ≈ Agreement value before discount
+    return a * r;
   }, [baseAreaSqft, baseRatePsf]);
 
-  // Derived: discountPercent, discountAmount, netBaseValue
   const { discountPercent, discountAmount, netBaseValue } = useMemo(() => {
     const bv = baseValue || 0;
     const rawVal = parseFloat(discountValue) || 0;
@@ -2112,12 +2111,11 @@ const CostSheetCreate = () => {
     if (discountType === "Percentage") {
       const discAmt = (bv * rawVal) / 100;
       return {
-        discountPercent: rawVal, // user entered %
+        discountPercent: rawVal,
         discountAmount: discAmt,
         netBaseValue: bv - discAmt,
       };
     } else {
-      // Fixed (flat amount)
       const discAmt = rawVal;
       const pct = bv ? (discAmt * 100) / bv : 0;
       return {
@@ -2143,10 +2141,10 @@ const CostSheetCreate = () => {
       : null;
 
   // ----------- Payment plan -----------
-  const [planRequired, setPlanRequired] = useState(true); // ✅ NEW
-  const [paymentPlanType, setPaymentPlanType] = useState("MASTER"); // MASTER or CUSTOM
+  const [planRequired, setPlanRequired] = useState(true);
+  const [paymentPlanType, setPaymentPlanType] = useState("MASTER");
   const [selectedPlanId, setSelectedPlanId] = useState("");
-  const [planRows, setPlanRows] = useState([]); // {name, percentage, due_date, slab_id?}
+  const [planRows, setPlanRows] = useState([]);
   const [planError, setPlanError] = useState("");
 
   const handleDueDateFocus = (index) => {
@@ -2178,16 +2176,17 @@ const CostSheetCreate = () => {
     { name: "Amenity Charges", type: "Fixed", value: "", amount: "" },
   ]);
 
-  // ✅ Parking with EDITABLE PRICE
+  // Parking
   const [hasParking, setHasParking] = useState(false);
   const [parkingCount, setParkingCount] = useState("");
-  const [parkingPrice, setParkingPrice] = useState(""); // editable
+  const [parkingPrice, setParkingPrice] = useState("");
   const [parkingPriceFocused, setParkingPriceFocused] = useState(false);
 
-  // ✅ Possession charges flags
+  // Possession charges
   const [isPossessionCharges, setIsPossessionCharges] = useState(false);
   const [possessionGstPercent, setPossessionGstPercent] = useState(0);
-  const [provisionalMaintenanceMonths, setProvisionalMaintenanceMonths] = useState(0);
+  const [provisionalMaintenanceMonths, setProvisionalMaintenanceMonths] =
+    useState(0);
 
   const additionalChargesTotal = useMemo(
     () => charges.reduce((sum, c) => sum + (parseFloat(c.amount || 0) || 0), 0),
@@ -2198,41 +2197,47 @@ const CostSheetCreate = () => {
   const effectiveBaseRate =
     baseAreaNum && netBaseValue ? netBaseValue / baseAreaNum : 0;
 
-  // ========== NEW CALCULATION FLOW ==========
+  // ========== COST CALCULATIONS ==========
 
-  // 1️⃣ MAIN COST (Unit + Additional + Parking + Stamp + GST)
-  const {
-    parkingAmount,
-    stampAmount,
-    gstAmount,
-    mainCostTotal,
-  } = useMemo(() => {
-    const pricePerParking = parseFloat(parkingPrice) || 0;
-    const parkingCountNum = Number(parkingCount || 0) || 0;
-    const parkingAmt = pricePerParking * parkingCountNum;
+  const { parkingAmount, stampAmount, gstAmount, mainCostTotal } =
+    useMemo(() => {
+      const pricePerParking = parseFloat(parkingPrice) || 0;
+      const parkingCountNum = Number(parkingCount || 0) || 0;
+      const parkingAmt = pricePerParking * parkingCountNum;
 
-    // Base for stamp & GST = netBaseValue + additionalCharges + parking
-    const baseForTaxes = (netBaseValue || 0) + (additionalChargesTotal || 0) + parkingAmt;
+      const baseForTaxes =
+        (netBaseValue || 0) + (additionalChargesTotal || 0) + parkingAmt;
 
-    const stampPercent =
-      template?.stamp_duty_percent ? parseFloat(template.stamp_duty_percent) || 0 : 0;
-    const stampAmt = (baseForTaxes * stampPercent) / 100;
+      const stampPercent = template?.stamp_duty_percent
+        ? parseFloat(template.stamp_duty_percent) || 0
+        : 0;
+      // ✅ Round to 2 decimal places
+      const stampAmt =
+        Math.round(((baseForTaxes * stampPercent) / 100) * 100) / 100;
 
-    const gstPercent =
-      template?.gst_percent ? parseFloat(template.gst_percent) || 0 : 0;
-    const gstAmt = (baseForTaxes * gstPercent) / 100;
+      const gstPercent = template?.gst_percent
+        ? parseFloat(template.gst_percent) || 0
+        : 0;
+      // ✅ Round to 2 decimal places
+      const gstAmt =
+        Math.round(((baseForTaxes * gstPercent) / 100) * 100) / 100;
 
-    const mainTotal = baseForTaxes + stampAmt + gstAmt;
+      const mainTotal = baseForTaxes + stampAmt + gstAmt;
 
-    return {
-      parkingAmount: parkingAmt,
-      stampAmount: stampAmt,
-      gstAmount: gstAmt,
-      mainCostTotal: mainTotal,
-    };
-  }, [netBaseValue, additionalChargesTotal, parkingPrice, parkingCount, template]);
+      return {
+        parkingAmount: parkingAmt,
+        stampAmount: stampAmt,
+        gstAmount: gstAmt,
+        mainCostTotal: mainTotal,
+      };
+    }, [
+      netBaseValue,
+      additionalChargesTotal,
+      parkingPrice,
+      parkingCount,
+      template,
+    ]);
 
-  // 2️⃣ POSSESSION CHARGES (if enabled)
   const {
     membershipAmount,
     legalComplianceAmount,
@@ -2262,34 +2267,31 @@ const CostSheetCreate = () => {
         : null;
 
     const carpetAreaSqft =
-      parseFloat((selectedInv && selectedInv.carpet_sqft) || baseAreaSqft || 0) || 0;
+      parseFloat(
+        (selectedInv && selectedInv.carpet_sqft) || baseAreaSqft || 0
+      ) || 0;
 
-    // Membership = FIXED
     const membershipAmt =
       template && template.share_application_money_membership_fees
         ? Number(template.share_application_money_membership_fees)
         : 0;
 
-    // Legal = FIXED
     const legalAmt =
       template && template.legal_fee_amount
         ? Number(template.legal_fee_amount)
         : 0;
 
-    // Development charges per sq. ft. on carpet area
     const devRate =
       template && template.development_charges_psf
         ? Number(template.development_charges_psf)
         : 0;
     const devAmt = devRate * carpetAreaSqft;
 
-    // Electrical = FIXED
     const elecAmt =
       template && template.electrical_watern_n_all_charges
         ? Number(template.electrical_watern_n_all_charges)
         : 0;
 
-    // Provisional maintenance per sq. ft.
     const provRate =
       template && template.provisional_maintenance_psf
         ? Number(template.provisional_maintenance_psf)
@@ -2298,8 +2300,9 @@ const CostSheetCreate = () => {
 
     const subtotal = membershipAmt + legalAmt + devAmt + elecAmt + provAmt;
 
-    // GST on possession charges
-    const gstAmt = (subtotal * possessionGstPercent) / 100;
+    // ✅ Round to 2 decimal places
+    const gstAmt =
+      Math.round(((subtotal * possessionGstPercent) / 100) * 100) / 100;
 
     const total = subtotal + gstAmt;
 
@@ -2322,14 +2325,12 @@ const CostSheetCreate = () => {
     possessionGstPercent,
   ]);
 
-  // 3️⃣ REGISTRATION (separate)
   const registrationAmount = useMemo(() => {
     return template && template.registration_amount
       ? parseFloat(template.registration_amount) || 0
       : 0;
   }, [template]);
 
-  // 4️⃣ FINAL TOTAL
   const finalAmount = useMemo(() => {
     return mainCostTotal + possessionTotal + registrationAmount;
   }, [mainCostTotal, possessionTotal, registrationAmount]);
@@ -2337,7 +2338,6 @@ const CostSheetCreate = () => {
   // ----------- Text sections -----------
   const [termsAndConditions, setTermsAndConditions] = useState("");
 
-  // Lines ko split + trim + empty remove + starting numbers strip
   const termsList = useMemo(() => {
     if (!termsAndConditions) return [];
     return termsAndConditions
@@ -2345,7 +2345,6 @@ const CostSheetCreate = () => {
       .map((line) => line.trim())
       .filter(Boolean)
       .map((line) => {
-        // "1. Payment Schedule" -> "Payment Schedule"
         const m = line.match(/^\d+\.?\s*(.*)$/);
         return m && m[1] ? m[1] : line;
       });
@@ -2372,7 +2371,6 @@ const CostSheetCreate = () => {
     setDiscountValue(raw);
   };
 
-  // Load username from localStorage for "Prepared by"
   useEffect(() => {
     try {
       const raw = localStorage.getItem("user");
@@ -2387,7 +2385,7 @@ const CostSheetCreate = () => {
   }, []);
 
   // ==============================
-  // 1) Load init + sales lead full-info + booking data
+  // Load init + sales lead + booking data
   // ==============================
   useEffect(() => {
     const load = async () => {
@@ -2395,15 +2393,28 @@ const CostSheetCreate = () => {
         setLoading(true);
         setInitError("");
 
-        // ---- Cost sheet init ----
         const initRes = await api.get(`/costsheet/lead/${leadId}/init/`);
         const data = initRes.data;
 
-        // ---- Sales Lead full-info (for interested_unit_links, etc.) ----
-        const salesRes = await api.get(
-          `/sales/sales-leads/${leadId}/full-info/`
-        );
-        const salesFull = salesRes.data;
+        if (!data || !data.project || !data.project.id) {
+          throw new Error(
+            "Init API did not return a valid project for this lead."
+          );
+        }
+
+        let salesFull = null;
+        try {
+          const salesRes = await api.get(
+            `/sales/sales-leads/${leadId}/full-info/`
+          );
+          salesFull = salesRes.data;
+        } catch (err) {
+          console.warn(
+            "Sales full-info failed, falling back to init lead data:",
+            err?.response?.status,
+            err?.response?.data || err
+          );
+        }
 
         setLead(data.lead);
         setProject(data.project);
@@ -2416,21 +2427,26 @@ const CostSheetCreate = () => {
         setValidTill(data.valid_till);
         setValidTillLimit(data.valid_till);
 
-        // ✅ Set plan_required from template - FIXED to use is_plan_required
         if (data.template) {
           setPlanRequired(data.template.is_plan_required !== false);
-          setIsPossessionCharges(data.template.is_possessional_charges === true);
-          setPossessionGstPercent(parseFloat(data.template.possessional_gst_percent) || 0);
-          setProvisionalMaintenanceMonths(parseInt(data.template.provisional_maintenance_months) || 0);
+          setIsPossessionCharges(
+            data.template.is_possessional_charges === true
+          );
+          setPossessionGstPercent(
+            parseFloat(data.template.possessional_gst_percent) || 0
+          );
+          setProvisionalMaintenanceMonths(
+            parseInt(data.template.provisional_maintenance_months) || 0
+          );
           setTermsAndConditions(data.template.terms_and_conditions || "");
         }
 
-        // ✅ Set parking price from project
         if (data.project && data.project.price_per_parking) {
-          setParkingPrice(String(Math.round(Number(data.project.price_per_parking))));
+          setParkingPrice(
+            String(Math.round(Number(data.project.price_per_parking)))
+          );
         }
 
-        // Prefer full-info where available
         const leadFullName = salesFull?.full_name || data.lead.full_name || "";
         const leadMobile =
           salesFull?.mobile_number || data.lead.mobile_number || "";
@@ -2443,7 +2459,6 @@ const CostSheetCreate = () => {
 
         setProjectName(data.project.name || "");
 
-        // project level default base rate (will be overridden by unit-specific if any)
         const projectRate =
           data.project.price_per_sqft != null
             ? String(Math.round(Number(data.project.price_per_sqft)))
@@ -2451,17 +2466,37 @@ const CostSheetCreate = () => {
 
         setBaseRatePsf(projectRate);
 
-        // ---- Booking Setup (tower -> floor -> units/inventory) ----
-        const bookingRes = await api.get("/client/booking-setup/", {
-          params: {
-            project_id: data.project.id,
-          },
-        });
+        // Booking Setup
+        let bookingData = null;
+        try {
+          const bookingRes = await api.get("/client/booking-setup/", {
+            params: {
+              project_id: data.project.id,
+            },
+          });
+          bookingData = bookingRes.data || {};
+        } catch (err) {
+          console.error(
+            "Booking setup failed:",
+            err?.response?.status,
+            err?.response?.data || err
+          );
+          throw err;
+        }
 
-        const bookingData = bookingRes.data || {};
         const towersFromApi = bookingData.towers || [];
 
-        // Interested unit from sales-full
+        const isBalconyCarpetPricingFromBooking = !!(
+          bookingData.project && bookingData.project.is_pricing_balcony_carpert
+        );
+
+        if (isBalconyCarpetPricingFromBooking) {
+          setProject((prev) => ({
+            ...(prev || data.project || {}),
+            is_pricing_balcony_carpert: true,
+          }));
+        }
+
         let primaryInterestedUnitId = null;
         if (
           salesFull &&
@@ -2476,14 +2511,6 @@ const CostSheetCreate = () => {
 
         let defaultInventoryId = null;
 
-        /**
-         * Transform booking-setup structure:
-         * towers[id,name,floors[id,number,units[unit + inventory]]]
-         *  -> towers[tower_id,tower_name,floors[floor_id,floor_number,inventories[]]]
-         * Keep ALL units that have inventory.
-         * Mark which ones are AVAILABLE vs BOOKED.
-         * Also: pick default inventory from salesFull.interested_unit_links
-         */
         const towersList = towersFromApi
           .map((tower) => {
             const floors = (tower.floors || [])
@@ -2500,7 +2527,6 @@ const CostSheetCreate = () => {
 
                     const isAvailable = inv.availability_status === "AVAILABLE";
 
-                    // If this unit matches the interested unit, remember its inventory_id
                     if (
                       primaryInterestedUnitId &&
                       u.id === primaryInterestedUnitId &&
@@ -2510,7 +2536,6 @@ const CostSheetCreate = () => {
                     }
 
                     return {
-                      // primary key we POST as inventory_id
                       inventory_id: inv.id,
                       unit_id: u.id,
 
@@ -2518,16 +2543,18 @@ const CostSheetCreate = () => {
                       configuration:
                         inv.configuration_name || inv.unit_type_name || "",
 
+                      // ✅ FIXED: Store all area types
                       rera_area_sqft: inv.rera_area_sqft,
                       saleable_sqft: inv.saleable_sqft,
                       carpet_sqft: inv.carpet_sqft,
+                      builtup_sqft: inv.builtup_sqft,
+                      balcony_area_sqft: inv.balcony_area_sqft,
 
                       agreement_value: inv.agreement_value || u.agreement_value,
                       rate_psf: inv.rate_psf,
                       base_price_psf: inv.base_price_psf,
                       total_cost: inv.total_cost,
 
-                      // new flags
                       isBooked,
                       isAvailable,
                       unit_status: u.status,
@@ -2553,7 +2580,6 @@ const CostSheetCreate = () => {
 
         setTowers(towersList);
 
-        // Flatten inventory lookup map (keyed by inventory_id)
         const invMap = {};
         towersList.forEach((t) => {
           (t.floors || []).forEach((f) => {
@@ -2570,7 +2596,7 @@ const CostSheetCreate = () => {
         });
         setInventoryMap(invMap);
 
-        // If we found a default inventory from interested_unit_links, auto-select it
+        // Auto-select if found
         if (defaultInventoryId) {
           const inv = invMap[String(defaultInventoryId)];
           if (inv) {
@@ -2581,15 +2607,28 @@ const CostSheetCreate = () => {
             setFloorNumber(inv.floor_number || "");
             setUnitNo(inv.unit_no || "");
 
-            // Area basis: RERA preferred, else saleable, else carpet
-            const autoArea =
-              inv.rera_area_sqft || inv.saleable_sqft || inv.carpet_sqft || "";
-            setAreaBasis(inv.rera_area_sqft ? "RERA" : "SALEABLE");
-            setBaseAreaSqft(autoArea || "");
+            // ✅ FIXED: Default to RERA + BALCONY if balcony pricing enabled
+            if (isBalconyCarpetPricingFromBooking) {
+              const reraNum = Number(inv.rera_area_sqft || 0);
+              const balconyNum = Number(inv.balcony_area_sqft || 0);
+              const total = reraNum + balconyNum;
+              setBaseAreaSqft(total ? String(total) : "");
+              setAreaBasis("RERA+BALCONY");
+            } else {
+              const autoArea =
+                inv.rera_area_sqft ||
+                inv.saleable_sqft ||
+                inv.carpet_sqft ||
+                "";
+              setBaseAreaSqft(autoArea || "");
+              setAreaBasis(inv.rera_area_sqft ? "RERA" : "SALEABLE");
+            }
 
-            // Prefill Base Rate / sq. ft. from inventory (editable)
             const autoRatePsfRaw =
-              inv.base_price_psf || inv.rate_psf || data.project.price_per_sqft || "";
+              inv.base_price_psf ||
+              inv.rate_psf ||
+              data.project.price_per_sqft ||
+              "";
 
             if (autoRatePsfRaw !== "") {
               const clean = String(Math.round(Number(autoRatePsfRaw)));
@@ -2598,14 +2637,21 @@ const CostSheetCreate = () => {
           }
         }
 
-        // optional: payment plans from booking-setup
         if (bookingData.payment_plans) {
           setPaymentPlans(bookingData.payment_plans);
         }
       } catch (err) {
-        console.error(err);
-        setInitError("Failed to load cost sheet init data.");
-        toast.error("Failed to load cost sheet init data.");
+        console.error("❌ Cost sheet init failed:", err?.response || err);
+        let message = "Failed to load cost sheet init data.";
+        const resp = err?.response;
+        if (resp?.data) {
+          if (resp.data.detail) message = resp.data.detail;
+          else if (typeof resp.data === "string") message = resp.data;
+        } else if (err?.message) {
+          message = err.message;
+        }
+        setInitError(message);
+        toast.error(message);
       } finally {
         setLoading(false);
       }
@@ -2617,7 +2663,7 @@ const CostSheetCreate = () => {
   }, [leadId]);
 
   // ==============================
-  // 2) Inventory select handlers
+  // Inventory handlers
   // ==============================
   const handleTowerChange = (e) => {
     const value = e.target.value;
@@ -2652,18 +2698,75 @@ const CostSheetCreate = () => {
     setFloorNumber(inv.floor_number || "");
     setUnitNo(inv.unit_no || "");
 
-    // area basis: RERA preferred, else saleable, else carpet
-    let area = inv.rera_area_sqft || inv.saleable_sqft || inv.carpet_sqft || "";
-    setAreaBasis(inv.rera_area_sqft ? "RERA" : "SALEABLE");
-    setBaseAreaSqft(area || "");
+    const isBalconyCarpetPricingLocal =
+      project?.is_pricing_balcony_carpert === true;
 
-    // When user changes unit manually, also update base rate from that unit (still editable)
+    // ✅ FIXED: Set default area basis
+    if (isBalconyCarpetPricingLocal) {
+      setAreaBasis("RERA+BALCONY");
+      const rera = Number(inv.rera_area_sqft || 0);
+      const balcony = Number(inv.balcony_area_sqft || 0);
+      setBaseAreaSqft(String(rera + balcony));
+    } else {
+      if (inv.rera_area_sqft) {
+        setAreaBasis("RERA");
+        setBaseAreaSqft(inv.rera_area_sqft);
+      } else if (inv.saleable_sqft) {
+        setAreaBasis("SALEABLE");
+        setBaseAreaSqft(inv.saleable_sqft);
+      } else {
+        setAreaBasis("CARPET");
+        setBaseAreaSqft(inv.carpet_sqft || "");
+      }
+    }
+
     const autoRatePsfRaw =
       inv.base_price_psf || inv.rate_psf || project?.price_per_sqft || "";
     if (autoRatePsfRaw !== "") {
       const clean = String(Math.round(Number(autoRatePsfRaw)));
       setBaseRatePsf(clean);
     }
+  };
+
+  // ✅ FIXED: Handle area basis change
+  const handleAreaBasisChange = (e) => {
+    const newBasis = e.target.value;
+    setAreaBasis(newBasis);
+
+    if (!selectedInventory) return;
+
+    const inv = selectedInventory;
+    const rera = Number(inv.rera_area_sqft || 0);
+    const carpet = Number(inv.carpet_sqft || 0);
+    const saleable = Number(inv.saleable_sqft || 0);
+    const builtup = Number(inv.builtup_sqft || 0);
+    const balcony = Number(inv.balcony_area_sqft || 0);
+
+    let newArea = 0;
+    switch (newBasis) {
+      case "RERA":
+        newArea = rera;
+        break;
+      case "CARPET":
+        newArea = carpet;
+        break;
+      case "SALEABLE":
+        newArea = saleable;
+        break;
+      case "BUILTUP":
+        newArea = builtup;
+        break;
+      case "RERA+BALCONY":
+        newArea = rera + balcony;
+        break;
+      case "CARPET+BALCONY":
+        newArea = carpet + balcony;
+        break;
+      default:
+        newArea = rera;
+    }
+
+    setBaseAreaSqft(newArea ? String(newArea) : "");
   };
 
   const selectedTower = towers.find(
@@ -2675,8 +2778,44 @@ const CostSheetCreate = () => {
   );
   const inventories = selectedFloor ? selectedFloor.inventories || [] : [];
 
+  const selectedInventory =
+    selectedInventoryId && inventoryMap[String(selectedInventoryId)]
+      ? inventoryMap[String(selectedInventoryId)]
+      : null;
+
+  const isBalconyCarpetPricing = project?.is_pricing_balcony_carpert === true;
+
+  // ✅ FIXED: Calculate area based on selection
+  const calculatedArea = useMemo(() => {
+    if (!selectedInventory) return 0;
+
+    const inv = selectedInventory;
+    const rera = Number(inv.rera_area_sqft || 0);
+    const carpet = Number(inv.carpet_sqft || 0);
+    const saleable = Number(inv.saleable_sqft || 0);
+    const builtup = Number(inv.builtup_sqft || 0);
+    const balcony = Number(inv.balcony_area_sqft || 0);
+
+    switch (areaBasis) {
+      case "RERA":
+        return rera;
+      case "CARPET":
+        return carpet;
+      case "SALEABLE":
+        return saleable;
+      case "BUILTUP":
+        return builtup;
+      case "RERA+BALCONY":
+        return rera + balcony;
+      case "CARPET+BALCONY":
+        return carpet + balcony;
+      default:
+        return rera;
+    }
+  }, [selectedInventory, areaBasis]);
+
   // ==============================
-  // 3) Payment plan handlers
+  // Payment plan handlers
   // ==============================
   const handlePlanSelect = (e) => {
     const value = e.target.value;
@@ -2728,7 +2867,7 @@ const CostSheetCreate = () => {
     const num = Number(raw);
     if (Number.isNaN(num)) return;
 
-    handleChargesChange(index, "amount", raw); // store raw number
+    handleChargesChange(index, "amount", raw);
   };
 
   const handleBrowseClick = () => {
@@ -2742,9 +2881,6 @@ const CostSheetCreate = () => {
     setAttachments(files);
   };
 
-  // ==============================
-  // 4) Charges / Taxes handlers
-  // ==============================
   const handleChargesChange = (index, field, value) => {
     const updated = [...charges];
     updated[index][field] = value;
@@ -2760,9 +2896,6 @@ const CostSheetCreate = () => {
 
   const [chargeFocusIndex, setChargeFocusIndex] = useState(null);
 
-  // ==============================
-  // 5) Date handlers (validation)
-  // ==============================
   const handleQuotationDateChange = (e) => {
     const value = e.target.value;
 
@@ -2806,7 +2939,7 @@ const CostSheetCreate = () => {
   };
 
   // ==============================
-  // 6) Save (POST)
+  // Save
   // ==============================
   const handleSave = async () => {
     setApiErrors([]);
@@ -2825,43 +2958,45 @@ const CostSheetCreate = () => {
       return;
     }
 
-    // Quoted date cannot be after valid_till
     if (quotationDate && validTill && quotationDate > validTill) {
       toast.error("Quote date cannot be after Valid Until date.");
       return;
     }
 
-    // Whatever plan type: if rows present, total must be 100
-    if (planRequired && planRows.length && Math.round(totalPercentage * 1000) !== 100000) {
+    if (
+      planRequired &&
+      planRows.length &&
+      Math.round(totalPercentage * 1000) !== 100000
+    ) {
       toast.error("Total payment plan percentage must be exactly 100%.");
       return;
     }
 
-    // ==========================
-    // Build custom_payment_plan ALWAYS
-    // ==========================
+    const roundedFinalAmount =
+      finalAmount !== null && finalAmount !== undefined
+        ? Number(finalAmount.toFixed(2))
+        : null;
+
     const customPaymentPlan =
       planRows.length > 0
-        ? planRows.map((row) => ({
-            name: row.name,
-            percentage: row.percentage,
-            // Installment amount based on FINAL AMOUNT (after taxes)
-            amount:
-              finalAmount && row.percentage
-                ? (
-                    (finalAmount * parseFloat(row.percentage || 0)) /
-                    100
-                  ).toFixed(2)
-                : null,
-            due_date: row.due_date || null,
-          }))
+        ? planRows.map((row) => {
+            const pct = parseFloat(row.percentage || 0) || 0;
+            return {
+              name: row.name,
+              percentage: row.percentage,
+              amount:
+                roundedFinalAmount && pct
+                  ? ((roundedFinalAmount * pct) / 100).toFixed(2)
+                  : null,
+              due_date: row.due_date || null,
+            };
+          })
         : null;
 
     try {
       setSaving(true);
 
       const payload = {
-        // FK inputs – MUST be *_id to match serializer
         lead_id: lead.id,
         project_id: project.id,
         inventory_id: Number(selectedInventoryId),
@@ -2886,42 +3021,56 @@ const CostSheetCreate = () => {
 
         base_area_sqft: baseAreaSqft || null,
         base_rate_psf: baseRatePsf || null,
-        base_value: baseValue || null, // Agreement/Base value from Area × Rate
+        base_value: baseValue || null,
 
         discount_percent: safeDiscountPercent,
         discount_amount: safeDiscountAmount,
 
         net_base_value: netBaseValue || null,
 
-        // ------- Payment Plan (conditional) -------
         payment_plan_type: planRequired ? paymentPlanType : null,
         payment_plan: planRequired && selectedPlanId ? selectedPlanId : null,
         custom_payment_plan: planRequired ? customPaymentPlan : null,
 
-        // ------- Taxes / Charges -------
         gst_percent: template ? template.gst_percent : null,
-        gst_amount: gstAmount || null,
+        gst_amount: gstAmount ? Math.round(gstAmount * 100) / 100 : null,
         stamp_duty_percent: template ? template.stamp_duty_percent : null,
-        stamp_duty_amount: stampAmount || null,
+        stamp_duty_amount: stampAmount
+          ? Math.round(stampAmount * 100) / 100
+          : null,
         registration_amount: registrationAmount || null,
         legal_fee_amount: template?.legal_fee_amount || null,
 
-        // ------- Parking -------
         parking_count: hasParking ? Number(parkingCount) || 0 : 0,
         per_parking_price: hasParking ? parkingPrice || null : null,
-        parking_amount: parkingAmount || null,
+        parking_amount: parkingAmount
+          ? Math.round(parkingAmount * 100) / 100
+          : null,
 
-        // ------- Possession Charges -------
-        share_application_money_membership_amount: isPossessionCharges ? membershipAmount || null : null,
-        legal_compliance_charges_amount: isPossessionCharges ? legalComplianceAmount || null : null,
-        development_charges_amount: isPossessionCharges ? developmentChargesAmount || null : null,
-        electrical_water_piped_gas_charges_amount: isPossessionCharges ? electricalChargesAmount || null : null,
-        provisional_maintenance_amount: isPossessionCharges ? provisionalMaintenanceAmount || null : null,
-        possessional_gst_amount: isPossessionCharges ? possessionGstAmount || null : null,
+        share_application_money_membership_amount: isPossessionCharges
+          ? membershipAmount || null
+          : null,
+        legal_compliance_charges_amount: isPossessionCharges
+          ? legalComplianceAmount || null
+          : null,
+        development_charges_amount: isPossessionCharges
+          ? developmentChargesAmount || null
+          : null,
+        electrical_water_piped_gas_charges_amount: isPossessionCharges
+          ? electricalChargesAmount || null
+          : null,
+        provisional_maintenance_amount: isPossessionCharges
+          ? provisionalMaintenanceAmount || null
+          : null,
+        possessional_gst_amount: isPossessionCharges
+          ? possessionGstAmount
+            ? Math.round(possessionGstAmount * 100) / 100
+            : null
+          : null,
 
         additional_charges_total: additionalChargesTotal || null,
         offers_total: null,
-        net_payable_amount: finalAmount || null,
+        net_payable_amount: roundedFinalAmount,
 
         terms_and_conditions: termsAndConditions,
         notes: "",
@@ -3158,7 +3307,7 @@ const CostSheetCreate = () => {
           </div>
         </SectionCard>
 
-        {/* BASE PRICING */}
+        {/* ✅ FIXED: BASE PRICING with dropdown for all area types */}
         <SectionCard title="Base Pricing">
           <div className="cs-grid-3">
             <div className="cs-field">
@@ -3166,16 +3315,84 @@ const CostSheetCreate = () => {
               <select
                 className="cs-select"
                 value={areaBasis}
-                onChange={(e) => setAreaBasis(e.target.value)}
+                onChange={handleAreaBasisChange}
               >
                 <option value="RERA">RERA Area</option>
                 <option value="CARPET">Carpet Area</option>
                 <option value="SALEABLE">Saleable Area</option>
+                <option value="BUILTUP">Built-up Area</option>
+                <option value="RERA+BALCONY">RERA + Balcony</option>
+                <option value="CARPET+BALCONY">Carpet + Balcony</option>
               </select>
             </div>
 
+            {/* Show individual areas if unit is selected */}
+            {selectedInventory && (
+              <>
+                {selectedInventory.rera_area_sqft && (
+                  <div className="cs-field">
+                    <label className="cs-label">RERA Area (sq. ft.)</label>
+                    <input
+                      type="text"
+                      className="cs-input"
+                      value={selectedInventory.rera_area_sqft}
+                      readOnly
+                    />
+                  </div>
+                )}
+
+                {selectedInventory.carpet_sqft && (
+                  <div className="cs-field">
+                    <label className="cs-label">Carpet Area (sq. ft.)</label>
+                    <input
+                      type="text"
+                      className="cs-input"
+                      value={selectedInventory.carpet_sqft}
+                      readOnly
+                    />
+                  </div>
+                )}
+
+                {selectedInventory.saleable_sqft && (
+                  <div className="cs-field">
+                    <label className="cs-label">Saleable Area (sq. ft.)</label>
+                    <input
+                      type="text"
+                      className="cs-input"
+                      value={selectedInventory.saleable_sqft}
+                      readOnly
+                    />
+                  </div>
+                )}
+
+                {selectedInventory.builtup_sqft && (
+                  <div className="cs-field">
+                    <label className="cs-label">Built-up Area (sq. ft.)</label>
+                    <input
+                      type="text"
+                      className="cs-input"
+                      value={selectedInventory.builtup_sqft}
+                      readOnly
+                    />
+                  </div>
+                )}
+
+                {selectedInventory.balcony_area_sqft && (
+                  <div className="cs-field">
+                    <label className="cs-label">Balcony Area (sq. ft.)</label>
+                    <input
+                      type="text"
+                      className="cs-input"
+                      value={selectedInventory.balcony_area_sqft}
+                      readOnly
+                    />
+                  </div>
+                )}
+              </>
+            )}
+
             <div className="cs-field">
-              <label className="cs-label">Area (sq. ft.)</label>
+              <label className="cs-label">Total Area (sq. ft.)</label>
               <input
                 type="number"
                 className="cs-input"
@@ -3187,16 +3404,11 @@ const CostSheetCreate = () => {
             <div className="cs-field">
               <label className="cs-label">
                 Base Rate/sq. ft.{" "}
-                {effectiveBaseRate > 0 ? (
+                {project?.price_per_sqft && (
                   <span className="cs-hint">
-                    (Current: {formatINR(effectiveBaseRate)} / sq. ft.)
+                    (Project Default: {formatINR(project.price_per_sqft)} / sq.
+                    ft.)
                   </span>
-                ) : (
-                  project?.price_per_sqft && (
-                    <span className="cs-hint">
-                      (Project: {formatINR(project.price_per_sqft)})
-                    </span>
-                  )
                 )}
               </label>
 
@@ -3378,24 +3590,28 @@ const CostSheetCreate = () => {
           </button>
         </SectionCard>
 
-        {/* ✅ NEW COST BREAKDOWN */}
+        {/* COST BREAKDOWN */}
         <SectionCard title="Cost Breakdown">
           {/* Section 1: Main Cost */}
           <div className="cs-cost-section">
             <h3 className="cs-cost-section-title">Unit Cost Calculation</h3>
-            
+
             <div className="cs-cost-breakdown">
               <div className="cs-cost-line">
                 <span>Unit Cost after Discount</span>
-                <span className="cs-cost-amount">{formatINR(netBaseValue || 0)}</span>
-              </div>
-              
-              <div className="cs-cost-line">
-                <span>Additional Charges</span>
-                <span className="cs-cost-amount">{formatINR(additionalChargesTotal || 0)}</span>
+                <span className="cs-cost-amount">
+                  {formatINR(netBaseValue || 0)}
+                </span>
               </div>
 
-              {/* ✅ PARKING with EDITABLE PRICE */}
+              <div className="cs-cost-line">
+                <span>Additional Charges</span>
+                <span className="cs-cost-amount">
+                  {formatINR(additionalChargesTotal || 0)}
+                </span>
+              </div>
+
+              {/* Parking */}
               <div className="cs-parking-section">
                 <div className="cs-parking-header">
                   <span className="cs-label">Car Parking Required?</span>
@@ -3476,67 +3692,97 @@ const CostSheetCreate = () => {
 
               <div className="cs-cost-line">
                 <span>Car Parking Amount</span>
-                <span className="cs-cost-amount">{formatINR(parkingAmount || 0)}</span>
+                <span className="cs-cost-amount">
+                  {formatINR(parkingAmount || 0)}
+                </span>
               </div>
 
               <div className="cs-cost-line">
                 <span>Stamp Duty ({template?.stamp_duty_percent || 0}%)</span>
-                <span className="cs-cost-amount">{formatINR(stampAmount || 0)}</span>
+                <span className="cs-cost-amount">
+                  {formatINR(stampAmount || 0)}
+                </span>
               </div>
 
               <div className="cs-cost-line">
                 <span>GST ({template?.gst_percent || 0}%)</span>
-                <span className="cs-cost-amount">{formatINR(gstAmount || 0)}</span>
+                <span className="cs-cost-amount">
+                  {formatINR(gstAmount || 0)}
+                </span>
               </div>
 
               <div className="cs-cost-line cs-cost-subtotal">
                 <span>Total Cost (1)</span>
-                <span className="cs-cost-amount">{formatINR(mainCostTotal || 0)}</span>
+                <span className="cs-cost-amount">
+                  {formatINR(mainCostTotal || 0)}
+                </span>
               </div>
             </div>
           </div>
 
-          {/* Section 2: Possession Charges (if enabled) */}
+          {/* Section 2: Possession Charges */}
           {isPossessionCharges && (
             <div className="cs-cost-section cs-possession-section">
-              <h3 className="cs-cost-section-title">Possession Related Charges</h3>
-              
+              <h3 className="cs-cost-section-title">
+                Possession Related Charges
+              </h3>
+
               <div className="cs-cost-breakdown">
                 <div className="cs-cost-line">
                   <span>Share Application Money & Membership Fees</span>
-                  <span className="cs-cost-amount">{formatINR(membershipAmount || 0)}</span>
+                  <span className="cs-cost-amount">
+                    {formatINR(membershipAmount || 0)}
+                  </span>
                 </div>
 
                 <div className="cs-cost-line">
                   <span>Legal & Compliance Charges</span>
-                  <span className="cs-cost-amount">{formatINR(legalComplianceAmount || 0)}</span>
-                </div>
-
-                <div className="cs-cost-line">
-                  <span>Development Charges @ Rs. {template?.development_charges_psf || 0} PSF</span>
-                  <span className="cs-cost-amount">{formatINR(developmentChargesAmount || 0)}</span>
-                </div>
-
-                <div className="cs-cost-line">
-                  <span>Electrical, Water & Piped Gas Connection Charges</span>
-                  <span className="cs-cost-amount">{formatINR(electricalChargesAmount || 0)}</span>
+                  <span className="cs-cost-amount">
+                    {formatINR(legalComplianceAmount || 0)}
+                  </span>
                 </div>
 
                 <div className="cs-cost-line">
                   <span>
-                    Provisional Maintenance for {provisionalMaintenanceMonths} months @ Rs. {template?.provisional_maintenance_psf || 0}
+                    Development Charges @ Rs.{" "}
+                    {template?.development_charges_psf || 0} PSF
                   </span>
-                  <span className="cs-cost-amount">{formatINR(provisionalMaintenanceAmount || 0)}</span>
+                  <span className="cs-cost-amount">
+                    {formatINR(developmentChargesAmount || 0)}
+                  </span>
                 </div>
 
                 <div className="cs-cost-line">
-                  <span>GST on Possession Charges ({possessionGstPercent}%)</span>
-                  <span className="cs-cost-amount">{formatINR(possessionGstAmount || 0)}</span>
+                  <span>Electrical, Water & Piped Gas Connection Charges</span>
+                  <span className="cs-cost-amount">
+                    {formatINR(electricalChargesAmount || 0)}
+                  </span>
+                </div>
+
+                <div className="cs-cost-line">
+                  <span>
+                    Provisional Maintenance for {provisionalMaintenanceMonths}{" "}
+                    months @ Rs. {template?.provisional_maintenance_psf || 0}
+                  </span>
+                  <span className="cs-cost-amount">
+                    {formatINR(provisionalMaintenanceAmount || 0)}
+                  </span>
+                </div>
+
+                <div className="cs-cost-line">
+                  <span>
+                    GST on Possession Charges ({possessionGstPercent}%)
+                  </span>
+                  <span className="cs-cost-amount">
+                    {formatINR(possessionGstAmount || 0)}
+                  </span>
                 </div>
 
                 <div className="cs-cost-line cs-cost-subtotal">
                   <span>Total Possession Related Charges (2)</span>
-                  <span className="cs-cost-amount">{formatINR(possessionTotal || 0)}</span>
+                  <span className="cs-cost-amount">
+                    {formatINR(possessionTotal || 0)}
+                  </span>
                 </div>
               </div>
             </div>
@@ -3547,21 +3793,27 @@ const CostSheetCreate = () => {
             <div className="cs-cost-breakdown">
               <div className="cs-cost-line">
                 <span>Registration Amount</span>
-                <span className="cs-cost-amount">{formatINR(registrationAmount || 0)}</span>
+                <span className="cs-cost-amount">
+                  {formatINR(registrationAmount || 0)}
+                </span>
               </div>
             </div>
           </div>
 
-          {/* Summary before Grand Total */}
+          {/* Summary */}
           <div className="cs-cost-summary">
             <div className="cs-cost-summary-line">
               <span>Total Cost</span>
-              <span className="cs-cost-amount">{formatINR(mainCostTotal || 0)}</span>
+              <span className="cs-cost-amount">
+                {formatINR(mainCostTotal || 0)}
+              </span>
             </div>
             {isPossessionCharges && (
               <div className="cs-cost-summary-line">
                 <span>Total Possession Related Charges</span>
-                <span className="cs-cost-amount">{formatINR(possessionTotal || 0)}</span>
+                <span className="cs-cost-amount">
+                  {formatINR(possessionTotal || 0)}
+                </span>
               </div>
             )}
           </div>
@@ -3569,14 +3821,15 @@ const CostSheetCreate = () => {
           {/* Final Total */}
           <div className="cs-cost-final">
             <span>Grand Total</span>
-            <span className="cs-cost-amount">{formatINR(finalAmount || 0)}</span>
+            <span className="cs-cost-amount">
+              {formatINR(finalAmount || 0)}
+            </span>
           </div>
         </SectionCard>
 
-        {/* ✅ PAYMENT PLAN - conditional */}
+        {/* PAYMENT PLAN */}
         {planRequired && (
           <SectionCard title="Payment Plan">
-            {/* Master vs Custom toggle */}
             <div className="cs-radio-group" style={{ marginBottom: 16 }}>
               <label className="cs-radio">
                 <input
@@ -3598,7 +3851,6 @@ const CostSheetCreate = () => {
               </label>
             </div>
 
-            {/* Plan dropdown only for MASTER mode */}
             {paymentPlanType === "MASTER" && (
               <div
                 className="cs-field cs-field--full"
@@ -3651,7 +3903,11 @@ const CostSheetCreate = () => {
                         className="cs-input"
                         value={row.percentage}
                         onChange={(e) =>
-                          handlePlanRowChange(index, "percentage", e.target.value)
+                          handlePlanRowChange(
+                            index,
+                            "percentage",
+                            e.target.value
+                          )
                         }
                       />
                     </div>
@@ -3705,27 +3961,6 @@ const CostSheetCreate = () => {
             </button>
           </SectionCard>
         )}
-
-        {/* TERMS & NOTES - COMMENTED OUT AS PER REQUIREMENT */}
-        {/* 
-        <SectionCard title="Terms & Conditions">
-          <div className="cs-field cs-field--full">
-            <div className="cs-tnc-preview">
-              <div className="cs-tnc-preview-title">Terms &amp; Conditions</div>
-
-              {termsList.length ? (
-                <ol className="cs-tnc-list">
-                  {termsList.map((item, idx) => (
-                    <li key={idx}>{item}</li>
-                  ))}
-                </ol>
-              ) : (
-                <p className="cs-tnc-empty">No terms configured.</p>
-              )}
-            </div>
-          </div>
-        </SectionCard>
-        */}
 
         {/* ATTACHMENTS */}
         <SectionCard title="Attachments">

@@ -1,6 +1,11 @@
+/* ============================================
+   QUOTATION PREVIEW - CLEAN WHITE THEME
+   Primary Color: #102a54 (Dark Blue)
+   ============================================ */
+
 /* Page background */
 .qp-page {
-  background-color: #f5f5f7;
+  background-color: #f8f9fa;
   min-height: 100vh;
   padding: 32px 24px;
   box-sizing: border-box;
@@ -8,14 +13,14 @@
     "Segoe UI", sans-serif;
 }
 
-/* Outer card – same feel as sample screenshot */
+/* Outer card */
 .qp-inner {
   max-width: 95%;
   margin: 0 auto 40px;
   background-color: #ffffff;
   border-radius: 18px;
   padding: 24px 28px 32px;
-  box-shadow: 0 14px 35px rgba(15, 23, 42, 0.08);
+  box-shadow: 0 2px 8px rgba(16, 42, 84, 0.08);
   border: 1px solid #e5e7eb;
 }
 
@@ -23,6 +28,7 @@
   text-align: center;
   font-size: 14px;
   padding: 40px 0;
+  color: #6b7280;
 }
 
 /* Sections */
@@ -34,18 +40,23 @@
   margin-bottom: 24px;
 }
 
+/* Hide print-only elements in screen view */
+.qp-print-only {
+  display: none !important;
+}
+
 /* Titles / headings */
 .qp-title {
   font-size: 22px;
   font-weight: 700;
-  color: #5b4fff;
+  color: #102a54;
   margin: 0 0 12px;
 }
 
 .qp-section-title {
   font-size: 15px;
   font-weight: 600;
-  color: #5b4fff;
+  color: #102a54;
   margin: 0 0 10px;
 }
 
@@ -90,12 +101,12 @@
   border-radius: 14px;
   border: 1px solid #e5e7eb;
   padding: 16px 20px;
-  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  box-shadow: 0 1px 2px rgba(16, 42, 84, 0.04);
 }
 
 .qp-panel-soft {
-  background-color: #faf5ff;
-  border-color: #efe4ff;
+  background-color: #f8f9fa;
+  border-color: #d1d5db;
 }
 
 /* Customer block */
@@ -150,14 +161,14 @@
 }
 
 .qp-table thead tr {
-  background-color: #f9fafb;
+  background-color: #102a54;
 }
 
 .qp-table thead th {
   padding: 10px 14px;
   font-weight: 600;
-  color: #6b7280;
-  border-bottom: 1px solid #e5e7eb;
+  color: #ffffff;
+  border-bottom: 1px solid #102a54;
 }
 
 .qp-table tbody td {
@@ -186,19 +197,21 @@
 /* Download PDF button */
 .qp-download-btn {
   padding: 8px 14px;
-  border-radius: 999px;
+  border-radius: 8px;
   border: none;
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
-  background: linear-gradient(135deg, #4f46e5, #6366f1);
+  background: #102a54;
   color: #ffffff;
-  box-shadow: 0 8px 18px rgba(79, 70, 229, 0.25);
+  box-shadow: 0 2px 8px rgba(16, 42, 84, 0.25);
+  transition: all 0.2s;
 }
 
 .qp-download-btn:hover {
-  opacity: 0.95;
+  background: #0d1f3f;
   transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(16, 42, 84, 0.3);
 }
 
 .qp-plan-meta {
@@ -207,45 +220,7 @@
   margin-bottom: 8px;
 }
 
-/* ============ NEW COST BREAKDOWN STYLES ============ */
-
-/* Print-only unit details - Hidden on screen, shown in print */
-.qp-print-only {
-  display: none;
-}
-
-.qp-unit-details {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 16px;
-  background-color: #f9fafb;
-  border-radius: 10px;
-  border: 1px solid #e5e7eb;
-}
-
-.qp-unit-detail-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 14px;
-  padding: 8px 0;
-  border-bottom: 1px solid #e5e7eb;
-}
-
-.qp-unit-detail-row:last-child {
-  border-bottom: none;
-}
-
-.qp-unit-detail-row .qp-label {
-  font-weight: 600;
-  color: #374151;
-}
-
-.qp-unit-detail-row .qp-value {
-  font-weight: 500;
-  color: #111827;
-}
+/* ============ COST BREAKDOWN STYLES ============ */
 
 .qp-cost-section {
   margin-bottom: 24px;
@@ -254,7 +229,7 @@
 .qp-cost-section-title {
   font-size: 14px;
   font-weight: 600;
-  color: #374151;
+  color: #102a54;
   margin: 0 0 12px 0;
   padding-bottom: 8px;
   border-bottom: 2px solid #e5e7eb;
@@ -270,8 +245,9 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 10px 16px;
-  background-color: #f9fafb;
+  padding: 12px 16px;
+  background-color: #ffffff;
+  border: 1px solid #e5e7eb;
   border-radius: 8px;
   font-size: 14px;
 }
@@ -288,57 +264,59 @@
 }
 
 .qp-cost-subtotal {
-  background-color: #ede9ff;
-  border: 1px solid #d8b4fe;
+  background-color: #f0f9ff;
+  border: 1px solid #bae6fd;
   margin-top: 4px;
 }
 
 .qp-cost-subtotal span:first-child {
-  color: #4c1d95;
+  color: #102a54;
   font-weight: 600;
 }
 
 .qp-cost-subtotal .qp-cost-amount {
-  color: #5b21b6;
+  color: #102a54;
   font-size: 15px;
 }
 
+/* Possession Section - Clean White with Blue Border */
 .qp-possession-section {
-  background-color: #fef3c7;
+  background-color: #ffffff;
   padding: 16px;
   border-radius: 12px;
-  border: 1px solid #fde047;
+  border: 2px solid #102a54;
 }
 
 .qp-possession-section .qp-cost-section-title {
-  color: #92400e;
-  border-bottom-color: #fde047;
+  color: #102a54;
+  border-bottom-color: #102a54;
 }
 
 .qp-possession-section .qp-cost-line {
-  background-color: #fffbeb;
+  background-color: #f8f9fa;
+  border-color: #d1d5db;
 }
 
 .qp-possession-section .qp-cost-subtotal {
-  background-color: #fde047;
-  border-color: #facc15;
+  background-color: #e8eef5;
+  border-color: #102a54;
 }
 
 .qp-possession-section .qp-cost-subtotal span:first-child {
-  color: #713f12;
+  color: #102a54;
 }
 
 .qp-possession-section .qp-cost-subtotal .qp-cost-amount {
-  color: #854d0e;
+  color: #102a54;
 }
 
 /* Summary before Grand Total */
 .qp-cost-summary {
   margin-top: 20px;
   padding: 16px;
-  background-color: #f0fdf4;
+  background-color: #f8f9fa;
   border-radius: 12px;
-  border: 1px solid #86efac;
+  border: 1px solid #d1d5db;
 }
 
 .qp-cost-summary-line {
@@ -347,29 +325,29 @@
   align-items: center;
   padding: 8px 0;
   font-size: 14px;
-  color: #166534;
+  color: #374151;
   font-weight: 500;
 }
 
 .qp-cost-summary-line .qp-cost-amount {
-  color: #15803d;
+  color: #111827;
   font-weight: 600;
 }
 
 .qp-cost-summary-line:not(:last-child) {
-  border-bottom: 1px solid #bbf7d0;
+  border-bottom: 1px solid #e5e7eb;
 }
 
-/* Grand Total */
+/* Grand Total - Dark Blue Theme */
 .qp-cost-final {
   margin-top: 20px;
   padding: 20px;
-  background: linear-gradient(135deg, #5b21b6, #7c3aed);
+  background: linear-gradient(135deg, #102a54, #1a3d6f);
   border-radius: 12px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  box-shadow: 0 10px 25px rgba(91, 33, 182, 0.3);
+  box-shadow: 0 10px 25px rgba(16, 42, 84, 0.25);
 }
 
 .qp-cost-final span:first-child {
@@ -384,6 +362,21 @@
   font-size: 22px;
   font-weight: 700;
   color: #ffffff;
+}
+
+/* Unit Number Header (print only) */
+.qp-unit-print-header {
+  margin-bottom: 20px;
+}
+
+.qp-unit-number {
+  font-size: 18px;
+  font-weight: 700;
+  color: #102a54;
+  padding: 12px 16px;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  border: 2px solid #102a54;
 }
 
 /* Responsive */
@@ -411,11 +404,14 @@
 
   .qp-cost-line {
     font-size: 13px;
-    padding: 8px 12px;
+    padding: 10px 12px;
   }
 
   .qp-cost-final {
     padding: 16px;
+    flex-direction: column;
+    gap: 8px;
+    text-align: center;
   }
 
   .qp-cost-final span:first-child {
@@ -427,33 +423,9 @@
   }
 }
 
-/* ============ PRINT STYLES ============ */
+/* ============ PRINT STYLES - MINIMAL VERSION (SINGLE PAGE) ============ */
 @media print {
-  /* Root ko free rakho */
-  @page {
-    margin: 2mm 2mm;
-  }
-
-  header,
-  nav,
-  footer,
-  .app-header,
-  .app-footer,
-  .app-sidebar,
-  .sidebar,
-  .main-navbar {
-    display: none !important;
-  }
-
-  /* Jo main content wrapper hai usko full page pe lao */
-  .app-main,
-  .layout-content,
-  .page-wrapper {
-    margin: 0 !important;
-    padding: 0 !important;
-    min-height: auto !important;
-  }
-
+  /* ✅ Root reset */
   html,
   body,
   #root {
@@ -474,6 +446,13 @@
     print-color-adjust: exact;
   }
 
+  /* ✅ Page setup - single page */
+  @page {
+    margin: 10mm;
+    size: A4;
+  }
+
+  /* ✅ Page container - COMPACT */
   .qp-page {
     background: #ffffff !important;
     padding: 0 !important;
@@ -486,67 +465,206 @@
     box-shadow: none !important;
     border-radius: 0 !important;
     border: none !important;
-    padding: 12mm 10mm !important;
+    padding: 0 !important;
   }
 
-  /* ✅ HIDE: Header, Customer info, Project info, Download button */
+  /* ✅ HIDE: Everything except unit number and cost breakdown */
   .qp-section-header,
   .qp-download-btn,
-  .qp-print-hide {
+  .qp-print-hide,
+  nav,
+  footer,
+  header,
+  .navbar,
+  .footer,
+  .qp-header-top,
+  .qp-header-row,
+  .qp-cust-name,
+  .qp-cust-address,
+  .qp-cust-grid,
+  .qp-panel-soft,
+  .qp-table,
+  .qp-plan-meta {
     display: none !important;
   }
 
-  /* Hide customer & unit details section */
-  .qp-section:has(.qp-cust-name),
-  .qp-section:has(.qp-panel-soft) {
-    display: none !important;
-  }
-
-  /* ✅ SHOW: Print-only sections */
+  /* ✅ SHOW: Unit number and cost breakdown only */
   .qp-print-only {
     display: block !important;
   }
 
-  /* Sections ko beech me todne se bachao */
+  /* ✅ Sections - COMPACT spacing */
   .qp-section {
+    margin-bottom: 8px !important;
     page-break-inside: avoid;
   }
 
+  /* ✅ Unit Number Header - COMPACT */
+  .qp-unit-print-header {
+    margin-bottom: 10px !important;
+    page-break-inside: avoid;
+  }
+
+  .qp-unit-number {
+    font-size: 14px !important;
+    font-weight: 700 !important;
+    color: #102a54 !important;
+    padding: 6px 10px !important;
+    background-color: #f8f9fa !important;
+    border: 1.5px solid #102a54 !important;
+    border-radius: 4px !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* ✅ Section titles - COMPACT */
+  .qp-section-title {
+    font-size: 12px !important;
+    margin-bottom: 6px !important;
+    color: #102a54 !important;
+    font-weight: 600 !important;
+  }
+
+  /* ✅ Cost sections - COMPACT */
   .qp-cost-section {
+    margin-bottom: 8px !important;
     page-break-inside: avoid;
   }
 
-  /* Keep colors in print for better readability */
+  .qp-cost-section-title {
+    font-size: 11px !important;
+    margin: 0 0 6px 0 !important;
+    padding-bottom: 4px !important;
+    border-bottom: 1.5px solid #e5e7eb !important;
+  }
+
+  .qp-cost-breakdown {
+    gap: 4px !important;
+  }
+
+  /* ✅ Cost lines - COMPACT */
+  .qp-cost-line {
+    padding: 6px 10px !important;
+    font-size: 11px !important;
+    border-radius: 4px !important;
+    border: 1px solid #e5e7eb !important;
+  }
+
+  .qp-cost-line span:first-child {
+    font-size: 11px !important;
+  }
+
+  .qp-cost-amount {
+    font-size: 11px !important;
+  }
+
+  /* ✅ Subtotals - COMPACT */
+  .qp-cost-subtotal {
+    background-color: #f0f9ff !important;
+    border: 1px solid #bae6fd !important;
+    margin-top: 2px !important;
+    padding: 7px 10px !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .qp-cost-subtotal span:first-child {
+    font-size: 11px !important;
+    font-weight: 600 !important;
+  }
+
+  .qp-cost-subtotal .qp-cost-amount {
+    font-size: 12px !important;
+    font-weight: 600 !important;
+  }
+
+  /* ✅ Possession Section - COMPACT */
+  .qp-possession-section {
+    background-color: #ffffff !important;
+    border: 1.5px solid #102a54 !important;
+    padding: 8px !important;
+    border-radius: 6px !important;
+    margin-bottom: 8px !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .qp-possession-section .qp-cost-section-title {
+    color: #102a54 !important;
+    border-bottom: 1.5px solid #102a54 !important;
+  }
+
+  .qp-possession-section .qp-cost-line {
+    background-color: #f8f9fa !important;
+    border-color: #d1d5db !important;
+  }
+
+  .qp-possession-section .qp-cost-subtotal {
+    background-color: #e8eef5 !important;
+    border-color: #102a54 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* ✅ Summary - COMPACT */
+  .qp-cost-summary {
+    background-color: #f8f9fa !important;
+    padding: 8px !important;
+    border-radius: 6px !important;
+    border: 1px solid #d1d5db !important;
+    margin-top: 8px !important;
+    margin-bottom: 8px !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .qp-cost-summary-line {
+    padding: 4px 0 !important;
+    font-size: 11px !important;
+  }
+
+  .qp-cost-summary-line .qp-cost-amount {
+    font-size: 11px !important;
+  }
+
+  /* ✅ Grand Total - COMPACT but prominent */
   .qp-cost-final {
-    background: linear-gradient(135deg, #5b21b6, #7c3aed) !important;
+    background: linear-gradient(135deg, #102a54, #1a3d6f) !important;
+    color: #ffffff !important;
+    padding: 10px 12px !important;
+    border-radius: 6px !important;
+    margin-top: 8px !important;
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+    page-break-inside: avoid;
+  }
+
+  .qp-cost-final span:first-child {
+    font-size: 13px !important;
+    font-weight: 700 !important;
+    color: #ffffff !important;
+    text-transform: uppercase !important;
+  }
+
+  .qp-cost-final .qp-cost-amount {
+    font-size: 16px !important;
+    font-weight: 700 !important;
     color: #ffffff !important;
   }
 
-  .qp-cost-subtotal {
-    background-color: #ede9ff !important;
+  /* ✅ Force single page */
+  .qp-section,
+  .qp-cost-section,
+  .qp-cost-final {
+    page-break-inside: avoid !important;
+    page-break-after: auto !important;
   }
 
-  .qp-possession-section {
-    background-color: #fef3c7 !important;
-  }
-
-  .qp-cost-summary {
-    background-color: #f0fdf4 !important;
-  }
-
-  /* Unit details in print */
-  .qp-unit-details {
-    background-color: #f9fafb !important;
-    border: 1px solid #e5e7eb !important;
-  }
-
-  /* Ensure table borders print */
-  .qp-table {
-    border-collapse: collapse !important;
-  }
-
-  .qp-table thead th,
-  .qp-table tbody td {
-    border: 1px solid #e5e7eb !important;
+  /* Remove extra margins */
+  h2, h3 {
+    margin-top: 0 !important;
   }
 }
