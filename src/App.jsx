@@ -69,7 +69,7 @@ export default function App() {
           {/* Public Route */}
           <Route path="/login" element={<Auth />} />
           <Route path="/booking/kyc-review" element={<KycReview />} />
-
+          <Route path="/onsite-registration" element={<OnsiteRegistration />} />
           {/* Protected Routes with MasterLayout */}
           <Route element={<ProtectedRoute />}>
             <Route element={<MasterLayout />}>
@@ -83,10 +83,6 @@ export default function App() {
               <Route
                 path="/sales/projects/:projectId"
                 element={<ProjectSetupDetail />}
-              />
-              <Route
-                path="/onsite-registration"
-                element={<OnsiteRegistration />}
               />
 
               {/* Master Setup */}
@@ -151,7 +147,6 @@ export default function App() {
               <Route path="/booking/form" element={<BookingForm />} />
               {/* 🔹 NEW: Pending approvals (admin) */}
               <Route path="/booking/approvals" element={<BookingApprovals />} />
-
 
               {/* Cost Sheet */}
 
