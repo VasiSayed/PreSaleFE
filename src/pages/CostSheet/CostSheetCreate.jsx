@@ -3353,29 +3353,6 @@ const CostSheetCreate = () => {
                   </div>
                 )}
 
-                {selectedInventory.saleable_sqft && (
-                  <div className="cs-field">
-                    <label className="cs-label">Saleable Area (sq. ft.)</label>
-                    <input
-                      type="text"
-                      className="cs-input"
-                      value={selectedInventory.saleable_sqft}
-                      readOnly
-                    />
-                  </div>
-                )}
-
-                {selectedInventory.builtup_sqft && (
-                  <div className="cs-field">
-                    <label className="cs-label">Built-up Area (sq. ft.)</label>
-                    <input
-                      type="text"
-                      className="cs-input"
-                      value={selectedInventory.builtup_sqft}
-                      readOnly
-                    />
-                  </div>
-                )}
 
                 {selectedInventory.balcony_area_sqft && (
                   <div className="cs-field">
@@ -3403,13 +3380,7 @@ const CostSheetCreate = () => {
 
             <div className="cs-field">
               <label className="cs-label">
-                Base Rate/sq. ft.{" "}
-                {project?.price_per_sqft && (
-                  <span className="cs-hint">
-                    (Project Default: {formatINR(project.price_per_sqft)} / sq.
-                    ft.)
-                  </span>
-                )}
+                Base Rate/sq. ft.
               </label>
 
               <input

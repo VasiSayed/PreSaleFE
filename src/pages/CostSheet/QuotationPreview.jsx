@@ -815,7 +815,7 @@ const QuotationPreview = () => {
                   <span className="qp-value">{unit_no || "-"}</span>
                 </div>
                 <div className="qp-label-value">
-                  <span className="qp-label">Base Area:&nbsp;</span>
+                  <span className="qp-label">Total Area:&nbsp;</span>
                   <span className="qp-value">
                     {base_area_sqft ? `${fmt(base_area_sqft)} sq. ft.` : "-"}
                   </span>

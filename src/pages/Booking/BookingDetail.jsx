@@ -723,8 +723,9 @@ const channelPartnerName =
                               <th>#</th>
                               <th>Milestone</th>
                               <th>Percentage</th>
-                              <th>Days</th>
-                              <th>Due Date</th>
+                              {/* <th>Days</th>
+                              <th>Due Date</th> */}
+                              <th>Amount</th>
                             </tr>
                           </thead>
                           <tbody>
@@ -734,11 +735,15 @@ const channelPartnerName =
                                 <td>{slab.name || "NA"}</td>
                                 <td>{formatPercentage(slab.percentage)}</td>
                                 <td>
+                                    <span className="rupee-symbol">₹</span>
+                                    {formatAmount(slab.amount || slab.value || slab.total || 0)}
+                                  </td>
+                                {/* <td>
                                   {slab.days !== null && slab.days !== undefined
                                     ? slab.days
                                     : "NA"}
                                 </td>
-                                <td>{slab.due_date || "NA"}</td>
+                                <td>{slab.due_date || "NA"}</td> */}
                               </tr>
                             ))}
                           </tbody>

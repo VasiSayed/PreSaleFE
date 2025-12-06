@@ -11,7 +11,7 @@
 
 .booking-card {
   width: 100%;
-  max-width: 1180px;
+  max-width: 100%;
   margin: 0 auto;
   background: #ffffff;
   border-radius: 22px;
@@ -742,22 +742,28 @@
   margin-top: 4px;
 }
 
-
-.booking-brand-logo-wrap {
-  width: 64px;
-  height: 40px;
-  border-radius: 8px;
-  overflow: hidden;
-  background: rgba(15, 23, 42, 0.35); /* halka dark frame */
-  display: flex;
-  align-items: center;
-  justify-content: center;
+/* glowing subtle inner blur */
+.booking-brand-logo-wrap::before {
+  content: "";
+  position: absolute;
+  inset: 6px;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    rgba(255,255,255,0.5) 0%,
+    rgba(255,255,255,0) 80%
+  );
+  z-index: 1;
 }
 
+/* actual logo */
 .booking-brand-logo {
-  width: 100%;
-  height: 100%;
+  width: 88px;
+  height: 88px;
   object-fit: contain;
+  border-radius: 50%;
+  position: relative;
+  z-index: 2;
 }
 
 .booking-brand-text {
@@ -830,14 +836,19 @@
 }
 
 .booking-brand-logo-wrap {
-  width: 64px;
-  height: 40px;
-  border-radius: 8px;
-  overflow: hidden;
-  background: rgba(15, 23, 42, 0.35);
+  width: 110px;
+  height: 110px;
+  border-radius: 50%;
+  background: #ffffff;
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: 10px;
+  position: relative;
+  flex-shrink: 0;
+  box-shadow:
+    0 0 0 6px rgba(255,255,255,0.35),   /* outer ring */
+    0 8px 20px rgba(0,0,0,0.25);        /* shadow */
 }
 
 .booking-brand-logo {
