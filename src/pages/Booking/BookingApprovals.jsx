@@ -428,14 +428,14 @@ export default function BookingApprovals() {
 
           {activeTab === "BOOKING" && (
             <div className="ba-filter-item ba-checkbox">
-              <label>
+              {/* <label>
                 <input
                   type="checkbox"
                   checked={kycOnly}
                   onChange={(e) => setKycOnly(e.target.checked)}
                 />{" "}
                 KYC linked only
-              </label>
+              </label> */}
             </div>
           )}
 
@@ -484,7 +484,7 @@ export default function BookingApprovals() {
                   <th>Agreement Value</th>
                   <th>Booking Amount</th>
                   <th>Total Advance</th>
-                  <th>KYC Status</th>
+                  {/* <th>KYC Status</th> */}
                   <th>Status</th>
                   <th>Created At</th>
                 </tr>
@@ -571,9 +571,9 @@ export default function BookingApprovals() {
                       <td>{agreementValue}</td>
                       <td>{bookingAmount}</td>
                       <td>{totalAdvance}</td>
-                      <td>
+                      {/* <td>
                         <span className="ba-kyc-chip">{kycStatus}</span>
-                      </td>
+                      </td> */}
                       <td>{statusLabel}</td>
                       <td>{createdAt}</td>
                     </tr>
@@ -812,10 +812,10 @@ function BookingDetailView({ booking }) {
             <label>Status</label>
             <div>{toSentenceCase(statusLabel)}</div>
           </div>
-          <div>
+          {/* <div>
             <label>KYC Status</label>
             <div>{toSentenceCase(kycStatus)}</div>
-          </div>
+          </div> */}
         </div>
       </section>
 
