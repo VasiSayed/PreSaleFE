@@ -8,6 +8,7 @@ import "react-toastify/dist/ReactToastify.css";
 import { toSentenceCase } from "../../utils/text";
 
 const BOOK_API_PREFIX = "/book";
+const KYC_STORAGE_KEY = "BOOKING_KYC_REQUEST_ID";
 
 const DOC_TYPES = [
   { value: "AGREEMENT_PDF", label: "Agreement PDF" },
@@ -399,6 +400,7 @@ const BookingForm = () => {
     setKycDealAmount("");
     setKycRequestId(null);
     setKycRequestStatus(null);
+    localStorage.removeItem(KYC_STORAGE_KEY);
   };
 
   // --------- Payment plan ----------
@@ -744,8 +746,11 @@ useEffect(() => {
   useEffect(() => {
     const baseValue = Number(agreementValue) || 0;
     const additionalTotal = Number(additionalChargesTotal) || 0;
-    setAmountBeforeTaxes(baseValue + additionalTotal);
-  }, [agreementValue, additionalChargesTotal]);
+    const parkingTotalNum = Number(parkingTotal) || 0;
+
+    // Taxes (GST / Stamp) should be applied on unit + additional + parking
+    setAmountBeforeTaxes(baseValue + additionalTotal + parkingTotalNum);
+  }, [agreementValue, additionalChargesTotal, parkingTotal]);
 
   // ---------- Calculate taxes based on amount before taxes ----------
   useEffect(() => {
@@ -1208,6 +1213,11 @@ useEffect(() => {
 
       setKycRequestId(data.id);
       setKycRequestStatus(data.status || "PENDING");
+      try {
+        localStorage.setItem(KYC_STORAGE_KEY, String(data.id));
+      } catch (e) {
+        console.warn("Unable to persist KYC request id locally", e);
+      }
 
       alert("KYC request sent to project admin.");
     } catch (err) {
@@ -1841,7 +1851,34 @@ const possessionCharges = useMemo(() => {
 // Replace entire function with this
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-const handleSaveBooking = async () => {
+  const linkKycRequestToBooking = async (bookingId) => {
+    if (requiresKyc !== "YES") return;
+    const storedId = (() => {
+      try {
+        return localStorage.getItem(KYC_STORAGE_KEY);
+      } catch {
+        return null;
+      }
+    })();
+
+    const kycId = kycRequestId || storedId;
+    if (!bookingId || !kycId) return;
+
+    try {
+      await axiosInstance.post(
+        `${BOOK_API_PREFIX}/bookings/${bookingId}/link-kyc-request/`,
+        { kyc_request_id: kycId }
+      );
+      try {
+        localStorage.removeItem(KYC_STORAGE_KEY);
+      } catch {}
+    } catch (err) {
+      console.error("Failed to link KYC request to booking", err);
+      toast.warn("Booking saved, but failed to link KYC request.");
+    }
+  };
+
+  const handleSaveBooking = async () => {
   // ---------- VALIDATIONS ----------
   if (!selectedUnitId) {
     toast.error("Please select a tower & flat (unit) before saving.");
@@ -2079,7 +2116,7 @@ const handleSaveBooking = async () => {
         additional_charges: additionalChargesTotal,
         parking: parkingTotalAmount, // ✅ Parking in Unit Cost section
         stamp_duty: stampAmount,
-        stamp_duty_percent: Number(costTemplate?.gst_percent || 0),
+        stamp_duty_percent: Number(costTemplate?.stamp_duty_percent || 0),
         gst: gstAmount,
         gst_percent: Number(costTemplate?.gst_percent || 0),
         total_cost_1: Number(finalAmount || 0)
@@ -2351,6 +2388,11 @@ const handleSaveBooking = async () => {
       headers: { "Content-Type": "multipart/form-data" },
     });
 
+    const bookingId = res?.data?.id;
+    if (bookingId) {
+      await linkKycRequestToBooking(bookingId);
+    }
+
     toast.success("Booking saved successfully! 🎉");
     console.log("BOOKING CREATED:", res.data);
   } catch (err) {
@@ -2410,23 +2452,8 @@ const handleSaveBooking = async () => {
 };
 
   // --- TAX BREAKUP HELPERS (Booking Form) ---
-  const baseAmountBeforeTaxes = Math.max(
-    (finalAmount || 0) - (totalTaxes || 0),
-    0
-  );
-
-  // GST amount
-  // const gstAmount =
-  //   gstEnabled && costTemplate
-  //     ? (baseAmountBeforeTaxes * Number(costTemplate.gst_percent || 0)) / 100
-  //     : 0;
-
-  // Stamp Duty amount
-  const stampAmount =
-    stampDutyEnabled && costTemplate
-      ? (baseAmountBeforeTaxes * Number(costTemplate.stamp_duty_percent || 0)) /
-        100
-      : 0;
+  // Stamp Duty amount (aligned with calculated stampDutyAmount)
+  const stampAmount = Number(stampDutyAmount) || 0;
 
   // Registration amount (fixed)
   const registrationAmount =

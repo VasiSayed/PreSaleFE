@@ -1098,9 +1098,19 @@ const LeadStaticPage = () => {
     );
   };
 
-  const handleStageClick = (stage) => {
+  const handleStageClick = (stage, canMoveForwardOnly = true) => {
     if (!lead) return;
     if (activeStageId && stage.id === activeStageId) return;
+
+    // prevent moving backward
+    if (
+      canMoveForwardOnly &&
+      activeStageOrder != null &&
+      stage.order <= activeStageOrder
+    ) {
+      toast.error("Cannot move back to a previous stage.");
+      return;
+    }
 
     setStageModal({
       open: true,
@@ -1119,7 +1129,12 @@ const LeadStaticPage = () => {
 
     if (activeStageId && stageId === activeStageId) return;
 
-    handleStageClick(stage); // same modal / same flow
+    if (activeStageOrder != null && stage.order <= activeStageOrder) {
+      toast.error("Cannot move back to a previous stage.");
+      return;
+    }
+
+    handleStageClick(stage, true); // same modal / same flow
   };
 
   const handleCancelStageChange = () => {
@@ -1444,9 +1459,43 @@ const LeadStaticPage = () => {
       <div className="lead-header">
         {/* LEFT: Lead name + basic info */}
         <div className="lead-header-left">
-          {/* Top bar: name centered like screenshot */}
+          {/* Top bar: customer name in compact field style */}
           <div className="lead-title-bar">
-            <h1 className="lead-title">{displayFullName}</h1>
+            <div className="field-compact">
+              <label>Customer Name:</label>
+              <input type="text" value={displayFullName} readOnly />
+            </div>
+
+            <div className="field-compact lead-status-inline">
+              <label>Lead Status:</label>
+              <div className="field-stage-select-wrap">
+                <select
+                  value={activeStageId || ""}
+                  onChange={handleStageDropdownChange}
+                  disabled={!stages.length}
+                >
+                  <option value="">
+                    {stages.length ? "Select stage" : "No stages configured"}
+                  </option>
+                  {stages.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {toTitleCase(String(s.name || "").replace(/_/g, " "))}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  className="stage-history-icon-btn"
+                  onClick={() => setStageHistoryModalOpen(true)}
+                  disabled={!stageHistory.length}
+                  title="View stage history"
+                >
+                  <span className="stage-history-icon" aria-hidden="true">
+                    🕓
+                  </span>
+                </button>
+              </div>
+            </div>
           </div>
 
           <div className="lead-header-grid">
@@ -1484,38 +1533,7 @@ const LeadStaticPage = () => {
               />
             </div>
 
-            <div className="field-compact stage-field">
-              <label>Lead Status:</label>
-              <div className="field-stage-select-wrap">
-                <select
-                  value={activeStageId || ""}
-                  onChange={handleStageDropdownChange}
-                  disabled={!stages.length}
-                >
-                  <option value="">
-                    {stages.length ? "Select stage" : "No stages configured"}
-                  </option>
-                  {stages.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {toTitleCase(String(s.name || "").replace(/_/g, " "))}
-                    </option>
-                  ))}
-                </select>
-
-                {/* small icon button – open stage history modal */}
-                <button
-                  type="button"
-                  className="stage-history-icon-btn"
-                  onClick={() => setStageHistoryModalOpen(true)}
-                  disabled={!stageHistory.length}
-                  title="View stage history"
-                >
-                  <span className="stage-history-icon" aria-hidden="true">
-                    🕓
-                  </span>
-                </button>
-              </div>
-            </div>
+           
           </div>
 
         </div>
@@ -1594,27 +1612,36 @@ const LeadStaticPage = () => {
         {stages.map((stage, idx) => {
           let extraClass = "";
 
+          const firstOrder = stages.length
+            ? Math.min(...stages.map((s) => s.order ?? 0))
+            : null;
+          const isFirstStage = firstOrder != null && stage.order === firstOrder;
+
           if (activeStageId) {
             if (stage.id === activeStageId) {
-              extraClass = "stage-active";
+              extraClass = "stage-current";
             } else if (
               activeStageOrder != null &&
               stage.order < activeStageOrder
             ) {
-              extraClass = "stage-done";
+              extraClass = isFirstStage ? "stage-origin" : "stage-done";
             } else {
               extraClass = "stage-pending";
             }
           } else {
-            extraClass = idx === 0 ? "stage-active" : "stage-pending";
+            extraClass =
+              isFirstStage && idx === 0 ? "stage-origin" : "stage-pending";
           }
+
+          const canMoveForwardOnly =
+            activeStageOrder == null || stage.order > activeStageOrder;
 
           return (
             <div
               key={stage.id}
               className={`stage-item ${extraClass}`}
-              onClick={() => handleStageClick(stage)}
-              style={{ cursor: "pointer" }}
+              onClick={() => handleStageClick(stage, canMoveForwardOnly)}
+              style={{ cursor: canMoveForwardOnly ? "pointer" : "not-allowed" }}
             >
               <span className="stage-dot" />
               <span className="stage-label">
@@ -2513,29 +2540,31 @@ const LeadStaticPage = () => {
               )}
             </div>
 
-            {/* Upload extra proposal docs – same as before */}
-            <div className="proposal-attachment">
-              <label>Attachment:</label>
-              <div className="proposal-upload-row">
-                <input
-                  type="file"
-                  multiple
-                  onChange={(e) => {
-                    const files = Array.from(e.target.files || []);
-                    setProposalFiles(files);
-                  }}
-                />
-                {proposalFiles.length > 0 && (
-                  <div className="proposal-file-list">
-                    {proposalFiles.map((f) => (
-                      <div key={f.name} className="proposal-file-item">
-                        {f.name}
-                      </div>
-                    ))}
-                  </div>
-                )}
+            {/* Upload extra proposal docs – hide if booking or quotation already present */}
+            {!bookingId && !quotationId && (
+              <div className="proposal-attachment">
+                <label>Attachment:</label>
+                <div className="proposal-upload-row">
+                  <input
+                    type="file"
+                    multiple
+                    onChange={(e) => {
+                      const files = Array.from(e.target.files || []);
+                      setProposalFiles(files);
+                    }}
+                  />
+                  {proposalFiles.length > 0 && (
+                    <div className="proposal-file-list">
+                      {proposalFiles.map((f) => (
+                        <div key={f.name} className="proposal-file-item">
+                          {f.name}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
+            )}
           </div>
         )}
       </div>
