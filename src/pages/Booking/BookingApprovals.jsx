@@ -488,6 +488,8 @@ export default function BookingApprovals() {
                   <th>Status</th>
                   <th>Created At</th>
                 </tr>
+
+                
               </thead>
               <tbody>
                 {filteredRows.map((b) => {
