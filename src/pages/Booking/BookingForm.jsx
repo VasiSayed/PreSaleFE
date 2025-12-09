@@ -1804,10 +1804,12 @@ const BookingForm = () => {
 
     // Possession base total (GST not applied on shareFee as per earlier logic)
     const baseTotal = devAmount + electrical + provAmount;
-
+    console.log('my base totoal',baseTotal);
+    
     // GST on possession (18%)
     const possessionGst = (baseTotal * 18) / 100;
-
+    console.log(possessionGst);
+    
     // Total with GST
     const totalWithGst = baseTotal + possessionGst;
 
