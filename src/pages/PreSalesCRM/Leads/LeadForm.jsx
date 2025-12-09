@@ -311,6 +311,7 @@ export default function LeadForm() {
 
   // dynamic data
   const [projects, setProjects] = useState([]);
+  const [emailRequired, setEmailRequired] = useState(false);
   const [masters, setMasters] = useState(null);
   const [loadingMasters, setLoadingMasters] = useState(false);
   const [loadingLead, setLoadingLead] = useState(false);
@@ -322,6 +323,12 @@ export default function LeadForm() {
         const list =
           data?.projects || data?.project_list || data?.results || [];
         setProjects(list);
+
+        // If a project is already selected, re-evaluate email requirement
+        if (form.project_id) {
+          const project = list.find((p) => String(p.id) === String(form.project_id));
+          setEmailRequired(!!project?.email_for_lead);
+        }
       })
       .catch((err) => {
         console.error("Failed to load scope", err);
@@ -378,8 +385,16 @@ export default function LeadForm() {
   useEffect(() => {
     if (!form.project_id) {
       setMasters(null);
+      setEmailRequired(false);
       return;
     }
+
+    // Toggle email required based on selected project's flag
+    const selectedProj = projects.find(
+      (p) => String(p.id) === String(form.project_id)
+    );
+    setEmailRequired(!!selectedProj?.email_for_lead);
+
     setLoadingMasters(true);
     api
       .get(URLS.leadMasters, {
@@ -504,6 +519,7 @@ export default function LeadForm() {
 
     FIELDS.forEach((field) => {
       if (!field.required) return;
+      if (field.name === "email" && !emailRequired) return; // email optional unless project demands
       const v = form[field.name];
       if (v === "" || v === null || v === undefined) {
         missing.push(field.label);
@@ -535,6 +551,15 @@ export default function LeadForm() {
     if (!normalized.project_id) {
       alert("Please select a project");
       return;
+    }
+
+    // If email is mandatory for this project, enforce presence
+    if (emailRequired) {
+      const email = (normalized.email || "").trim();
+      if (!email) {
+        alert("Email is required for this project.");
+        return;
+      }
     }
 
     const projectLeadId =
@@ -586,6 +611,24 @@ export default function LeadForm() {
     };
 
     try {
+      // If email verification is required for this project, trigger email OTP start
+      if (emailRequired) {
+        try {
+          await api.post("/sales/sales-leads/email-otp/start/", {
+            email: normalized.email,
+          });
+        } catch (otpErr) {
+          console.error("Failed to start email verification", otpErr);
+          const data = otpErr?.response?.data;
+          const msg =
+            (data && data.detail) ||
+            (typeof data === "string" ? data : null) ||
+            "Failed to start email verification.";
+          alert(msg);
+          return;
+        }
+      }
+
       if (isEditMode) {
         await LeadAPI.update(id, leadPayload);
         alert("Lead updated successfully!");

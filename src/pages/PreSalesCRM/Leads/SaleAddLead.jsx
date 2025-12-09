@@ -446,6 +446,7 @@ const SaleAddLead = ({ handleLeadSubmit, leadId: propLeadId }) => {
   });
 
   const [projects, setProjects] = useState([]);
+  const [emailRequired, setEmailRequired] = useState(false);
   const [masters, setMasters] = useState(null);
   const [loadingMasters, setLoadingMasters] = useState(false);
 
@@ -513,6 +514,15 @@ const SaleAddLead = ({ handleLeadSubmit, leadId: propLeadId }) => {
         // Auto-select if only 1 project (create mode only)
         if (list.length === 1 && !isEditing) {
           setForm((prev) => ({ ...prev, project_id: list[0].id }));
+          setEmailRequired(!!list[0]?.email_for_lead);
+        }
+
+        // If a project already selected, refresh email requirement
+        if (form.project_id) {
+          const proj = list.find(
+            (p) => String(p.id) === String(form.project_id)
+          );
+          setEmailRequired(!!proj?.email_for_lead);
         }
       })
       .catch((err) => {
@@ -525,8 +535,11 @@ const SaleAddLead = ({ handleLeadSubmit, leadId: propLeadId }) => {
   useEffect(() => {
     if (!form.project_id) {
       setMasters(null);
+      setEmailRequired(false);
       return;
     }
+    const proj = projects.find((p) => String(p.id) === String(form.project_id));
+    setEmailRequired(!!proj?.email_for_lead);
     setLoadingMasters(true);
     api
       .get(URLS.leadMasters, {
@@ -1209,6 +1222,7 @@ const SaleAddLead = ({ handleLeadSubmit, leadId: propLeadId }) => {
 
     FIELDS.forEach((field) => {
       if (!field.required || isFieldHidden(field)) return;
+      if (field.name === "email" && !emailRequired) return;
       const v = form[field.name];
       if (v === "" || v === null || v === undefined) {
         missing.push(field.label);
@@ -1350,7 +1364,7 @@ const SaleAddLead = ({ handleLeadSubmit, leadId: propLeadId }) => {
       };
 
       // Email OTP check (only for create)
-      if (normalized.email && !emailVerified) {
+      if (emailRequired && normalized.email && !emailVerified) {
         setPendingSaveBody(body);
         setShowEmailOtpModal(true);
         setEmailOtpCode("");
@@ -1395,7 +1409,10 @@ const SaleAddLead = ({ handleLeadSubmit, leadId: propLeadId }) => {
     const label = (
       <label htmlFor={id} className="form-label">
         {field.label}
-        {field.required && <span className="required">*</span>}
+        {((field.name === "email" && emailRequired) ||
+          (field.name !== "email" && field.required)) && (
+          <span className="required">*</span>
+        )}
       </label>
     );
 
@@ -1723,7 +1740,7 @@ const SaleAddLead = ({ handleLeadSubmit, leadId: propLeadId }) => {
             })}
 
             {/* Email info for lead group */}
-            {groupKey === "lead" && (
+            {groupKey === "lead" && emailRequired && (
               <div className="form-row">
                 <div className="form-field-full">
                   <span
