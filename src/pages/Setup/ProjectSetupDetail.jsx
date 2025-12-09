@@ -175,7 +175,7 @@ const saveMilestonePlan = async (plan) => {
       start_date: plan.start_date,
       end_date: plan.end_date,
       calc_mode: plan.calc_mode,
-      amount: plan.amount,
+      amount: plan.amount ? Number(plan.amount) : null,
       enable_pg_integration: plan.enable_pg_integration,
       status: plan.status,
       notes: plan.notes,
@@ -199,6 +199,39 @@ const saveMilestonePlan = async (plan) => {
     toast.error("Failed to save milestone plan");
   }
 };
+
+  // ========= Milestone Slabs =========
+
+  const handleMilestoneSlabChange = (id, field, value) => {
+    setMilestoneSlabs((prev) =>
+      prev.map((s) => (s.id === id ? { ...s, [field]: value } : s))
+    );
+  };
+
+  const saveMilestoneSlab = async (slab) => {
+    try {
+      const payload = {
+        plan: slab.plan,
+        orderindex: slab.orderindex,
+        name: slab.name,
+        percentage: slab.percentage ? Number(slab.percentage) : null,
+        amount: slab.amount ? Number(slab.amount) : null,
+        remarks: slab.remarks || "",
+      };
+      const res = await axiosInstance.patch(
+        `/client/milestone-slabs/${slab.id}/`,
+        payload
+      );
+      setMilestoneSlabs((prev) =>
+        prev.map((s) => (s.id === slab.id ? res.data : s))
+      );
+      toast.success(`Milestone slab "${slab.name}" updated`);
+    } catch (err) {
+      console.error(err);
+      setError(`Failed to save milestone slab ${slab.id}.`);
+      toast.error("Failed to save milestone slab");
+    }
+  };
 
 
   // ========= Payment Plans =========
@@ -429,79 +462,180 @@ const saveProjectBank = async (bank) => {
       {/* MILESTONE PLANS SECTION */}
       <section className="psd-section">
         <h2>Milestone Plans</h2>
-        <table className="psd-table">
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>Name</th>
-              <th>Status</th>
-              <th>Calc Mode</th>
-              <th>Amount</th>
-              <th>Notes</th>
-              <th>Save</th>
-            </tr>
-          </thead>
-          <tbody>
-            {milestonePlans.map((p) => (
-              <tr key={p.id}>
-                <td>{p.id}</td>
-                <td>
-                  <input
-                    value={p.name || ""}
-                    onChange={(e) =>
-                      handleMilestonePlanChange(p.id, "name", e.target.value)
-                    }
-                  />
-                </td>
-                <td>
-                  <input
-                    value={p.status || ""}
-                    onChange={(e) =>
-                      handleMilestonePlanChange(p.id, "status", e.target.value)
-                    }
-                  />
-                </td>
-                <td>
-                  <input
-                    value={p.calc_mode || ""}
-                    onChange={(e) =>
-                      handleMilestonePlanChange(
-                        p.id,
-                        "calc_mode",
-                        e.target.value
-                      )
-                    }
-                  />
-                </td>
-                <td>
-                  <input
-                    type="number"
-                    value={p.amount || ""}
-                    onChange={(e) =>
-                      handleMilestonePlanChange(p.id, "amount", e.target.value)
-                    }
-                  />
-                </td>
-                <td>
-                  <input
-                    value={p.notes || ""}
-                    onChange={(e) =>
-                      handleMilestonePlanChange(p.id, "notes", e.target.value)
-                    }
-                  />
-                </td>
-                <td>
-                  <button onClick={() => saveMilestonePlan(p)}>Save</button>
-                </td>
-              </tr>
-            ))}
-            {milestonePlans.length === 0 && (
-              <tr>
-                <td colSpan="7">No milestone plans found.</td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+        {milestonePlans.length === 0 ? (
+          <div>No milestone plans found.</div>
+        ) : (
+          milestonePlans.map((p) => {
+            // Prefer slabs returned inline with the plan; fall back to global list
+            const planSlabs =
+              (Array.isArray(p.slabs) && p.slabs.length > 0
+                ? p.slabs
+                : milestoneSlabs
+              ).filter((s) => s.plan === p.id || String(s.plan) === String(p.id) || !s.plan);
+            return (
+              <div key={p.id} style={{ marginBottom: "32px" }}>
+                <table className="psd-table" style={{ marginBottom: "16px" }}>
+                  <thead>
+                    <tr>
+                      <th>ID</th>
+                      <th>Name</th>
+                      <th>Status</th>
+                      <th>Calc Mode</th>
+                      <th>Amount</th>
+                      <th>Notes</th>
+                      <th>Save</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>{p.id}</td>
+                      <td>
+                        <input
+                          value={p.name || ""}
+                          onChange={(e) =>
+                            handleMilestonePlanChange(p.id, "name", e.target.value)
+                          }
+                        />
+                      </td>
+                      <td>
+                        <input
+                          value={p.status || ""}
+                          onChange={(e) =>
+                            handleMilestonePlanChange(p.id, "status", e.target.value)
+                          }
+                        />
+                      </td>
+                      <td>
+                        <select
+                          value={p.calc_mode || "AMOUNT"}
+                          onChange={(e) =>
+                            handleMilestonePlanChange(
+                              p.id,
+                              "calc_mode",
+                              e.target.value
+                            )
+                          }
+                        >
+                          <option value="AMOUNT">Amount</option>
+                          <option value="PERCENTAGE">Percentage</option>
+                        </select>
+                      </td>
+                      <td>
+                        <input
+                          type="number"
+                          value={p.amount || ""}
+                          onChange={(e) =>
+                            handleMilestonePlanChange(p.id, "amount", e.target.value)
+                          }
+                          step="0.01"
+                        />
+                      </td>
+                      <td>
+                        <input
+                          value={p.notes || ""}
+                          onChange={(e) =>
+                            handleMilestonePlanChange(p.id, "notes", e.target.value)
+                          }
+                        />
+                      </td>
+                      <td>
+                        <button onClick={() => saveMilestonePlan(p)}>Save</button>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+
+                {/* Milestone Slabs for this Plan */}
+                <div style={{ marginLeft: "24px", marginTop: "16px" }}>
+                  <h3 style={{ fontSize: "16px", marginBottom: "12px" }}>
+                    Milestone Slabs for Plan: {p.name}
+                  </h3>
+                  {planSlabs.length > 0 ? (
+                    <table className="psd-table">
+                      <thead>
+                        <tr>
+                          <th>ID</th>
+                          <th>Order</th>
+                          <th>Name</th>
+                          <th>Percentage</th>
+                          <th>Amount</th>
+                          <th>Remarks</th>
+                          <th>Save</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {planSlabs.map((slab) => (
+                          <tr key={slab.id}>
+                            <td>{slab.id}</td>
+                            <td>{slab.order_index ?? slab.orderindex ?? "-"}</td>
+                            <td>
+                              <input
+                                value={slab.name || ""}
+                                onChange={(e) =>
+                                  handleMilestoneSlabChange(slab.id, "name", e.target.value)
+                                }
+                              />
+                            </td>
+                            <td>
+                              <input
+                                type="number"
+                                value={slab.percentage || ""}
+                                onChange={(e) =>
+                                  handleMilestoneSlabChange(
+                                    slab.id,
+                                    "percentage",
+                                    e.target.value
+                                  )
+                                }
+                                step="0.01"
+                                disabled={p.calc_mode === "AMOUNT"}
+                              />
+                            </td>
+                            <td>
+                              <input
+                                type="number"
+                                value={slab.amount || ""}
+                                onChange={(e) =>
+                                  handleMilestoneSlabChange(
+                                    slab.id,
+                                    "amount",
+                                    e.target.value
+                                  )
+                                }
+                                step="0.01"
+                              />
+                            </td>
+                            <td>
+                              <input
+                                value={slab.remarks || ""}
+                                onChange={(e) =>
+                                  handleMilestoneSlabChange(
+                                    slab.id,
+                                    "remarks",
+                                    e.target.value
+                                  )
+                                }
+                              />
+                            </td>
+                            <td>
+                              <button onClick={() => saveMilestoneSlab(slab)}>
+                                Save
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  ) : (
+                    <div style={{ padding: "12px", color: "#666" }}>
+                      No milestone slabs found for this plan.
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })
+        )}
       </section>
 
       {/* PAYMENT PLANS SECTION */}

@@ -7,7 +7,7 @@ export default function MilestonePlanForm({
   projects,
   users,
   isOpen,
-  onSuccess
+  onSuccess,
 }) {
   const [milestoneForm, setMilestoneForm] = useState({
     name: "",
@@ -17,7 +17,7 @@ export default function MilestonePlanForm({
     enddate: "",
     responsibleuser: "",
     amount: "",
-    calcmode: "PERCENTAGE",
+    calcmode: "AMOUNT",
     enablepgintegration: false,
     verifiedby: "",
     verifieddate: "",
@@ -70,8 +70,12 @@ export default function MilestonePlanForm({
 
   const handleSaveMilestone = async (e) => {
     e.preventDefault();
-    
-    if (!milestoneForm.name || !milestoneForm.project || !milestoneForm.responsibleuser) {
+
+    if (
+      !milestoneForm.name ||
+      !milestoneForm.project ||
+      !milestoneForm.responsibleuser
+    ) {
       alert("Milestone Name, Project, and Responsible User are required");
       return;
     }
@@ -91,50 +95,56 @@ export default function MilestonePlanForm({
     }
 
     try {
-      // Step 1: Create Milestone Plan
-      // Step 1: Create Milestone Plan
-const plan = await MilestoneAPI.createPlan({
-  name: milestoneForm.name,
-  project: Number(milestoneForm.project),
-  tower: milestoneForm.tower ? Number(milestoneForm.tower) : null,
-  start_date: milestoneForm.startdate || null,          // ← FIXED: start_date
-  end_date: milestoneForm.enddate || null,              // ← FIXED: end_date
-  responsible_user: Number(milestoneForm.responsibleuser),  // ← FIXED: responsible_user
-  calc_mode: milestoneForm.calcmode,                    // ← FIXED: calc_mode
-  amount: usingPct ? null : Number(milestoneForm.amount || 0),
-  enable_pg_integration: !!milestoneForm.enablepgintegration,  // ← FIXED: enable_pg_integration
-  verified_by: milestoneForm.verifiedby ? Number(milestoneForm.verifiedby) : null,  // ← FIXED: verified_by
-  verified_date: milestoneForm.verifieddate || null,    // ← FIXED: verified_date
-  status: milestoneForm.status || "DRAFT",
-  notes: milestoneForm.notes || "",
-});
+      // Prepare slabs array
+      const slabs = milestoneSlabs
+        .filter((s) => s.name) // Only include slabs with names
+        .map((s, idx) => {
+          const slab = {
+            name: s.name,
+            remarks: s.remarks || "",
+          };
 
+          if (usingPct) {
+            if (s.percentage) {
+              slab.percentage = Number(s.percentage);
+            }
+          } else {
+            if (s.amount) {
+              slab.amount = Number(s.amount);
+            }
+          }
 
-      // Step 2: Create each Slab separately
-      for (let i = 0; i < milestoneSlabs.length; i++) {
-        const s = milestoneSlabs[i];
-        if (!s.name) continue;
+          return slab;
+        })
+        .filter((s) => usingPct ? s.percentage !== undefined : s.amount !== undefined); // Filter out incomplete slabs
 
-        const payload = {
-          plan: plan.id,
-          orderindex: i + 1,
-          name: s.name,
-          remarks: s.remarks || "",
-        };
+      // Prepare bulk create payload with nested slabs
+      const bulkPayload = [
+        {
+          name: milestoneForm.name,
+          project: Number(milestoneForm.project),
+          tower: milestoneForm.tower ? Number(milestoneForm.tower) : null,
+          start_date: milestoneForm.startdate || null,
+          end_date: milestoneForm.enddate || null,
+          responsible_user: Number(milestoneForm.responsibleuser),
+          calc_mode: milestoneForm.calcmode,
+          amount: usingPct ? null : Number(milestoneForm.amount || 0),
+          enable_pg_integration: !!milestoneForm.enablepgintegration,
+          verified_by: milestoneForm.verifiedby
+            ? Number(milestoneForm.verifiedby)
+            : null,
+          verified_date: milestoneForm.verifieddate || null,
+          status: milestoneForm.status || "DRAFT",
+          notes: milestoneForm.notes || "",
+          slabs: slabs,
+        },
+      ];
 
-        if (usingPct) {
-          if (!s.percentage) continue;
-          payload.percentage = Number(s.percentage);
-        } else {
-          if (!s.amount) continue;
-          payload.amount = Number(s.amount);
-        }
-
-        await MilestoneAPI.createSlab(payload);
-      }
+      // Create milestone plan with slabs in one API call
+      await MilestoneAPI.bulkCreate(bulkPayload);
 
       alert("Milestone plan saved successfully!");
-      
+
       setMilestoneForm({
         name: "",
         project: "",
@@ -150,8 +160,10 @@ const plan = await MilestoneAPI.createPlan({
         status: "DRAFT",
         notes: "",
       });
-      setMilestoneSlabs([{ name: "", percentage: "", amount: "", remarks: "" }]);
-      
+      setMilestoneSlabs([
+        { name: "", percentage: "", amount: "", remarks: "" },
+      ]);
+
       await loadMilestonePlans();
       onSuccess && onSuccess();
     } catch (err) {
@@ -161,8 +173,9 @@ const plan = await MilestoneAPI.createPlan({
   };
 
   // Get towers for selected project
-  const towersForMilestone = projects.find((p) => String(p.id) === String(milestoneForm.project))
-    ?.towers || [];
+  const towersForMilestone =
+    projects.find((p) => String(p.id) === String(milestoneForm.project))
+      ?.towers || [];
 
   return (
     <div className="milestone-container">
@@ -193,7 +206,9 @@ const plan = await MilestoneAPI.createPlan({
                     <td>{mp.calcmode}</td>
                     <td>{mp.amount ?? "-"}</td>
                     <td>
-                      <span className={`status-badge status-${mp.status?.toLowerCase()}`}>
+                      <span
+                        className={`status-badge status-${mp.status?.toLowerCase()}`}
+                      >
                         {mp.status}
                       </span>
                     </td>
@@ -206,7 +221,10 @@ const plan = await MilestoneAPI.createPlan({
       )}
 
       {/* New Milestone Plan Form */}
-      <div className="project-form-container" style={{ marginTop: milestonePlans.length > 0 ? '24px' : '0' }}>
+      <div
+        className="project-form-container"
+        style={{ marginTop: milestonePlans.length > 0 ? "24px" : "0" }}
+      >
         <div className="form-header">
           <h3>Create Milestone Plan</h3>
           <button type="button" className="btn-import">
@@ -279,7 +297,9 @@ const plan = await MilestoneAPI.createPlan({
                 className="field-input"
                 type="date"
                 value={milestoneForm.startdate}
-                onChange={(e) => updateMilestoneForm("startdate", e.target.value)}
+                onChange={(e) =>
+                  updateMilestoneForm("startdate", e.target.value)
+                }
               />
             </div>
 
@@ -300,7 +320,9 @@ const plan = await MilestoneAPI.createPlan({
               <select
                 className="field-input"
                 value={milestoneForm.responsibleuser}
-                onChange={(e) => updateMilestoneForm("responsibleuser", e.target.value)}
+                onChange={(e) =>
+                  updateMilestoneForm("responsibleuser", e.target.value)
+                }
                 required
               >
                 <option value="">Select User</option>
@@ -320,13 +342,12 @@ const plan = await MilestoneAPI.createPlan({
               <select
                 className="field-input"
                 value={milestoneForm.calcmode}
-                onChange={(e) => updateMilestoneForm("calcmode", e.target.value)}
+                onChange={(e) =>
+                  updateMilestoneForm("calcmode", e.target.value)
+                }
               >
-                {setup?.statuses?.calc_mode?.map((s) => (
-                  <option key={s.code} value={s.code}>
-                    {s.label}
-                  </option>
-                ))}
+                <option value="AMOUNT">Amount</option>
+                <option value="PERCENTAGE">Percentage</option>
               </select>
             </div>
 
@@ -337,7 +358,9 @@ const plan = await MilestoneAPI.createPlan({
                   className="field-input"
                   type="number"
                   value={milestoneForm.amount}
-                  onChange={(e) => updateMilestoneForm("amount", e.target.value)}
+                  onChange={(e) =>
+                    updateMilestoneForm("amount", e.target.value)
+                  }
                   placeholder="Enter total amount"
                   step="0.01"
                 />
@@ -367,7 +390,9 @@ const plan = await MilestoneAPI.createPlan({
               <select
                 className="field-input"
                 value={milestoneForm.verifiedby}
-                onChange={(e) => updateMilestoneForm("verifiedby", e.target.value)}
+                onChange={(e) =>
+                  updateMilestoneForm("verifiedby", e.target.value)
+                }
               >
                 <option value="">Select User</option>
                 {users.map((u) => (
@@ -384,7 +409,9 @@ const plan = await MilestoneAPI.createPlan({
                 className="field-input"
                 type="date"
                 value={milestoneForm.verifieddate}
-                onChange={(e) => updateMilestoneForm("verifieddate", e.target.value)}
+                onChange={(e) =>
+                  updateMilestoneForm("verifieddate", e.target.value)
+                }
               />
             </div>
           </div>
@@ -414,7 +441,9 @@ const plan = await MilestoneAPI.createPlan({
                 className="field-input"
                 placeholder="Name"
                 value={slab.name}
-                onChange={(e) => updateMilestoneSlab(idx, "name", e.target.value)}
+                onChange={(e) =>
+                  updateMilestoneSlab(idx, "name", e.target.value)
+                }
               />
               <input
                 className="field-input"
@@ -432,8 +461,9 @@ const plan = await MilestoneAPI.createPlan({
                 type="number"
                 placeholder="Amount"
                 value={slab.amount}
-                onChange={(e) => updateMilestoneSlab(idx, "amount", e.target.value)}
-                disabled={milestoneForm.calcmode === "PERCENTAGE"}
+                onChange={(e) =>
+                  updateMilestoneSlab(idx, "amount", e.target.value)
+                }
                 step="0.01"
               />
               <input

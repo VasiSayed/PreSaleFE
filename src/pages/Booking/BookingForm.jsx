@@ -64,18 +64,29 @@ const getTodayDate = () => {
   return today.toISOString().split("T")[0];
 };
 
-// Convert YYYY-MM-DD to DD-MM-YYYY
+// Convert YYYY-MM-DD to DD/MM/YYYY
 const formatDateDDMMYYYY = (dateString) => {
   if (!dateString) return "";
-  if (typeof dateString !== "string") return dateString;
+  if (typeof dateString !== "string") {
+    // If it's a Date object, convert to string first
+    if (dateString instanceof Date) {
+      dateString = dateString.toISOString().split("T")[0];
+    } else {
+      return String(dateString);
+    }
+  }
 
-  // If already in DD-MM-YYYY format, return as is
-  if (/^\d{2}-\d{2}-\d{4}$/.test(dateString)) return dateString;
+  // If already in DD/MM/YYYY format, return as is
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(dateString)) return dateString;
+  // If in DD-MM-YYYY format, convert to DD/MM/YYYY
+  if (/^\d{2}-\d{2}-\d{4}$/.test(dateString)) {
+    return dateString.replace(/-/g, "/");
+  }
 
-  // If in YYYY-MM-DD format, convert to DD-MM-YYYY
+  // If in YYYY-MM-DD format, convert to DD/MM/YYYY
   if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
     const [year, month, day] = dateString.split("-");
-    return `${day}-${month}-${year}`;
+    return `${day}/${month}/${year}`;
   }
 
   // Try parsing as Date object
@@ -85,7 +96,7 @@ const formatDateDDMMYYYY = (dateString) => {
       const day = String(date.getDate()).padStart(2, "0");
       const month = String(date.getMonth() + 1).padStart(2, "0");
       const year = date.getFullYear();
-      return `${day}-${month}-${year}`;
+      return `${day}/${month}/${year}`;
     }
   } catch (e) {
     // Ignore
@@ -1494,7 +1505,9 @@ const BookingForm = () => {
       }
 
       if (field === "percentage") {
-        const p = Number(value) || 0;
+        // ✅ Integer only - no decimals, no leading zeros
+        const cleaned = value.replace(/[^\d]/g, ""); // Remove non-digits
+        const p = cleaned ? Math.floor(Number(cleaned)) : 0;
         slab.percentage = p;
         // ✅ auto-recalculate amount from %
         slab.amount =
@@ -1504,10 +1517,10 @@ const BookingForm = () => {
       if (field === "amount") {
         const a = Number(value) || 0;
         slab.amount = a;
-        // ✅ auto-recalculate % from amount
+        // ✅ auto-recalculate % from amount (integer only)
         slab.percentage =
           paymentPlanBaseAmount > 0 && a > 0
-            ? (a / paymentPlanBaseAmount) * 100
+            ? Math.floor((a / paymentPlanBaseAmount) * 100)
             : slab.percentage;
       }
 
@@ -1531,7 +1544,20 @@ const BookingForm = () => {
 
   const handleUpdateCustomSlab = (index, field, value) => {
     setCustomSlabs((prev) =>
-      prev.map((row, idx) => (idx === index ? { ...row, [field]: value } : row))
+      prev.map((row, idx) => {
+        if (idx !== index) return row;
+        const updated = { ...row };
+
+        if (field === "percentage") {
+          // ✅ Integer only - no decimals, no leading zeros
+          const cleaned = value.replace(/[^\d]/g, ""); // Remove non-digits
+          updated[field] = cleaned ? Math.floor(Number(cleaned)) : "";
+        } else {
+          updated[field] = value;
+        }
+
+        return updated;
+      })
     );
   };
 
@@ -1704,7 +1730,8 @@ const BookingForm = () => {
 
     // Load slabs from selected master plan + pre-compute amount
     const editable = selectedPaymentPlan.slabs.map((s) => {
-      const percentage = Number(s.percentage || 0);
+      // ✅ Integer only - no decimals
+      const percentage = Math.floor(Number(s.percentage || 0));
       const computedAmount =
         paymentPlanBaseAmount > 0
           ? (paymentPlanBaseAmount * percentage) / 100
@@ -1742,46 +1769,46 @@ const BookingForm = () => {
   const possessionCharges = useMemo(() => {
     if (!costTemplate) return null;
 
-    // ✅ Pricing area calculation: carpet + balcony if is_pricing_balcony_carpert = true, else just carpet
+    // Match CostSheet calculation: development_charges_psf is applied on total
+    // pricing area (carpet + balcony where balcony pricing is enabled). Fall
+    // back to super built-up if nothing is provided to avoid a 0 multiplier.
     const carpet = Number(carpetSqft || 0);
     const balcony = Number(balconySqft || 0);
+    const superBuiltUp = Number(superBuiltupSqft || 0);
     const isBalconyCarpetPricing = project?.is_pricing_balcony_carpert === true;
-    const pricingArea = isBalconyCarpetPricing ? carpet + balcony : carpet;
 
-    // Share Application Fees
+    // Total area used for all PSF possession charges (dev + provisional)
+    const totalAreaForCharges =
+      (isBalconyCarpetPricing ? carpet + balcony : carpet) || carpet + balcony || superBuiltUp;
+
+    // Share Application Fees (flat)
     const shareFee = Number(
       costTemplate.share_application_money_membership_fees || 0
     );
 
-    // Development Charges - using pricingArea instead of just carpet
+    // Development Charges @ PSF × total area
     const devPsqf = Number(costTemplate.development_charges_psf || 0);
-    const devAmount = devPsqf * pricingArea;
-
-    // Electrical, Water, Gas
+    const devAmount = devPsqf * totalAreaForCharges;
+    console.log(devAmount, "yea hai mera devamount", devPsqf);
+    
+    
+    // Electrical, Water, Gas (flat)
     const electrical = Number(
       costTemplate.electrical_watern_n_all_charges || 0
     );
 
-    // Provisional Maintenance - using pricingArea instead of just carpet
+    // Provisional Maintenance @ PSF × total area × months
     const provPsqf = Number(costTemplate.provisional_maintenance_psf || 0);
-    console.log(costTemplate, "my template");
-
     const provMonths = Number(costTemplate.provisional_maintenance_months || 0);
-    console.log(provMonths, "my months");
+    const provAmount = provPsqf * totalAreaForCharges * provMonths;
 
-    // ❗ Ye hi main formula: rate × area × months
-    const provAmount = provPsqf * pricingArea * provMonths;
-    // ✅ PARKING REMOVED - Not included in possession charges
-    // Parking is shown separately in Unit Cost section
-
-    // ✅ Base total (before GST) - WITHOUT shareFee and WITHOUT parking
-    // GST is NOT applied on Share Application
+    // Possession base total (GST not applied on shareFee as per earlier logic)
     const baseTotal = devAmount + electrical + provAmount;
 
-    // ✅ GST on possession (18%)
+    // GST on possession (18%)
     const possessionGst = (baseTotal * 18) / 100;
 
-    // ✅ Total with GST
+    // Total with GST
     const totalWithGst = baseTotal + possessionGst;
 
     return {
@@ -1791,9 +1818,10 @@ const BookingForm = () => {
       electrical,
       provPsqf,
       provAmount,
+      provMonths,
+      totalAreaForCharges,
       baseTotal,
       possessionGst,
-      provMonths,
       total: baseTotal,
       totalWithGst,
     };
@@ -1801,8 +1829,8 @@ const BookingForm = () => {
     costTemplate,
     carpetSqft,
     balconySqft,
+    superBuiltupSqft,
     project,
-    // ✅ REMOVED: parkingRequired, parkingCount, parkingAmount
   ]);
 
   const effectiveBaseRate = useMemo(() => {
@@ -1956,6 +1984,8 @@ const BookingForm = () => {
       fd.append("agreement_value", agreementValue || "");
       fd.append("agreement_value_words", agreementValueWords || "");
       fd.append("agreement_done", agreementDone);
+      const customerBaseRate = Number(stripAmount(baseRateDisplay)) || 0;
+      fd.append("customer_base_price_psf", String(customerBaseRate));
 
       // ✅ PARKING - Calculate ALL values first, then append
       const parkingCountNum =
@@ -2449,14 +2479,51 @@ const BookingForm = () => {
 
       toast.success("Booking saved successfully! 🎉");
       console.log("BOOKING CREATED:", res.data);
+
+      // If a KYC request exists, link it to this booking
+      if (kycRequestId && res?.data?.id) {
+        try {
+          await axiosInstance.post(
+            `${BOOK_API_PREFIX}/bookings/${res.data.id}/link-kyc-request/`,
+            { kyc_request_id: kycRequestId }
+          );
+          console.log("KYC request linked to booking", res.data.id);
+        } catch (linkErr) {
+          console.error("Failed to link KYC request to booking", linkErr);
+          toast.warn("Booking saved, but failed to link KYC request.");
+        }
+      }
     } catch (err) {
       console.error("❌ Booking save failed:", err);
-      const errorMsg =
-        err?.response?.data?.message ||
-        err?.response?.data?.error ||
-        err?.message ||
-        "Unknown error occurred";
-      toast.error(`Booking Failed: ${errorMsg}`);
+      // Build a detailed error message from API response (e.g., unit_id errors)
+      const respData = err?.response?.data;
+      const collected = [];
+
+      if (typeof respData === "string") {
+        collected.push(respData);
+      } else if (Array.isArray(respData)) {
+        collected.push(...respData);
+      } else if (respData && typeof respData === "object") {
+        Object.entries(respData).forEach(([key, val]) => {
+          if (Array.isArray(val)) {
+            val.forEach((msg) => collected.push(`${key}: ${msg}`));
+          } else if (typeof val === "string") {
+            collected.push(`${key}: ${val}`);
+          }
+        });
+      }
+
+      if (collected.length === 0) {
+        collected.push(
+          err?.response?.data?.message ||
+            err?.response?.data?.error ||
+            err?.message ||
+            "Unknown error occurred"
+        );
+      }
+
+      // Show all errors together for clarity
+      toast.error(`Booking Failed:\n${collected.join("\n")}`);
     } finally {
       setSaving(false);
     }
@@ -3647,10 +3714,10 @@ const BookingForm = () => {
                     </label>
                     <input
                       className="bf-input"
-                      type="number"
-                      value={discountAmount}
+                      type="text"
+                      value={formatINR(discountAmount)}
                       onChange={(e) => {
-                        setDiscountAmount(e.target.value);
+                        setDiscountAmount(stripAmount(e.target.value));
                         setDiscountPercent(""); // Clear % when amount changes
                       }}
                       placeholder="e.g., 50000"
@@ -3668,7 +3735,7 @@ const BookingForm = () => {
                     <input
                       className="bf-input"
                       type="text"
-                      value={agreementValue}
+                      value={formatINR(agreementValue)}
                       onChange={(e) => {
                         setAgreementTouched(true);
                         setAgreementValue(stripAmount(e.target.value));
@@ -3799,10 +3866,10 @@ const BookingForm = () => {
                         Parking Amount (Per Parking)
                       </label>
                       <input
-                        type="number"
+                        type="text"
                         className="bf-input"
-                        value={parkingAmount}
-                        onChange={(e) => setParkingAmount(e.target.value)}
+                        value={formatINR(parkingAmount)}
+                        onChange={(e) => setParkingAmount(stripAmount(e.target.value))}
                         placeholder="Enter parking price"
                       />
                       <div className="bf-helper">
@@ -3818,9 +3885,13 @@ const BookingForm = () => {
                         Total Parking Amount (₹)
                       </label>
                       <input
-                        type="number"
+                        type="text"
                         className="bf-input"
-                        value={parkingTotal}
+                        value={
+                          parkingTotal
+                            ? formatINR(parkingTotal)
+                            : ""
+                        }
                         readOnly
                       />
                     </div>
@@ -4257,7 +4328,11 @@ const BookingForm = () => {
                           <div className="cost-breakdown-row">
                             <span>
                               Development Charges @ Rs.{" "}
-                              {formatINR(possessionCharges.devPsqf)} PSF
+                              {formatINR(possessionCharges.devPsqf)} PSF ×{" "}
+                              {formatINR(
+                                possessionCharges.totalAreaForCharges || 0
+                              )}{" "}
+                              sq. ft.
                             </span>
                             <span>
                               {formatINR(possessionCharges.devAmount)}
@@ -4799,9 +4874,9 @@ const BookingForm = () => {
                     {/* Selected Plan Header */}
                     <div className="bf-row">
                       <div className="bf-col">
-                        <strong>Selected Plan:</strong>{" "}
+                        <strong>{toSentenceCase("Selected Plan")}:</strong>{" "}
                         {selectedPaymentPlan.name} (
-                        {masterTotalPercentage.toFixed(3)}%)
+                        {Math.floor(masterTotalPercentage)}%)
                       </div>
                     </div>
 
@@ -4819,9 +4894,9 @@ const BookingForm = () => {
                           color: "#6b7280",
                         }}
                       >
-                        <div>Installment Name</div>
-                        <div>Percentage</div>
-                        <div>Amount</div>
+                        <div>{toSentenceCase("Installment Name")}</div>
+                        <div>{toSentenceCase("Percentage")}</div>
+                        <div>{toSentenceCase("Amount")}</div>
                         <div>{toSentenceCase("Due Date / Days")}</div>
                       </div>
 
@@ -4858,8 +4933,9 @@ const BookingForm = () => {
                           <input
                             className="bf-input"
                             type="number"
-                            step="0.001"
-                            value={slab.percentage}
+                            step="1"
+                            min="0"
+                            value={slab.percentage || ""}
                             onChange={(e) =>
                               handleMasterSlabChange(
                                 index,
@@ -4936,7 +5012,8 @@ const BookingForm = () => {
                           fontWeight: "600",
                         }}
                       >
-                        Total: {masterTotalPercentage.toFixed(3)}%
+                        {toSentenceCase("Total")}:{" "}
+                        {Math.floor(masterTotalPercentage)}%
                       </div>
                     </div>
                   </div>
@@ -4972,9 +5049,9 @@ const BookingForm = () => {
                           color: "#6b7280",
                         }}
                       >
-                        <div>Installment Name</div>
-                        <div>Percentage</div>
-                        <div>Amount</div>
+                        <div>{toSentenceCase("Installment Name")}</div>
+                        <div>{toSentenceCase("Percentage")}</div>
+                        <div>{toSentenceCase("Amount")}</div>
                         <div>{toSentenceCase("Due Date")}</div>
                       </div>
 
@@ -5006,7 +5083,9 @@ const BookingForm = () => {
                           <input
                             className="bf-input"
                             type="number"
-                            value={row.percentage}
+                            step="1"
+                            min="0"
+                            value={row.percentage || ""}
                             onChange={(e) =>
                               handleUpdateCustomSlab(
                                 idx,
@@ -5066,8 +5145,9 @@ const BookingForm = () => {
                           fontSize: "14px",
                         }}
                       >
-                        Total Percentage: {customTotalPercentage.toFixed(2)}%
-                        (should be 100%)
+                        {toSentenceCase("Total Percentage")}:{" "}
+                        {Math.floor(customTotalPercentage)}% (
+                        {toSentenceCase("should be 100%")})
                       </div>
 
                       <button
@@ -5131,13 +5211,7 @@ const BookingForm = () => {
                                 const isPending = status === "PENDING";
 
                                 const dateLabel = p.payment_date
-                                  ? new Date(p.payment_date).toLocaleString(
-                                      "en-IN",
-                                      {
-                                        dateStyle: "medium",
-                                        timeStyle: "short",
-                                      }
-                                    )
+                                  ? formatDateDDMMYYYY(p.payment_date)
                                   : "-";
 
                                 const detail =

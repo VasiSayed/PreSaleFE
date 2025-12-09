@@ -9,7 +9,7 @@ export async function createPaymentLead(payload) {
       value !== null &&
       value !== undefined &&
       value !== "" &&
-      // File object bhi allowed hai
+      // File object bhi allowed haib
       !(Array.isArray(value) && value.length === 0)
     ) {
       formData.append(key, value);

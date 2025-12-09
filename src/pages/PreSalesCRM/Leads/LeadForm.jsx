@@ -319,7 +319,8 @@ export default function LeadForm() {
   useEffect(() => {
     SetupAPI.myScope()
       .then((data) => {
-        const list = data?.projects || data?.project_list || data?.results || [];
+        const list =
+          data?.projects || data?.project_list || data?.results || [];
         setProjects(list);
       })
       .catch((err) => {
@@ -578,7 +579,9 @@ export default function LeadForm() {
       lead: leadPayload,
       first_update: {
         title: "Lead created",
-        info: `${normalized.first_name || ""} ${normalized.last_name || ""}`.trim(),
+        info: `${normalized.first_name || ""} ${
+          normalized.last_name || ""
+        }`.trim(),
       },
     };
 
@@ -621,7 +624,8 @@ export default function LeadForm() {
   const renderField = (field) => {
     const id = `lead_form_${field.name}`;
     const disabled = false;
-    const baseInputClass = "field-input" + (disabled ? " field-input-disabled" : "");
+    const baseInputClass =
+      "field-input" + (disabled ? " field-input-disabled" : "");
     const label = (
       <label htmlFor={id} className="field-label">
         {field.label}
@@ -759,16 +763,12 @@ export default function LeadForm() {
         </div>
 
         <form onSubmit={onSubmit} className="lead-form">
-          {renderSectionGroup("lead", "Lead Information")}
+          {renderSectionGroup("lead", "")}
           {renderSectionGroup("address", "Address Information")}
           {renderSectionGroup("description", "Description Information")}
 
           <div className="form-actions">
-            <button
-              type="button"
-              className="btn-cancel"
-              onClick={handleCancel}
-            >
+            <button type="button" className="btn-cancel" onClick={handleCancel}>
               Cancel
             </button>
 

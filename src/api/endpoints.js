@@ -24,6 +24,7 @@ export const URLS = {
   paymentPlans: "client/payment-plans/",
   paymentSlabs: "client/payment-slabs/",
   milestonePlans: "client/milestone-plans/",
+  milestonePlansBulkCreate: "client/milestone-plans/bulk-create/",
   milestoneSlabs: "client/milestone-slabs/",
 
   // bank
@@ -134,10 +135,14 @@ export const PaymentAPI = {
 };
 
 export const MilestoneAPI = {
+  list: (params = {}) =>
+    api.get(URLS.milestonePlans, { params }).then((r) => r.data),
   createPlan: (payload) =>
     api.post(URLS.milestonePlans, payload).then((r) => r.data),
   createSlab: (payload) =>
     api.post(URLS.milestoneSlabs, payload).then((r) => r.data),
+  bulkCreate: (payload) =>
+    api.post(URLS.milestonePlansBulkCreate, payload).then((r) => r.data),
 };
 
 export const BankAPI = {

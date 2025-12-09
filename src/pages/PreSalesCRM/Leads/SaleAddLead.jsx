@@ -10,18 +10,13 @@ const SECTION_KEY = "lead_setup";
 
 // Budget slabs (2 Cr to 7 Cr)
 const BUDGET_OPTIONS = [
-  { value: 20000000, label: "2 Cr – 2.5 Cr" },
-  { value: 22500000, label: "2.5 Cr – 3 Cr" },
-  { value: 30000000, label: "3 Cr – 3.5 Cr" },
-  { value: 32500000, label: "3.5 Cr – 4 Cr" },
-  { value: 40000000, label: "4 Cr – 4.5 Cr" },
-  { value: 42500000, label: "4.5 Cr – 5 Cr" },
-  { value: 50000000, label: "5 Cr – 5.5 Cr" },
-  { value: 52500000, label: "5.5 Cr – 6 Cr" },
-  { value: 60000000, label: "6 Cr – 6.5 Cr" },
-  { value: 62500000, label: "6.5 Cr – 7 Cr" },
+  { value: 20000000, label: "below 2 Cr" },
+  { value: 22500000, label: "2 Cr – 2.5 Cr" },
+  { value: 30000000, label: "2.5 Cr – 3 Cr" },
+  { value: 32500000, label: "3 Cr – 4 Cr" },
+  { value: 40000000, label: "4 Cr – 5 Cr" },
+  { value: 42500000, label: "5 Cr and Above" },
 ];
-
 
 const formatIndianNumber = (raw) => {
   const digits = String(raw || "").replace(/\D/g, "");
@@ -507,7 +502,6 @@ const SaleAddLead = ({ handleLeadSubmit, leadId: propLeadId }) => {
     }
   }, [propLeadId, paramLeadId, searchParams]);
 
-
   // -------- scope (projects) --------
   useEffect(() => {
     SetupAPI.myScope()
@@ -743,66 +737,65 @@ const SaleAddLead = ({ handleLeadSubmit, leadId: propLeadId }) => {
     setOpenGroups((prev) => ({ ...prev, [groupKey]: !prev[groupKey] }));
   };
 
-const handleChange = (name, value) => {
-  setForm((prev) => {
-    // ✅ 1) Annual income ke liye comma formatting
-    let newValue = value;
-    if (name === "annual_income") {
-      const digits = String(value || "").replace(/\D/g, "");
-      newValue = digits ? formatIndianNumber(digits) : "";
-    }
+  const handleChange = (name, value) => {
+    setForm((prev) => {
+      // ✅ 1) Annual income ke liye comma formatting
+      let newValue = value;
+      if (name === "annual_income") {
+        const digits = String(value || "").replace(/\D/g, "");
+        newValue = digits ? formatIndianNumber(digits) : "";
+      }
 
-    // ✅ 2) Form ka naya object ek hi baar banao
-    const next = { ...prev, [name]: newValue };
+      // ✅ 2) Form ka naya object ek hi baar banao
+      const next = { ...prev, [name]: newValue };
 
-    // ✅ 3) Email change => OTP reset
-    if (name === "email") {
-      setEmailVerified(false);
-      setEmailOtpCode("");
-    }
+      // ✅ 3) Email change => OTP reset
+      if (name === "email") {
+        setEmailVerified(false);
+        setEmailOtpCode("");
+      }
 
-    // ✅ 4) Walking toggle
-    if (name === "walking") {
-      if (newValue === true) {
-        // Reset classification/source fields
-        next.lead_classification_id = "";
-        next.lead_subclass_id = "";
-        next.lead_source_id = "";
+      // ✅ 4) Walking toggle
+      if (name === "walking") {
+        if (newValue === true) {
+          // Reset classification/source fields
+          next.lead_classification_id = "";
+          next.lead_subclass_id = "";
+          next.lead_source_id = "";
+          next.lead_sub_source_id = "";
+          setCpMode(CP_MODE.REGISTERED);
+          setSelectedCpId("");
+        }
+      }
+
+      // ✅ 5) When main source changes: reset sub-source
+      if (name === "lead_source_id") {
         next.lead_sub_source_id = "";
-        setCpMode(CP_MODE.REGISTERED);
         setSelectedCpId("");
+        setCpSearch("");
+        setNormalCpSearch("");
+        setNormalSelectedCpId("");
       }
-    }
 
-    // ✅ 5) When main source changes: reset sub-source
-    if (name === "lead_source_id") {
-      next.lead_sub_source_id = "";
-      setSelectedCpId("");
-      setCpSearch("");
-      setNormalCpSearch("");
-      setNormalSelectedCpId("");
-    }
-
-    if (name === "lead_sub_source_id") {
-      setSelectedCpId("");
-      setCpSearch("");
-      setNormalCpSearch("");
-      setNormalSelectedCpId("");
-    }
-
-    // ✅ 6) assign_to → round robin state (create mode only)
-    if (name === "assign_to_id") {
-      if (newValue === ROUND_ROBIN_VALUE) {
-        next.round_robin = true;
-      } else {
-        next.round_robin = false;
+      if (name === "lead_sub_source_id") {
+        setSelectedCpId("");
+        setCpSearch("");
+        setNormalCpSearch("");
+        setNormalSelectedCpId("");
       }
-    }
 
-    return next;
-  });
-};
+      // ✅ 6) assign_to → round robin state (create mode only)
+      if (name === "assign_to_id") {
+        if (newValue === ROUND_ROBIN_VALUE) {
+          next.round_robin = true;
+        } else {
+          next.round_robin = false;
+        }
+      }
 
+      return next;
+    });
+  };
 
   const handleSendEmailOtp = async () => {
     const email = (form.email || "").trim();
@@ -1108,8 +1101,15 @@ const handleChange = (name, value) => {
         return toOptions(root?.children || root?.subclasses);
       }
 
-      case "lead_source_id":
-        return toOptions(masters.sources);
+      case "lead_source_id": {
+        // MODIFICATION STARTS HERE
+        // Filter out any source that has 'walk-in' in its name or label (case-insensitive)
+        const filteredSources = (masters.sources || []).filter((s) => {
+          const name = s.name || s.label || s.title || "";
+          return !/walk-in/i.test(name);
+        });
+        return toOptions(filteredSources);
+      } // MODIFICATION ENDS HERE
 
       case "lead_sub_source_id": {
         const selectedId = form.lead_source_id

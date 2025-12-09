@@ -63,10 +63,9 @@ const ProfileIcon = ({ className = "", size = 20 }) => (
   </svg>
 );
 
-// 🔹 SearchIcon is no longer needed – you can delete it safely
-
+// Navbar Component
 function Navbar({ currentUser, onLogout, showLogout = true }) {
-  // ⭐ helper to pretty-print roles like "SUPER_ADMIN" -> "Super Admin"
+  // Convert "SUPER_ADMIN" → "Super Admin"
   const formatLabel = (val) => {
     if (!val) return "";
     return val
@@ -76,7 +75,6 @@ function Navbar({ currentUser, onLogout, showLogout = true }) {
       .join(" ");
   };
 
-  // ⭐ Role & username
   const roleLabel = formatLabel(currentUser?.role);
   const username = currentUser?.username || currentUser?.email || "";
 
@@ -94,7 +92,7 @@ function Navbar({ currentUser, onLogout, showLogout = true }) {
         justifyContent: "space-between",
       }}
     >
-      {/* Left Section */}
+      {/* LEFT SECTION */}
       <div className="d-flex align-items-center">
         <img
           src={profileImg}
@@ -117,9 +115,8 @@ function Navbar({ currentUser, onLogout, showLogout = true }) {
         </span>
       </div>
 
-      {/* Right Section */}
+      {/* RIGHT SECTION */}
       <div className="ms-auto d-flex align-items-center gap-3">
-        {/* ⭐ Neat user block */}
         {currentUser && (
           <div className="nav-user-block me-2">
             {roleLabel && <div className="nav-user-role">{roleLabel}</div>}
@@ -127,14 +124,20 @@ function Navbar({ currentUser, onLogout, showLogout = true }) {
           </div>
         )}
 
+        {/* Notification */}
         <BellIcon className="icon" />
 
+        {/* Settings */}
         <Link to="/setup" aria-label="Open Setup">
           <GearIcon className="icon" />
         </Link>
 
-        <ProfileIcon className="icon" />
+        {/* PROFILE (NOW WORKING) */}
+        <Link to="/profile" aria-label="Profile Page">
+          <ProfileIcon className="icon" />
+        </Link>
 
+        {/* Logout */}
         {showLogout && (
           <button onClick={onLogout} className="logout-btn" title="Logout">
             Logout

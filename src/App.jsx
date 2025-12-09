@@ -246,7 +246,7 @@ import OnsiteRegistration from "./pages/OnsiteRegistration";
 import BookingApprovals from "./pages/Booking/BookingApprovals";
 import KycBlack from "./pages/Kycblack/Kycpage";
 import { Toaster } from "react-hot-toast";
-
+import ProfilePage from "./pages/Profile";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
@@ -301,6 +301,8 @@ export default function App() {
               <Route path="/leads/new/:leadId" element={<SaleAddLead />} />
               <Route path="/leads" element={<LeadsList />} />
               <Route path="/Kycblack" element={<KycBlack />} />
+              <Route path="/profile" element={<ProfilePage />} />
+
               <Route
                 path="/lead-setup/additional-info"
                 element={<LeadAdditionalInfoPage />}
