@@ -279,14 +279,23 @@
 import React, { useEffect, useState, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import axiosInstance from "../../api/axiosInstance";
+import SearchBar from "../../common/SearchBar";
 import "./MyBookings.css";
+import "../PreSalesCRM/Leads/LeadsList.css";
+
+function debounce(fn, delay) {
+  let timeoutId;
+  return (...args) => {
+    if (timeoutId) clearTimeout(timeoutId);
+    timeoutId = setTimeout(() => fn(...args), delay);
+  };
+}
 
 const MyBookings = () => {
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
-  const [searchOpen, setSearchOpen] = useState(false);
 
   // 🔹 upload related
   const fileInputRef = useRef(null);
@@ -319,14 +328,17 @@ const MyBookings = () => {
     navigate("/booking/form");
   };
 
-  const handleSearchIconClick = () => {
-    setSearchOpen((prev) => !prev);
-  };
+  const debouncedSearch = useMemo(
+    () =>
+      debounce((val) => {
+        // Search is handled by filtered useMemo, no API call needed
+      }, 300),
+    []
+  );
 
-  const handleSearchBlur = () => {
-    if (!search.trim()) {
-      setSearchOpen(false);
-    }
+  const handleSearchChange = (value) => {
+    setSearch(value);
+    debouncedSearch(value);
   };
 
   const formatAmount = (value) => {
@@ -468,56 +480,26 @@ const MyBookings = () => {
         />
 
         {/* ---------- Header ---------- */}
-        <div className="booking-list-header">
-          <div className="booking-header-left">
-            <button
-              type="button"
-              className="booking-search-icon-btn"
-              onClick={handleSearchIconClick}
-              title="Search"
-            >
-              🔍
-            </button>
-
-            {searchOpen && (
-              <input
-                className="booking-search-input"
-                type="text"
-                placeholder="Search by customer, project, unit, status..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                onBlur={handleSearchBlur}
-                autoFocus
-              />
-            )}
+        <div className="list-header">
+          {/* LEFT: Search */}
+          <div className="list-header-left">
+            <SearchBar
+              value={search}
+              onChange={handleSearchChange}
+              placeholder="Search by customer, project, unit, status..."
+              wrapperClassName="search-box"
+            />
           </div>
 
-          <div className="booking-header-right">
-            <span className="booking-count-label">{rangeLabel}</span>
+          {/* RIGHT: Buttons */}
+          <div className="list-header-right">
             <button
               type="button"
-              className="booking-page-btn"
-              disabled
-              aria-label="Previous page"
-            >
-              ‹
-            </button>
-            <button
-              type="button"
-              className="booking-page-btn"
-              disabled
-              aria-label="Next page"
-            >
-              ›
-            </button>
-
-            {/* Optional: add "New Booking" button */}
-            <button
-              type="button"
-              className="booking-add-btn"
+              className="btn-add"
               onClick={handleAddClick}
             >
-              + New Booking
+              <i className="fa fa-plus" style={{ marginRight: "6px" }} />
+              New Booking
             </button>
           </div>
         </div>
@@ -656,6 +638,11 @@ const MyBookings = () => {
             </div>
           </div>
         )}
+
+        {/* Pagination Info */}
+        <div className="pagination-info">
+          {rangeLabel}
+        </div>
       </div>
     </div>
   );

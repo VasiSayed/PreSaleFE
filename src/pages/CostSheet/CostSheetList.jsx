@@ -2,8 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axiosInstance from "../../api/axiosInstance";
 import SearchBar from "../../common/SearchBar";
-
-// import "../CostSheetList.css";
+import "../PreSalesCRM/Leads/LeadsList.css";
 
 function debounce(fn, delay) {
   let timeoutId;
@@ -96,52 +95,31 @@ export default function CostSheetList() {
   const totalPages = useMemo(() => Math.max(1, Math.ceil(count / 10)), [count]);
 
   return (
-    <div className="templates-page">
-      {/* Toolbar */}
-      <div className="templates-toolbar">
-        
-        <SearchBar
-          value={q}
-          onChange={handleSearchChange}
-          placeholder="Search quotations…"
-        />
-
-        {/* <div className="search-wrap">
-          <svg width="22" height="22" viewBox="0 0 24 24">
-            <path
-              d="M21 21l-4.3-4.3M10 18a8 8 0 1 1 0-16 8 8 0 0 1 0 16z"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
+    <div className="leads-list-page">
+      <div className="leads-list-container">
+        {/* Header */}
+        <div className="list-header">
+          {/* LEFT: Search */}
+          <div className="list-header-left">
+            <SearchBar
+              value={q}
+              onChange={handleSearchChange}
+              placeholder="Search quotations…"
+              wrapperClassName="search-box"
             />
-          </svg>
-          <input
-            className="search-input"
-            placeholder="Search quotations…"
-            value={q}
-            onChange={(e) => {
-              const value = e.target.value;
-              setQ(value);
-              debouncedFetchList(value);
-            }}
-          />
-        </div> */}
+          </div>
 
-        {/* <button
-          className="btn-primary"
-          // if later you want select lead first, change this route
-          onClick={() => navigate("/costsheet/new")}
-        >
-          Add
-        </button> */}
-      </div>
-
-      {/* Pagination Info */}
-      <div className="pagination-hint">
-        {count
-          ? `${(page - 1) * 10 + 1}-${Math.min(page * 10, count)} of ${count}`
-          : "0 of 0"}
-      </div>
+          {/* RIGHT: Buttons */}
+          <div className="list-header-right">
+            <button
+              className="btn-add"
+              onClick={() => navigate("/costsheet/new")}
+            >
+              <i className="fa fa-plus" style={{ marginRight: "6px" }} />
+              Add Quotation
+            </button>
+          </div>
+        </div>
 
       {/* Table */}
       <div className="table-wrapper">
@@ -236,31 +214,38 @@ export default function CostSheetList() {
         </table>
       </div>
 
-      {/* Pagination */}
-      <div className="pager">
-        <button
-          disabled={page <= 1}
-          onClick={() => {
-            const newPage = page - 1;
-            setPage(newPage);
-            fetchList({ page: newPage });
-          }}
-        >
-          &lt;
-        </button>
-        <span>
-          {page} / {totalPages}
-        </span>
-        <button
-          disabled={page >= totalPages}
-          onClick={() => {
-            const newPage = page + 1;
-            setPage(newPage);
-            fetchList({ page: newPage });
-          }}
-        >
-          &gt;
-        </button>
+        {/* Pagination BELOW table */}
+        <div className="pagination-info">
+          {count > 0 ? (
+            <>
+              {(page - 1) * 10 + 1}-{Math.min(page * 10, count)} of {count}
+            </>
+          ) : (
+            "No results"
+          )}
+          <button
+            className="pagination-btn"
+            onClick={() => {
+              const newPage = page - 1;
+              setPage(newPage);
+              fetchList({ page: newPage });
+            }}
+            disabled={page === 1}
+          >
+            ❮
+          </button>
+          <button
+            className="pagination-btn"
+            onClick={() => {
+              const newPage = page + 1;
+              setPage(newPage);
+              fetchList({ page: newPage });
+            }}
+            disabled={page >= totalPages}
+          >
+            ❯
+          </button>
+        </div>
       </div>
     </div>
   );

@@ -9,6 +9,14 @@
   gap: 12px;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
+}
+
+.toolbar-buttons-group {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
 }
 
 .search-wrap {
@@ -40,6 +48,59 @@
   border-radius: 8px;
   border: none;
   cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: background 0.2s;
+}
+
+.btn-primary:hover {
+  background: #0d2042;
+}
+
+.btn-secondary {
+  background: white;
+  color: #374151;
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: 1px solid #d1d5db;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.btn-secondary:hover {
+  background: #f9fafb;
+  border-color: #9ca3af;
+}
+
+.btn-import {
+  background: #3b82f6;
+  color: white;
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: background 0.2s;
+}
+
+.btn-import:hover:not(:disabled) {
+  background: #2563eb;
+}
+
+.btn-import:disabled {
+  background: #9ca3af;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.import-icon {
+  font-size: 14px;
 }
 
 .latest-remark {

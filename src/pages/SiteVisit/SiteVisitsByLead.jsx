@@ -159,7 +159,7 @@ export default function SiteVisitsByLead() {
                     >
                       <i className="fa fa-eye" />
                     </button>
-                    <button
+                    {/* <button
                       className="icon-btn icon-btn-edit"
                       title="Edit"
                       onClick={() =>
@@ -167,7 +167,7 @@ export default function SiteVisitsByLead() {
                       }
                     >
                       <i className="fa fa-edit" />
-                    </button>
+                    </button> */}
                   </td>
 
                   <td>{formatDT(visit.scheduled_at)}</td>

@@ -69,10 +69,9 @@ const SiteVisitStatusModal = ({ id, currentStatus, onClose, onUpdated }) => {
             <option value="SCHEDULED">Scheduled</option>
             <option value="COMPLETED">Completed</option>
             <option value="CANCELLED">Cancelled</option>
-            <option value="NO_SHOW">No Show</option>
-            {/* RESCHEDULED yahan rehne do taaki agar currentStatus RESCHEDULED ho
-                to select break na ho; actual reschedule time change doosre modal se hoga */}
-            <option value="RESCHEDULED">Rescheduled</option>
+            {/* <option value="NO_SHOW">No Show</option>
+            <option value="RESCHEDULED">Rescheduled</option> */}
+
           </select>
 
           <label className="sv-label">

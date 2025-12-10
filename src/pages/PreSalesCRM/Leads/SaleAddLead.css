@@ -71,6 +71,17 @@
   flex-direction: column;
 }
 
+/* Prevent tel fields from growing in height when lookup messages appear */
+.form-field-tel {
+  min-height: auto;
+  height: auto;
+  flex-shrink: 0;
+}
+
+.form-field-tel > * {
+  flex-shrink: 0;
+}
+
 .form-label {
   font-size: 14px;
   font-weight: 500;
@@ -176,6 +187,10 @@
 }
 
 /* Searchable Select */
+.searchable-select {
+  position: relative;
+}
+
 .searchable-select select {
   font-family: inherit;
 }
@@ -196,6 +211,23 @@
 .searchable-select select option {
   padding: 8px 12px;
   cursor: pointer;
+}
+
+/* CP Search Dropdown - improved styling */
+.cp-search-dropdown {
+  max-height: 200px;
+  overflow-y: auto;
+  display: block;
+  min-height: 40px;
+}
+
+.cp-search-dropdown option {
+  padding: 8px 12px;
+  cursor: pointer;
+}
+
+.cp-search-dropdown option:hover {
+  background-color: #f3f4f6;
 }
 
 /* Buttons */

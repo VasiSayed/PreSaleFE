@@ -1,8 +1,9 @@
 // src/pages/Opportunities/OppurnityList.jsx (path adjust kar lena)
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import axiosInstance from "../../api/axiosInstance";
 import SearchBar from "../../common/SearchBar";
-import "../SiteVisit/SiteVisitList.css"; // same styling reuse
+import "../PreSalesCRM/Leads/LeadsList.css"; // Use LeadsList CSS for consistent styling
 import { toast } from "react-toastify";
 
 function debounce(fn, delay) {
@@ -14,9 +15,10 @@ function debounce(fn, delay) {
 }
 
 export default function OppurnityList() {
+  const navigate = useNavigate();
   const [rows, setRows] = useState([]);
   const [projects, setProjects] = useState([]);
-const [excelUploading, setExcelUploading] = useState(false);
+  const [excelUploading, setExcelUploading] = useState(false);
 
   // filters
   const [q, setQ] = useState("");
@@ -593,47 +595,64 @@ const downloadSampleExcel = () => {
   const totalOpp = summary?.total ?? count;
 
   return (
-    <div className="projects-page">
-      {/* Toolbar */}
+    <div className="leads-list-page">
+      <div className="leads-list-container">
+        {/* Header */}
+        <div className="list-header">
+          {/* LEFT: Search */}
+          <div className="list-header-left">
+            <SearchBar
+              value={q}
+              onChange={handleSearchChange}
+              placeholder="Search by name, email, mobile..."
+              wrapperClassName="search-box"
+            />
+          </div>
 
-      <input
-        id="opp-excel-input"
-        type="file"
-        accept=".csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-        style={{ display: "none" }}
-        onChange={handleExcelChange}
-      />
+          {/* RIGHT: Filters + Excel + Add Opportunity */}
+          <div className="list-header-right">
+            <input
+              id="opp-excel-input"
+              type="file"
+              accept=".csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+              style={{ display: "none" }}
+              onChange={handleExcelChange}
+            />
 
-      <div className="projects-toolbar">
-        <SearchBar
-          value={q}
-          onChange={(e) => handleSearchChange(e.target.value)}
-          placeholder="Search by name, email, mobile..."
-        />
+            <button
+              type="button"
+              className="filter-btn"
+              onClick={() => setModalOpen(true)}
+            >
+              <i className="fa fa-filter" /> Filters
+            </button>
 
-        <button
-          type="button"
-          className="btn-secondary"
-          onClick={downloadSampleExcel}
-          style={{ fontSize: 12, padding: "6px 10px" }}
-        >
-          ⬇ Sample Excel
-        </button>
+            <button
+              type="button"
+              className="filter-btn"
+              onClick={downloadSampleExcel}
+            >
+              ⬇ Sample Excel
+            </button>
 
-        <button
-          type="button"
-          className="btn-import"
-          onClick={() => document.getElementById("opp-excel-input")?.click()}
-          disabled={excelUploading}
-        >
-          <span className="import-icon">📄</span>
-          {excelUploading ? "IMPORTING..." : "IMPORT EXCEL"}
-        </button>
+            <button
+              type="button"
+              className="filter-btn"
+              onClick={() => document.getElementById("opp-excel-input")?.click()}
+              disabled={excelUploading}
+            >
+              {excelUploading ? "IMPORTING..." : "📥 Import Excel"}
+            </button>
 
-        <button className="filter-btn" onClick={() => setModalOpen(true)}>
-          <i className="fa fa-filter" /> Filters
-        </button>
-      </div>
+            <button
+              className="btn-add"
+              onClick={() => navigate("/sales/opportunities/add")}
+            >
+              <i className="fa fa-plus" style={{ marginRight: "6px" }} />
+              Add Opportunity
+            </button>
+          </div>
+        </div>
 
       {/* Stats row */}
       {/* <div className="stats-row">
@@ -665,13 +684,6 @@ const downloadSampleExcel = () => {
           </div>
         </div>
       </div> */}
-
-      {/* Pagination hint */}
-      <div className="pagination-hint">
-        {count
-          ? `${(page - 1) * 10 + 1}-${Math.min(page * 10, count)} of ${count}`
-          : "0 of 0"}
-      </div>
 
       {/* Table */}
       <div className="table-wrapper">
@@ -799,31 +811,38 @@ const downloadSampleExcel = () => {
         </table>
       </div>
 
-      {/* Pagination */}
-      <div className="pager">
+      {/* Pagination BELOW table */}
+      <div className="pagination-info">
+        {count > 0 ? (
+          <>
+            {(page - 1) * 10 + 1}-{Math.min(page * 10, count)} of {count}
+          </>
+        ) : (
+          "No results"
+        )}
         <button
-          disabled={page <= 1}
+          className="pagination-btn"
           onClick={() => {
             const newPage = page - 1;
             setPage(newPage);
             fetchList({ page: newPage });
           }}
+          disabled={page === 1}
         >
-          &lt;
+          ❮
         </button>
-        <span>
-          {page} / {totalPages}
-        </span>
         <button
-          disabled={page >= totalPages}
+          className="pagination-btn"
           onClick={() => {
             const newPage = page + 1;
             setPage(newPage);
             fetchList({ page: newPage });
           }}
+          disabled={page >= totalPages}
         >
-          &gt;
+          ❯
         </button>
+      </div>
       </div>
 
       {/* Filter Modal */}

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { Navigate, useParams, useSearchParams } from "react-router-dom";
 
 import { SetupAPI, URLS } from "../../../api/endpoints";
@@ -104,12 +104,23 @@ const FIELDS = [
   },
   {
     section: "lead",
-    name: "walking",
-    label: "Walk-in Lead",
-    type: "toggle",
+    name: "lead_source_id",
+    label: "Lead Source",
+    type: "select",
     required: false,
     span: 1,
-    parse: "identity",
+    parse: "number",
+    options: [],
+  },
+  {
+    section: "lead",
+    name: "lead_sub_source_id",
+    label: "Lead Sub Source",
+    type: "select",
+    required: false,
+    span: 1,
+    parse: "number",
+    options: [],
   },
   {
     section: "lead",
@@ -149,7 +160,7 @@ const FIELDS = [
     span: 1,
     parse: "number",
     options: [],
-    hiddenWhen: (form) => form.walking === true,
+    hiddenWhen: (form, { masters }) => isWalkInSource(form, masters),
   },
   {
     section: "lead",
@@ -160,29 +171,7 @@ const FIELDS = [
     span: 1,
     parse: "number",
     options: [],
-    hiddenWhen: (form) => form.walking === true,
-  },
-  {
-    section: "lead",
-    name: "lead_source_id",
-    label: "Lead Source",
-    type: "select",
-    required: false,
-    span: 1,
-    parse: "number",
-    options: [],
-    hiddenWhen: (form) => form.walking === true,
-  },
-  {
-    section: "lead",
-    name: "lead_sub_source_id",
-    label: "Lead Sub Source",
-    type: "select",
-    required: false,
-    span: 1,
-    parse: "number",
-    options: [],
-    hiddenWhen: (form) => form.walking === true,
+    hiddenWhen: (form, { masters }) => isWalkInSource(form, masters),
   },
   // Normal lead CP type (shown when source selected and NOT walk-in)
   {
@@ -193,7 +182,7 @@ const FIELDS = [
     required: false,
     span: 1,
     parse: "identity",
-    hiddenWhen: (form) => form.walking === true || !form.lead_source_id,
+    hiddenWhen: (form, { masters }) => isWalkInSource(form, masters) || !form.lead_source_id,
   },
   {
     section: "lead",
@@ -203,10 +192,10 @@ const FIELDS = [
     required: false,
     span: 3,
     parse: "identity",
-    hiddenWhen: (form) => form.walking === true || !form.lead_source_id,
+    hiddenWhen: (form, { masters }) => isWalkInSource(form, masters) || !form.lead_source_id,
   },
 
-  // Walk-in CP type (shown ONLY when walking = true)
+  // Walk-in CP type (shown ONLY when source name starts with "walk")
   {
     section: "lead",
     name: "walkin_cp_type",
@@ -215,7 +204,7 @@ const FIELDS = [
     required: false,
     span: 1,
     parse: "identity",
-    hiddenWhen: (form) => form.walking === false,
+    hiddenWhen: (form, { masters }) => !isWalkInSource(form, masters),
   },
   {
     section: "lead",
@@ -225,7 +214,7 @@ const FIELDS = [
     required: false,
     span: 3,
     parse: "identity",
-    hiddenWhen: (form) => form.walking === false,
+    hiddenWhen: (form, { masters }) => !isWalkInSource(form, masters),
   },
 
   {
@@ -364,6 +353,23 @@ const buildInitialFormState = () => {
   return form;
 };
 
+// Helper to check if source is walk-in based on for_walkin property or source name
+const isWalkInSource = (form, masters) => {
+  if (!form.lead_source_id || !masters?.sources) return false;
+  const source = masters.sources.find(
+    (s) => String(s.id) === String(form.lead_source_id)
+  );
+  if (!source) return false;
+  
+  // First check for_walkin property (future-proof)
+  if (source.for_walkin === true) return true;
+  if (source.for_walkin === false) return false;
+  
+  // Fallback: check if name starts with "walk" (backward compatibility)
+  const sourceName = (source.name || source.label || "").toLowerCase();
+  return sourceName.startsWith("walk");
+};
+
 const evaluateExpression = (expr, { form, setup, scope }) => {
   if (!expr || typeof expr !== "string") return false;
 
@@ -488,6 +494,11 @@ const SaleAddLead = ({ handleLeadSubmit, leadId: propLeadId }) => {
   // Partner tiers for quick CP
   const [partnerTiers, setPartnerTiers] = useState([]);
 
+  // Phone lookup for duplicate detection
+  const [lookupResult, setLookupResult] = useState(null);
+  const [checkingPhone, setCheckingPhone] = useState(false);
+  const [showLookupModal, setShowLookupModal] = useState(false);
+
   // -------- determine if we are editing (from prop or URL) -------- ⭐ NEW
   useEffect(() => {
     const urlLeadId =
@@ -530,6 +541,41 @@ const SaleAddLead = ({ handleLeadSubmit, leadId: propLeadId }) => {
         showToast("Failed to load project scope", "error");
       });
   }, [isEditing]);
+
+  // -------- Phone lookup (10 digits + project) --------
+  useEffect(() => {
+    // Skip lookup in edit mode
+    if (isEditing) {
+      setLookupResult(null);
+      return;
+    }
+
+    const digits = (form.mobile_number || "").replace(/\D/g, "");
+
+    // New lookup start -> close modal
+    setShowLookupModal(false);
+
+    if (digits.length === 10 && form.project_id) {
+      setCheckingPhone(true);
+      api
+        .get("/sales/sales-leads/lookup-by-phone/", {
+          params: {
+            phone: digits,
+            project_id: form.project_id,
+          },
+        })
+        .then((res) => {
+          setLookupResult(res.data || null);
+        })
+        .catch((err) => {
+          console.error("phone lookup failed", err);
+          setLookupResult(null);
+        })
+        .finally(() => setCheckingPhone(false));
+    } else {
+      setLookupResult(null);
+    }
+  }, [form.mobile_number, form.project_id, isEditing]);
 
   // -------- masters (classification, source, status, etc.) --------
   useEffect(() => {
@@ -586,7 +632,6 @@ const SaleAddLead = ({ handleLeadSubmit, leadId: propLeadId }) => {
         next.tel_res = lead.tel_res || "";
         next.tel_office = lead.tel_office || "";
         next.project_id = lead.project || "";
-        next.walking = !!lead.walking;
         next.company = lead.company || "";
         next.budget = lead.budget || "";
         if (lead.annual_income !== null && lead.annual_income !== undefined) {
@@ -621,8 +666,14 @@ const SaleAddLead = ({ handleLeadSubmit, leadId: propLeadId }) => {
 
         setForm(next);
 
-        // Prefill CP selection
-        if (lead.walking) {
+        // Prefill CP selection - use isWalkInSource to determine if it's a walk-in
+        // We need to wait for masters to load, so we'll use lead.walking as fallback
+        // but prefer checking source name if available
+        const isWalkIn = lead.walking || (next.lead_source_id && masters?.sources 
+          ? isWalkInSource(next, masters) 
+          : false);
+        
+        if (isWalkIn) {
           setCpMode(
             lead.unknown_channel_partner
               ? CP_MODE.UNREGISTERED
@@ -672,8 +723,10 @@ const SaleAddLead = ({ handleLeadSubmit, leadId: propLeadId }) => {
       return;
     }
 
+    const isWalkIn = isWalkInSource(form, { masters });
+
     // Walk-in mode
-    if (form.walking) {
+    if (isWalkIn) {
       if (cpMode === CP_MODE.REGISTERED) {
         setLoadingCP(true);
         api
@@ -696,7 +749,7 @@ const SaleAddLead = ({ handleLeadSubmit, leadId: propLeadId }) => {
       return;
     }
 
-    // Normal lead mode (walk-in = false)
+    // Normal lead mode (not walk-in)
     const sourceId = form.lead_source_id;
     if (!sourceId) {
       setChannelPartners([]);
@@ -740,11 +793,34 @@ const SaleAddLead = ({ handleLeadSubmit, leadId: propLeadId }) => {
       .finally(() => setLoadingCP(false));
   }, [
     form.project_id,
-    form.walking,
+    masters,
     cpMode,
     form.lead_source_id,
     form.lead_sub_source_id,
   ]);
+
+  // -------- Computed values for duplicate lead detection --------
+  const existingProjectLead = useMemo(() => {
+    if (!lookupResult?.present || !form.project_id) return null;
+    const pid = Number(form.project_id);
+    const leads = lookupResult.leads || [];
+    return leads.find((lead) => Number(lead.project) === pid) || null;
+  }, [lookupResult, form.project_id]);
+
+  const hasExistingLeadInProject = !!existingProjectLead;
+
+  const leadsForPhone = useMemo(
+    () => lookupResult?.leads || [],
+    [lookupResult]
+  );
+
+  const hasLeadsInOtherProjects = useMemo(
+    () =>
+      leadsForPhone.some(
+        (lead) => String(lead.project) !== String(form.project_id)
+      ),
+    [leadsForPhone, form.project_id]
+  );
 
   const toggleGroup = (groupKey) => {
     setOpenGroups((prev) => ({ ...prev, [groupKey]: !prev[groupKey] }));
@@ -768,20 +844,7 @@ const SaleAddLead = ({ handleLeadSubmit, leadId: propLeadId }) => {
         setEmailOtpCode("");
       }
 
-      // ✅ 4) Walking toggle
-      if (name === "walking") {
-        if (newValue === true) {
-          // Reset classification/source fields
-          next.lead_classification_id = "";
-          next.lead_subclass_id = "";
-          next.lead_source_id = "";
-          next.lead_sub_source_id = "";
-          setCpMode(CP_MODE.REGISTERED);
-          setSelectedCpId("");
-        }
-      }
-
-      // ✅ 5) When main source changes: reset sub-source
+      // ✅ 4) When main source changes: reset sub-source
       if (name === "lead_source_id") {
         next.lead_sub_source_id = "";
         setSelectedCpId("");
@@ -1068,7 +1131,9 @@ const SaleAddLead = ({ handleLeadSubmit, leadId: propLeadId }) => {
   };
 
   const isFieldHidden = (field) =>
-    typeof field.hiddenWhen === "function" ? field.hiddenWhen(form) : false;
+    typeof field.hiddenWhen === "function"
+      ? field.hiddenWhen(form, { masters, projects })
+      : false;
 
   const isFieldDisabled = (field) =>
     evaluateExpression(field.disabledWhen, {
@@ -1115,14 +1180,9 @@ const SaleAddLead = ({ handleLeadSubmit, leadId: propLeadId }) => {
       }
 
       case "lead_source_id": {
-        // MODIFICATION STARTS HERE
-        // Filter out any source that has 'walk-in' in its name or label (case-insensitive)
-        const filteredSources = (masters.sources || []).filter((s) => {
-          const name = s.name || s.label || s.title || "";
-          return !/walk-in/i.test(name);
-        });
-        return toOptions(filteredSources);
-      } // MODIFICATION ENDS HERE
+        // Show all sources including walk-in sources
+        return toOptions(masters.sources);
+      }
 
       case "lead_sub_source_id": {
         const selectedId = form.lead_source_id
@@ -1229,18 +1289,29 @@ const SaleAddLead = ({ handleLeadSubmit, leadId: propLeadId }) => {
       }
     });
 
+    const isWalkIn = isWalkInSource(form, { masters });
+    
     // Walk-in CP validation
-    if (form.walking && cpMode === CP_MODE.REGISTERED && !selectedCpId) {
+    if (isWalkIn && cpMode === CP_MODE.REGISTERED && !selectedCpId) {
       missing.push("Channel Partner (Registered)");
     }
 
     if (
-      !form.walking &&
+      !isWalkIn &&
       normalCpType === CP_MODE.REGISTERED &&
       !normalSelectedCpId
     ) {
       // optional: if you want to force CP for non-walk-in
       // missing.push("Channel Partner (Registered)");
+    }
+
+    // Duplicate lead validation (create mode only)
+    if (!isEditing && hasExistingLeadInProject) {
+      showToast(
+        "This customer is already part of this project. Please edit the existing lead instead.",
+        "error"
+      );
+      return false;
     }
 
     if (missing.length) {
@@ -1309,7 +1380,7 @@ const SaleAddLead = ({ handleLeadSubmit, leadId: propLeadId }) => {
 
       current_owner: normalized.lead_owner_id || null,
 
-      walking: !!normalized.walking,
+      walking: isWalkInSource(form, { masters }),
 
       offering_types:
         normalized.offering_type != null && normalized.offering_type !== ""
@@ -1317,8 +1388,10 @@ const SaleAddLead = ({ handleLeadSubmit, leadId: propLeadId }) => {
           : [],
     };
 
+    const isWalkIn = isWalkInSource(form, { masters });
+
     // Walk-in CP logic
-    if (form.walking) {
+    if (isWalkIn) {
       if (cpMode === CP_MODE.REGISTERED && selectedCpId) {
         leadPayload.channel_partner = selectedCpId;
         leadPayload.unknown_channel_partner = "";
@@ -1437,9 +1510,10 @@ const SaleAddLead = ({ handleLeadSubmit, leadId: propLeadId }) => {
 
     // CP Type dropdown (for normal leads)
     if (field.type === "cp_type") {
-      // Determine which CP type to use based on walking
-      const currentCpType = form.walking ? cpMode : normalCpType;
-      const setCpTypeFunc = form.walking ? setCpMode : setNormalCpType;
+      // Determine which CP type to use based on source name
+      const isWalkIn = isWalkInSource(form, { masters });
+      const currentCpType = isWalkIn ? cpMode : normalCpType;
+      const setCpTypeFunc = isWalkIn ? setCpMode : setNormalCpType;
 
       return (
         <div
@@ -1470,8 +1544,8 @@ const SaleAddLead = ({ handleLeadSubmit, leadId: propLeadId }) => {
 
     // CP Search field type (for both walk-in and normal leads)
     if (field.type === "cp_search") {
-      // Determine which mode we're in
-      const isWalkIn = form.walking;
+      // Determine which mode we're in based on source name
+      const isWalkIn = isWalkInSource(form, { masters });
       const currentCpType = isWalkIn ? cpMode : normalCpType;
       const currentSearch = isWalkIn ? cpSearch : normalCpSearch;
       const setCurrentSearch = isWalkIn ? setCpSearch : setNormalCpSearch;
@@ -1527,91 +1601,102 @@ const SaleAddLead = ({ handleLeadSubmit, leadId: propLeadId }) => {
               }}
               disabled={loadingCP}
             />
-            <select
-              className="form-input"
-              style={{ marginTop: "8px" }}
-              value={currentSelectedId}
-              onChange={(e) => {
-                setCurrentSelectedId(e.target.value);
-                if (e.target.value) {
-                  const selected = channelPartners.find(
-                    (cp) => cp.id === parseInt(e.target.value, 10)
-                  );
-                  if (selected) {
+            {(() => {
+              const filteredCPs = channelPartners.filter((cp) => {
+                if (!currentSearch) return false; // Only show when user is typing
+                const term = currentSearch.toLowerCase();
+                const fullName =
+                  cp.full_name ||
+                  cp.user?.full_name ||
+                  [
+                    cp.first_name || cp.user?.first_name,
+                    cp.last_name || cp.user?.last_name,
+                  ]
+                    .filter(Boolean)
+                    .join(" ");
+                const companyName = cp.company_name || "";
+                const email = cp.email || cp.user?.email || "";
+                const searchString =
+                  `${fullName} ${companyName} ${email}`.toLowerCase();
+                return searchString.includes(term);
+              });
+
+              // Only show dropdown if there are filtered results or user is searching
+              if (!currentSearch && filteredCPs.length === 0) {
+                return null;
+              }
+
+              return (
+                <select
+                  className="form-input cp-search-dropdown"
+                  style={{ marginTop: "8px" }}
+                  value={currentSelectedId}
+                  onChange={(e) => {
+                    setCurrentSelectedId(e.target.value);
+                    if (e.target.value) {
+                      const selected = channelPartners.find(
+                        (cp) => cp.id === parseInt(e.target.value, 10)
+                      );
+                      if (selected) {
+                        const fullName =
+                          selected.full_name ||
+                          selected.user?.full_name ||
+                          [
+                            selected.first_name || selected.user?.first_name,
+                            selected.last_name || selected.user?.last_name,
+                          ]
+                            .filter(Boolean)
+                            .join(" ");
+                        const mainLabel =
+                          fullName ||
+                          selected.company_name ||
+                          selected.email ||
+                          selected.user?.email ||
+                          `CP #${selected.id}`;
+                        setCurrentSearch(mainLabel);
+                      }
+                    }
+                  }}
+                  disabled={loadingCP}
+                  size={Math.min(filteredCPs.length + 1, 6)}
+                >
+                  <option value="">
+                    {loadingCP
+                      ? "Loading..."
+                      : currentSearch && filteredCPs.length === 0
+                      ? "— No results found —"
+                      : currentSearch
+                      ? "— Select from filtered results —"
+                      : "— Start typing to search —"}
+                  </option>
+                  {filteredCPs.map((cp) => {
                     const fullName =
-                      selected.full_name ||
-                      selected.user?.full_name ||
+                      cp.full_name ||
+                      cp.user?.full_name ||
                       [
-                        selected.first_name || selected.user?.first_name,
-                        selected.last_name || selected.user?.last_name,
+                        cp.first_name || cp.user?.first_name,
+                        cp.last_name || cp.user?.last_name,
                       ]
                         .filter(Boolean)
                         .join(" ");
                     const mainLabel =
                       fullName ||
-                      selected.company_name ||
-                      selected.email ||
-                      selected.user?.email ||
-                      `CP #${selected.id}`;
-                    setCurrentSearch(mainLabel);
-                  }
-                }
-              }}
-              disabled={loadingCP}
-              size="6"
-            >
-              <option value="">
-                {loadingCP
-                  ? "Loading..."
-                  : currentSearch
-                  ? "— Select from filtered results —"
-                  : "— Start typing to search —"}
-              </option>
-              {channelPartners
-                .filter((cp) => {
-                  if (!currentSearch) return true;
-                  const term = currentSearch.toLowerCase();
-                  const fullName =
-                    cp.full_name ||
-                    cp.user?.full_name ||
-                    [
-                      cp.first_name || cp.user?.first_name,
-                      cp.last_name || cp.user?.last_name,
-                    ]
-                      .filter(Boolean)
-                      .join(" ");
-                  const companyName = cp.company_name || "";
-                  const email = cp.email || cp.user?.email || "";
-                  const searchString =
-                    `${fullName} ${companyName} ${email}`.toLowerCase();
-                  return searchString.includes(term);
-                })
-                .map((cp) => {
-                  const fullName =
-                    cp.full_name ||
-                    cp.user?.full_name ||
-                    [
-                      cp.first_name || cp.user?.first_name,
-                      cp.last_name || cp.user?.last_name,
-                    ]
-                      .filter(Boolean)
-                      .join(" ");
-                  const mainLabel =
-                    fullName ||
-                    cp.company_name ||
-                    cp.email ||
-                    cp.user?.email ||
-                    `CP #${cp.id}`;
-                  const extra =
-                    cp.company_name && fullName ? ` (${cp.company_name})` : "";
-                  return (
-                    <option key={cp.id} value={cp.id}>
-                      {mainLabel}
-                      {extra}
-                    </option>
-                  );
-                })}
-            </select>
+                      cp.company_name ||
+                      cp.email ||
+                      cp.user?.email ||
+                      `CP #${cp.id}`;
+                    const extra =
+                      cp.company_name && fullName ? ` (${cp.company_name})` : "";
+                    return (
+                      <option key={cp.id} value={cp.id}>
+                        {mainLabel}
+                        {extra}
+                      </option>
+                    );
+                  })}
+                </select>
+              );
+            })()}
           </div>
         </div>
       );
@@ -1689,10 +1774,40 @@ const SaleAddLead = ({ handleLeadSubmit, leadId: propLeadId }) => {
       );
     }
 
+    // Special handling for mobile_number field with duplicate detection
+    if (field.name === "mobile_number" && !isEditing) {
+      return (
+        <div
+          key={field.name}
+          className={field.span === 3 ? "form-field-full" : "form-field"}
+        >
+          {label}
+          <input
+            id={id}
+            className={baseInputClass}
+            type={field.type === "number" ? "number" : field.type || "text"}
+            value={form[field.name] || ""}
+            onChange={(e) => handleChange(field.name, e.target.value)}
+            disabled={disabled}
+            placeholder={field.placeholder || ""}
+          />
+        </div>
+      );
+    }
+
+    // Add class for tel fields to prevent height increase
+    const isTelField = field.name === "tel_res" || field.name === "tel_office";
+    
     return (
       <div
         key={field.name}
-        className={field.span === 3 ? "form-field-full" : "form-field"}
+        className={
+          field.span === 3
+            ? "form-field-full"
+            : isTelField
+            ? "form-field form-field-tel"
+            : "form-field"
+        }
       >
         {label}
         <input
@@ -1785,6 +1900,90 @@ const SaleAddLead = ({ handleLeadSubmit, leadId: propLeadId }) => {
         )}
 
         <form onSubmit={onSubmit}>
+          {/* Duplicate detection alerts - shown at top to avoid affecting field layout */}
+          {!isEditing && (checkingPhone || lookupResult) && (
+            <div style={{ marginBottom: "16px" }}>
+              {(checkingPhone || lookupResult?.present) && (
+                <div
+                  style={{
+                    padding: "12px 16px",
+                    borderRadius: "6px",
+                    backgroundColor: "#fef3c7",
+                    border: "1px solid #fbbf24",
+                    fontSize: "14px",
+                    marginBottom: lookupResult?.present && existingProjectLead ? "8px" : "0",
+                  }}
+                >
+                  {checkingPhone ? (
+                    <span>Checking existing records…</span>
+                  ) : lookupResult?.present ? (
+                    <>
+                      <span>
+                        Lead / opportunity already exists for this mobile. Leads:{" "}
+                        {lookupResult.lead_count || 0}, Opportunities:{" "}
+                        {lookupResult.opportunity_count || 0}.
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setShowLookupModal(true)}
+                        style={{
+                          marginLeft: "8px",
+                          color: "#1d4ed8",
+                          textDecoration: "underline",
+                          background: "none",
+                          border: "none",
+                          cursor: "pointer",
+                          fontSize: "14px",
+                          fontWeight: "500",
+                        }}
+                      >
+                        View more
+                      </button>
+                    </>
+                  ) : null}
+                </div>
+              )}
+
+              {!checkingPhone &&
+                lookupResult?.present &&
+                existingProjectLead && (
+                  <div
+                    style={{
+                      padding: "12px 16px",
+                      borderRadius: "6px",
+                      backgroundColor: "#fee2e2",
+                      border: "1px solid #ef4444",
+                      fontSize: "14px",
+                      color: "#991b1b",
+                      marginBottom: "8px",
+                    }}
+                  >
+                    This customer is already registered in this project. Please edit
+                    the existing lead instead.
+                  </div>
+                )}
+
+              {!checkingPhone &&
+                !hasExistingLeadInProject &&
+                lookupResult?.present &&
+                lookupResult.leads?.length > 0 && (
+                  <div
+                    style={{
+                      padding: "12px 16px",
+                      borderRadius: "6px",
+                      backgroundColor: "#dbeafe",
+                      border: "1px solid #3b82f6",
+                      fontSize: "14px",
+                      color: "#1e40af",
+                    }}
+                  >
+                    This customer already exists in another project. You can copy
+                    their data if needed.
+                  </div>
+                )}
+            </div>
+          )}
+
           {renderSectionGroup("lead", "Lead Information")}
           {renderSectionGroup("address", "Address Information")}
           {renderSectionGroup("description", "Description Information")}
@@ -1812,7 +2011,7 @@ const SaleAddLead = ({ handleLeadSubmit, leadId: propLeadId }) => {
                 <button
                   type="submit"
                   className="btn-primary"
-                  disabled={loadingLead}
+                  disabled={loadingLead || (!isEditing && hasExistingLeadInProject)}
                 >
                   {isEditing ? "Update Lead" : "Submit"}
                 </button>
@@ -2069,6 +2268,103 @@ const SaleAddLead = ({ handleLeadSubmit, leadId: propLeadId }) => {
                 onClick={handleQuickCpCreate}
               >
                 Create CP
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Existing lead details modal */}
+      {showLookupModal && lookupResult?.present && (
+        <div className="modal-overlay">
+          <div className="modal" style={{ maxWidth: "800px" }}>
+            <h3 className="modal-title">Existing Lead Details</h3>
+
+            {leadsForPhone.length === 0 ? (
+              <div className="onsite-helper">No lead details available.</div>
+            ) : (
+              leadsForPhone.map((lead) => (
+                <div
+                  key={lead.id}
+                  style={{
+                    borderBottom: "1px solid #e5e7eb",
+                    paddingBottom: 12,
+                    marginBottom: 12,
+                  }}
+                >
+                  <div style={{ fontWeight: 600, marginBottom: 4 }}>
+                    #{lead.id} –{" "}
+                    {lead.full_name ||
+                      `${lead.first_name || ""} ${lead.last_name || ""}`.trim()}
+                  </div>
+
+                  <div style={{ fontSize: 13, marginBottom: 4 }}>
+                    <strong>Project:</strong> {lead.project} &nbsp;|&nbsp;
+                    <strong>Phone:</strong> {lead.mobile_number} &nbsp;|&nbsp;
+                    <strong>Email:</strong> {lead.email || "-"}
+                  </div>
+
+                  <div style={{ fontSize: 13, marginBottom: 4 }}>
+                    <strong>Status:</strong> {lead.status_name || "-"}{" "}
+                    &nbsp;|&nbsp;
+                    <strong>Purpose:</strong> {lead.purpose_name || "-"}
+                  </div>
+
+                  {lead.address && (
+                    <div style={{ fontSize: 13, marginBottom: 4 }}>
+                      <strong>Address:</strong>{" "}
+                      {[
+                        lead.address.flat_or_building,
+                        lead.address.area,
+                        lead.address.city,
+                        lead.address.pincode,
+                      ]
+                        .filter(Boolean)
+                        .join(", ")}
+                    </div>
+                  )}
+
+                  {lead.last_update ? (
+                    <div
+                      style={{
+                        fontSize: 13,
+                        padding: "8px 10px",
+                        borderRadius: 6,
+                        background: "#f9fafb",
+                        marginTop: 4,
+                      }}
+                    >
+                      <div style={{ fontWeight: 600, marginBottom: 2 }}>
+                        Last Update ({lead.last_update.type}):
+                      </div>
+                      <div>{lead.last_update.title || "-"}</div>
+                      <div style={{ marginTop: 2 }}>
+                        <strong>On:</strong>{" "}
+                        {lead.last_update.event_date
+                          ? lead.last_update.event_date
+                              .slice(0, 16)
+                              .replace("T", " ")
+                          : "-"}
+                        {"  "} | <strong>By:</strong>{" "}
+                        {lead.last_update.created_by || "-"}
+                      </div>
+                    </div>
+                  ) : (
+                    <div style={{ fontSize: 13, marginTop: 4 }}>
+                      No updates recorded yet.
+                    </div>
+                  )}
+                </div>
+              ))
+            )}
+
+            <div className="modal-actions">
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={() => setShowLookupModal(false)}
+              >
+                Close
               </button>
             </div>
           </div>

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axiosInstance from "../../api/axiosInstance";
 import SearchBar from "../../common/SearchBar";
-import "./SiteVisitList.css";
+import "../PreSalesCRM/Leads/LeadsList.css"; // Use LeadsList CSS for consistent styling
 
 function debounce(fn, delay) {
   let timeoutId;
@@ -70,9 +70,19 @@ export default function SiteVisitList() {
   };
 
   const debouncedSearch = useMemo(
-    () => debounce((val) => fetchList({ q: val, page: 1 }), 300),
-    []
+    () => debounce((val) => {
+      setPage(1);
+      fetchList({ q: val, page: 1 });
+    }, 350),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [status, project, startDate, endDate]
   );
+
+  const handleSearchChange = (value) => {
+    setQ(value);
+    setPage(1);
+    debouncedSearch(value);
+  };
 
   useEffect(() => {
     const loadScopeAndFetch = async () => {
@@ -210,43 +220,27 @@ export default function SiteVisitList() {
   };
 
   return (
-    <div className="projects-page">
-      {/* Toolbar */}
-      <div className="projects-toolbar">
-        <SearchBar
-          value={q}
-          onChange={(e) => {
-            setQ(e.target.value);
-            debouncedSearch(e.target.value);
-          }}
-          placeholder="Search by lead name, mobile, project..."
-        />
+    <div className="leads-list-page">
+      <div className="leads-list-container">
+        {/* Header */}
+        <div className="list-header">
+          {/* LEFT: Search */}
+          <div className="list-header-left">
+            <SearchBar
+              value={q}
+              onChange={handleSearchChange}
+              placeholder="Search by lead name, mobile, project..."
+              wrapperClassName="search-box"
+            />
+          </div>
 
-        <button className="filter-btn" onClick={() => setModalOpen(true)}>
-          <i className="fa fa-filter" /> Filters
-        </button>
-      </div>
-
-      {/* Stats */}
-      <div className="stats-row">
-        <div className="stat-card">
-          <div className="stat-label">Total Leads</div>
-          <div className="stat-value">{count}</div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-label">Total Visits</div>
-          <div className="stat-value">
-            {rows.reduce((sum, r) => sum + (r.total_visits || 0), 0)}
+          {/* RIGHT: Filters */}
+          <div className="list-header-right">
+            <button className="filter-btn" onClick={() => setModalOpen(true)}>
+              <i className="fa fa-filter" /> Filters
+            </button>
           </div>
         </div>
-      </div>
-
-      {/* Pagination Info */}
-      <div className="pagination-hint">
-        {count
-          ? `${(page - 1) * 10 + 1}-${Math.min(page * 10, count)} of ${count}`
-          : "0 of 0"}
-      </div>
 
       {/* Table */}
       <div className="table-wrapper">
@@ -356,29 +350,38 @@ export default function SiteVisitList() {
         </table>
       </div>
 
-      {/* Pagination */}
-      <div className="pager">
+      {/* Pagination BELOW table */}
+      <div className="pagination-info">
+        {count > 0 ? (
+          <>
+            {(page - 1) * 10 + 1}-{Math.min(page * 10, count)} of {count}
+          </>
+        ) : (
+          "No results"
+        )}
         <button
-          disabled={page <= 1}
+          className="pagination-btn"
           onClick={() => {
-            setPage(page - 1);
-            fetchList({ page: page - 1 });
+            const newPage = page - 1;
+            setPage(newPage);
+            fetchList({ page: newPage });
           }}
+          disabled={page === 1}
         >
-          &lt;
+          ❮
         </button>
-        <span>
-          {page} / {totalPages}
-        </span>
         <button
+          className="pagination-btn"
+          onClick={() => {
+            const newPage = page + 1;
+            setPage(newPage);
+            fetchList({ page: newPage });
+          }}
           disabled={page >= totalPages}
-          onClick={() => {
-            setPage(page + 1);
-            fetchList({ page: page + 1 });
-          }}
         >
-          &gt;
+          ❯
         </button>
+      </div>
       </div>
 
       {/* Filter Modal */}

@@ -165,7 +165,7 @@ const SiteVisitEdit = () => {
           <hr className="sv-divider" />
 
           {/* Editable Scheduled Date */}
-          <div className="sv-row">
+          {/* <div className="sv-row">
             <div className="sv-field-full">
               <label className="sv-label">Reschedule Visit (Date & Time)</label>
               <input
@@ -175,7 +175,7 @@ const SiteVisitEdit = () => {
                 onChange={(e) => handleChange("scheduled_at", e.target.value)}
               />
             </div>
-          </div>
+          </div> */}
         </div>
       </div>
 

@@ -244,6 +244,7 @@ import QuotationPreview from "./pages/CostSheet/QuotationPreview";
 import DocumentBrowser from "./pages/Documents/DocumentBrowser";
 import OnsiteRegistration from "./pages/OnsiteRegistration";
 import BookingApprovals from "./pages/Booking/BookingApprovals";
+import LeadOpportunityCreate from "./pages/Sales/LeadOpportunityCreate";
 import KycBlack from "./pages/Kycblack/Kycpage";
 import { Toaster } from "react-hot-toast";
 import ProfilePage from "./pages/Profile";
@@ -376,6 +377,7 @@ export default function App() {
                 element={<CostSheetTemplatesList />}
               />
               <Route path="/sales/opportunities" element={<OppurnityList />} />
+              <Route path="/sales/opportunities/add" element={<LeadOpportunityCreate />} />
               <Route
                 path="/costsheet/templates/:id"
                 element={<CostSheetTemplateCreate />}

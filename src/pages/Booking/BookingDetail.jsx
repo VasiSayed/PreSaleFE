@@ -259,7 +259,8 @@ const BookingDetail = () => {
   const bookingStatus = booking.status || NA;
   const isDraft = bookingStatus === "DRAFT";
   const isBooked = bookingStatus === "BOOKED";
-  const isCancelled = bookingStatus === "CANCELLED" || bookingStatus === "CANCELED";
+  const isCancelled =
+    bookingStatus === "CANCELLED" || bookingStatus === "CANCELED";
 
   const areaSummary = (() => {
     const carpet = booking.carpet_sqft || booking.carpet_area_sqft;
@@ -314,7 +315,10 @@ const BookingDetail = () => {
           {isCancelled && (
             <div className="booking-watermark-container">
               {[...Array(20)].map((_, index) => (
-                <div key={index} className="booking-watermark cancelled-watermark">
+                <div
+                  key={index}
+                  className="booking-watermark cancelled-watermark"
+                >
                   CANCELLED
                 </div>
               ))}
@@ -355,12 +359,18 @@ const BookingDetail = () => {
                   {reraNo && (
                     <div className="booking-brand-rera">RERA No.: {reraNo}</div>
                   )}
+
+                  {header.code && (
+                    <div className="booking-header-code">
+                      Ref: {header.code}
+                    </div>
+                  )}
                 </div>
               </div>
 
-              {header.code && (
+              {/* {header.code && (
                 <div className="booking-header-code">Ref: {header.code}</div>
-              )}
+              )} */}
             </div>
 
             {/* RIGHT: Amount + Booking Date */}
