@@ -123,7 +123,7 @@ export default function CostSheetList() {
           {/* RIGHT: Buttons */}
           <div className="list-header-right">
             <button
-              className="btn-add"
+              className="filter-btn"
               onClick={() => navigate("/costsheet/new")}
             >
               <i className="fa fa-plus" style={{ marginRight: "6px" }} />
@@ -132,97 +132,109 @@ export default function CostSheetList() {
           </div>
         </div>
 
-      {/* Table */}
-      <div className="table-wrapper">
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th style={{ width: 120, textAlign: "center" }}>Action</th>
-              <th>Quotation No</th>
-              <th>Customer Name</th>
-              <th>Project Name</th>
-              <th>Sales Executive</th>
-              <th>Validity Date</th>
-              <th style={{ textAlign: "center" }}>Attachments</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
+        {/* Table */}
+        <div className="table-wrapper">
+          <table className="data-table">
+            <thead>
               <tr>
-                <td colSpan={7}>Loading…</td>
+                <th style={{ width: 120, textAlign: "center" }}>Action</th>
+                <th>Quotation No</th>
+                <th>Customer Name</th>
+                <th>Project Name</th>
+                <th>Sales Executive</th>
+                <th>Validity Date</th>
+                <th style={{ textAlign: "center" }}>Attachments</th>
               </tr>
-            ) : rows.length ? (
-              rows.map((t) => (
-                <tr key={t.id}>
-                  {/* ACTIONS */}
-                  <td className="row-actions" style={{ textAlign: "center" }}>
-                    <button
-                      title="Edit"
-                      className="icon-btn"
-                      onClick={() => navigate(`/costsheet/${t.id}/edit`)}
-                    >
-                      <i className="fa fa-edit" />
-                    </button>
-
-                    <button
-                      title="View"
-                      className="icon-btn"
-                      onClick={() => navigate(`/costsheet/${t.id}`)}
-                    >
-                      <i className="fa fa-eye" />
-                    </button>
-
-                    <button
-                      title="Delete"
-                      className="icon-btn"
-                      onClick={() => {
-                        console.log("delete id", t.id);
-                        // later -> call DELETE /costsheet/cost-sheets/:id/
-                      }}
-                    >
-                      <i className="fa fa-trash" />
-                    </button>
-                  </td>
-
-                  {/* QUOTATION NO */}
-                  <td>{t.quotation_no || "-"}</td>
-
-                  {/* CUSTOMER NAME */}
-                  <td>{t.customer_name ? toTitleCase(t.customer_name) : "-"}</td>
-
-                  {/* PROJECT NAME */}
-                  <td>{t.project_name || t.project?.name ? toTitleCase(t.project_name || t.project?.name) : "-"}</td>
-
-                  {/* SALES EXECUTIVE */}
-                  <td>
-                    {t.prepared_by_name || t.prepared_by_username || t.prepared_by
-                      ? toTitleCase(t.prepared_by_name || t.prepared_by_username || t.prepared_by)
-                      : "-"}
-                  </td>
-
-                  {/* VALIDITY DATE */}
-                  <td>{t.valid_till || t.validity_date || "-"}</td>
-
-                  {/* ATTACHMENTS COUNT */}
-                  <td style={{ textAlign: "center" }}>
-                    {typeof t.attachments_count === "number"
-                      ? t.attachments_count === 0
-                        ? "-"
-                        : `${t.attachments_count} file${
-                            t.attachments_count > 1 ? "s" : ""
-                          }`
-                      : "-"}
-                  </td>
+            </thead>
+            <tbody>
+              {loading ? (
+                <tr>
+                  <td colSpan={7}>Loading…</td>
                 </tr>
-              ))
-            ) : (
-              <tr>
-                <td colSpan={7}>No quotations found</td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+              ) : rows.length ? (
+                rows.map((t) => (
+                  <tr key={t.id}>
+                    {/* ACTIONS */}
+                    <td className="row-actions" style={{ textAlign: "center" }}>
+                      <button
+                        title="Edit"
+                        className="icon-btn"
+                        onClick={() => navigate(`/costsheet/${t.id}/edit`)}
+                      >
+                        <i className="fa fa-edit" />
+                      </button>
+
+                      <button
+                        title="View"
+                        className="icon-btn"
+                        onClick={() => navigate(`/costsheet/${t.id}`)}
+                      >
+                        <i className="fa fa-eye" />
+                      </button>
+
+                      <button
+                        title="Delete"
+                        className="icon-btn"
+                        onClick={() => {
+                          console.log("delete id", t.id);
+                          // later -> call DELETE /costsheet/cost-sheets/:id/
+                        }}
+                      >
+                        <i className="fa fa-trash" />
+                      </button>
+                    </td>
+
+                    {/* QUOTATION NO */}
+                    <td>{t.quotation_no || "-"}</td>
+
+                    {/* CUSTOMER NAME */}
+                    <td>
+                      {t.customer_name ? toTitleCase(t.customer_name) : "-"}
+                    </td>
+
+                    {/* PROJECT NAME */}
+                    <td>
+                      {t.project_name || t.project?.name
+                        ? toTitleCase(t.project_name || t.project?.name)
+                        : "-"}
+                    </td>
+
+                    {/* SALES EXECUTIVE */}
+                    <td>
+                      {t.prepared_by_name ||
+                      t.prepared_by_username ||
+                      t.prepared_by
+                        ? toTitleCase(
+                            t.prepared_by_name ||
+                              t.prepared_by_username ||
+                              t.prepared_by
+                          )
+                        : "-"}
+                    </td>
+
+                    {/* VALIDITY DATE */}
+                    <td>{t.valid_till || t.validity_date || "-"}</td>
+
+                    {/* ATTACHMENTS COUNT */}
+                    <td style={{ textAlign: "center" }}>
+                      {typeof t.attachments_count === "number"
+                        ? t.attachments_count === 0
+                          ? "-"
+                          : `${t.attachments_count} file${
+                              t.attachments_count > 1 ? "s" : ""
+                            }`
+                        : "-"}
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={7}>No quotations found</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
 
         {/* Pagination BELOW table */}
         <div className="pagination-info">

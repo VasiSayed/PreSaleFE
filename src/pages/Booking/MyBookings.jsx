@@ -506,7 +506,7 @@ const MyBookings = () => {
           <div className="list-header-right">
             <button
               type="button"
-              className="btn-add"
+              className="filter-btn"
               onClick={handleAddClick}
             >
               <i className="fa fa-plus" style={{ marginRight: "6px" }} />
@@ -585,9 +585,19 @@ const MyBookings = () => {
                           </td>
 
                           <td>{bookingId}</td>
-                          <td>{b.primary_full_name ? toTitleCase(b.primary_full_name) : "-"}</td>
-                          <td>{b.project_name || b.project ? toTitleCase(b.project_name || b.project) : "-"}</td>
-                          <td>{unitLabel !== "-" ? toTitleCase(unitLabel) : "-"}</td>
+                          <td>
+                            {b.primary_full_name
+                              ? toTitleCase(b.primary_full_name)
+                              : "-"}
+                          </td>
+                          <td>
+                            {b.project_name || b.project
+                              ? toTitleCase(b.project_name || b.project)
+                              : "-"}
+                          </td>
+                          <td>
+                            {unitLabel !== "-" ? toTitleCase(unitLabel) : "-"}
+                          </td>
 
                           <td className="booking-amount-cell">
                             {b.total_advance != null &&
@@ -651,9 +661,7 @@ const MyBookings = () => {
         )}
 
         {/* Pagination Info */}
-        <div className="pagination-info">
-          {rangeLabel}
-        </div>
+        <div className="pagination-info">{rangeLabel}</div>
       </div>
     </div>
   );

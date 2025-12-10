@@ -217,16 +217,22 @@ export default function SiteVisitList() {
 
   const renderLatestRemark = (remark) => {
     if (!remark) {
-      return <span className="remark-empty">No remarks yet</span>;
+      return (
+        <div className="remark-cell">
+          <div className="remark-empty">—</div>
+        </div>
+      );
     }
 
-    const text =
-      remark.length > 120 ? remark.slice(0, 120).trim() + "…" : remark;
+    const fullText = toTitleCase(remark);
+    const displayText = remark.length > 150 ? remark.slice(0, 150).trim() + "…" : remark;
 
     return (
-      <span className="latest-remark" title={toTitleCase(remark)}>
-        {toTitleCase(text)}
-      </span>
+      <div className="remark-cell" title={fullText}>
+        <div className="remark-content">
+          {toTitleCase(displayText)}
+        </div>
+      </div>
     );
   };
 
@@ -251,158 +257,164 @@ export default function SiteVisitList() {
               <i className="fa fa-filter" /> Filters
             </button>
 
-            
             <button
-            className="filter-btn"
-            onClick={() => navigate('/sales/lead/site-visit/create')}
-          >
-            <i className="fa fa-filter" /> Add Site Visit
-          </button>
-
-
+              className="filter-btn"
+              onClick={() => navigate("/sales/lead/site-visit/create")}
+            >
+              <i className="fa fa-plus" />
+              Add Site Visit
+            </button>
           </div>
         </div>
 
-      {/* Table */}
-      <div className="table-wrapper">
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th style={{ width: 100 }}>Actions</th>
-              <th>Lead Name</th>
-              <th>Mobile</th>
-              <th>Project</th>
-              <th>Latest Visit</th>
-              <th>Status</th>
-              <th>Total Visits Schedule</th>
-              <th>Latest Remark</th>
-            </tr>
-          </thead>
-
-          <tbody>
-            {loading ? (
+        {/* Table */}
+        <div className="table-wrapper">
+          <table className="data-table">
+            <thead>
               <tr>
-                {/* 👇 7 → 8 because 8 columns */}
-                <td
-                  colSpan={8}
-                  style={{ textAlign: "center", padding: "40px" }}
-                >
-                  <div className="loading-spinner"></div>
-                  <div style={{ marginTop: "12px", color: "#6b7280" }}>
-                    Loading...
-                  </div>
-                </td>
+                <th style={{ width: 100 }}>Actions</th>
+                <th>Lead Name</th>
+                <th>Mobile</th>
+                <th>Project</th>
+                <th>Latest Visit</th>
+                <th>Status</th>
+                <th>Total Visits Schedule</th>
+                <th style={{ width: 320, minWidth: 280 }}>Latest Remark</th>
               </tr>
-            ) : rows.length ? (
-              rows.map((v) => (
-                <tr key={v.lead_id}>
-                  <td className="row-actions">
-                    <button
-                      className="icon-btn icon-btn-view"
-                      title="View All Visits"
-                      onClick={() =>
-                        navigate(`/sales/lead/site-visit/by-lead/${v.lead_id}`)
-                      }
-                    >
-                      <i className="fa fa-eye" />
-                    </button>
-                  </td>
+            </thead>
 
-                  <td>
-                    <div className="lead-name">{toTitleCase(v.lead_name || "")}</div>
+            <tbody>
+              {loading ? (
+                <tr>
+                  {/* 👇 7 → 8 because 8 columns */}
+                  <td
+                    colSpan={8}
+                    style={{ textAlign: "center", padding: "40px" }}
+                  >
+                    <div className="loading-spinner"></div>
+                    <div style={{ marginTop: "12px", color: "#6b7280" }}>
+                      Loading...
+                    </div>
                   </td>
-                  <td>
-                    <div className="mobile-number">📱 {v.mobile}</div>
-                  </td>
-                  <td>
-                    <div className="project-name">{toTitleCase(v.project || "")}</div>
-                  </td>
-                  <td>{formatDT(v.latest_scheduled_at)}</td>
-                  <td>
-                    <span
-                      className="status-badge"
+                </tr>
+              ) : rows.length ? (
+                rows.map((v) => (
+                  <tr key={v.lead_id}>
+                    <td className="row-actions">
+                      <button
+                        className="icon-btn icon-btn-view"
+                        title="View All Visits"
+                        onClick={() =>
+                          navigate(
+                            `/sales/lead/site-visit/by-lead/${v.lead_id}`
+                          )
+                        }
+                      >
+                        <i className="fa fa-eye" />
+                      </button>
+                    </td>
+
+                    <td>
+                      <div className="lead-name">
+                        {toTitleCase(v.lead_name || "")}
+                      </div>
+                    </td>
+                    <td>
+                      <div className="mobile-number">📱 {v.mobile}</div>
+                    </td>
+                    <td>
+                      <div className="project-name">
+                        {toTitleCase(v.project || "")}
+                      </div>
+                    </td>
+                    <td>{formatDT(v.latest_scheduled_at)}</td>
+                    <td>
+                      <span
+                        className="status-badge"
+                        style={{
+                          backgroundColor: `${getStatusColor(
+                            v.latest_status
+                          )}20`,
+                          color: getStatusColor(v.latest_status),
+                        }}
+                      >
+                        {toTitleCase(v.latest_status || "")}
+                      </span>
+                    </td>
+                    <td>
+                      <span className="visits-count">{v.total_visits}</span>
+                    </td>
+                    {/* 👇 NEW: Latest Remark column */}
+                    <td>{renderLatestRemark(v.latest_remarks)}</td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  {/* 👇 7 → 8 here too */}
+                  <td
+                    colSpan={8}
+                    style={{ textAlign: "center", padding: "40px" }}
+                  >
+                    <div style={{ fontSize: "48px", marginBottom: "12px" }}>
+                      📭
+                    </div>
+                    <div
                       style={{
-                        backgroundColor: `${getStatusColor(v.latest_status)}20`,
-                        color: getStatusColor(v.latest_status),
+                        fontSize: "16px",
+                        fontWeight: "600",
+                        color: "#374151",
                       }}
                     >
-                      {toTitleCase(v.latest_status || "")}
-                    </span>
+                      No site visits found
+                    </div>
+                    <div
+                      style={{
+                        fontSize: "14px",
+                        color: "#6b7280",
+                        marginTop: "4px",
+                      }}
+                    >
+                      Try adjusting your filters or search query
+                    </div>
                   </td>
-                  <td>
-                    <span className="visits-count">{v.total_visits}</span>
-                  </td>
-                  {/* 👇 NEW: Latest Remark column */}
-                  <td>{renderLatestRemark(v.latest_remarks)}</td>
                 </tr>
-              ))
-            ) : (
-              <tr>
-                {/* 👇 7 → 8 here too */}
-                <td
-                  colSpan={8}
-                  style={{ textAlign: "center", padding: "40px" }}
-                >
-                  <div style={{ fontSize: "48px", marginBottom: "12px" }}>
-                    📭
-                  </div>
-                  <div
-                    style={{
-                      fontSize: "16px",
-                      fontWeight: "600",
-                      color: "#374151",
-                    }}
-                  >
-                    No site visits found
-                  </div>
-                  <div
-                    style={{
-                      fontSize: "14px",
-                      color: "#6b7280",
-                      marginTop: "4px",
-                    }}
-                  >
-                    Try adjusting your filters or search query
-                  </div>
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+              )}
+            </tbody>
+          </table>
+        </div>
 
-      {/* Pagination BELOW table */}
-      <div className="pagination-info">
-        {count > 0 ? (
-          <>
-            {(page - 1) * 10 + 1}-{Math.min(page * 10, count)} of {count}
-          </>
-        ) : (
-          "No results"
-        )}
-        <button
-          className="pagination-btn"
-          onClick={() => {
-            const newPage = page - 1;
-            setPage(newPage);
-            fetchList({ page: newPage });
-          }}
-          disabled={page === 1}
-        >
-          ❮
-        </button>
-        <button
-          className="pagination-btn"
-          onClick={() => {
-            const newPage = page + 1;
-            setPage(newPage);
-            fetchList({ page: newPage });
-          }}
-          disabled={page >= totalPages}
-        >
-          ❯
-        </button>
-      </div>
+        {/* Pagination BELOW table */}
+        <div className="pagination-info">
+          {count > 0 ? (
+            <>
+              {(page - 1) * 10 + 1}-{Math.min(page * 10, count)} of {count}
+            </>
+          ) : (
+            "No results"
+          )}
+          <button
+            className="pagination-btn"
+            onClick={() => {
+              const newPage = page - 1;
+              setPage(newPage);
+              fetchList({ page: newPage });
+            }}
+            disabled={page === 1}
+          >
+            ❮
+          </button>
+          <button
+            className="pagination-btn"
+            onClick={() => {
+              const newPage = page + 1;
+              setPage(newPage);
+              fetchList({ page: newPage });
+            }}
+            disabled={page >= totalPages}
+          >
+            ❯
+          </button>
+        </div>
       </div>
 
       {/* Filter Modal */}

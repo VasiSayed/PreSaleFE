@@ -403,20 +403,6 @@
   letter-spacing: 0.02em;
 }
 
-/* Remarks */
-.latest-remark {
-  font-size: 13px;
-  color: #374151;
-  max-width: 260px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.remark-empty {
-  font-size: 12px;
-  color: #9ca3af;
-  font-style: italic;
-}
+/* Remarks - Duplicate removed, using styles above */
 
 

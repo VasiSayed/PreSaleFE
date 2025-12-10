@@ -663,24 +663,26 @@ const downloadSampleExcel = () => {
             <button
               type="button"
               className="filter-btn"
-              onClick={() => document.getElementById("opp-excel-input")?.click()}
+              onClick={() =>
+                document.getElementById("opp-excel-input")?.click()
+              }
               disabled={excelUploading}
             >
               {excelUploading ? "Importing..." : "📥 Import excel"}
             </button>
 
             <button
-              className="btn-add"
+              className="filter-btn"
               onClick={() => navigate("/sales/opportunities/add")}
             >
-              <i className="fa fa-plus" style={{ marginRight: "6px" }} />
+              <i className="fa fa-plus"  />
               Add opportunity
             </button>
           </div>
         </div>
 
-      {/* Stats row */}
-      {/* <div className="stats-row">
+        {/* Stats row */}
+        {/* <div className="stats-row">
         <div className="stat-card">
           <div className="stat-label">Total Opportunities</div>
           <div className="stat-value">{totalOpp}</div>
@@ -710,165 +712,167 @@ const downloadSampleExcel = () => {
         </div>
       </div> */}
 
-      {/* Table */}
-      <div className="table-wrapper">
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th style={{ width: 140 }}>Actions</th>
-              <th>Full Name</th>
-              <th>Contact</th>
-              <th>Email</th>
-              <th>Source System</th>
-              <th>Source Name</th>
-              <th>Project</th>
-              <th>Status</th>
-              <th>Created At</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
+        {/* Table */}
+        <div className="table-wrapper">
+          <table className="data-table">
+            <thead>
               <tr>
-                <td
-                  colSpan={9}
-                  style={{ textAlign: "center", padding: "40px" }}
-                >
-                  <div className="loading-spinner"></div>
-                  <div style={{ marginTop: "12px", color: "#6b7280" }}>
-                    Loading...
-                  </div>
-                </td>
+                <th style={{ width: 140 }}>Actions</th>
+                <th>Full Name</th>
+                <th>Contact</th>
+                <th>Email</th>
+                <th>Source System</th>
+                <th>Source Name</th>
+                <th>Project</th>
+                <th>Status</th>
+                <th>Created At</th>
               </tr>
-            ) : rows.length ? (
-              rows.map((o) => {
-                const contact = o.mobile_number || "-";
-                const projectName = toSentenceCase(
-                  o.project_name || o.project?.name || o.project || "-"
-                );
+            </thead>
+            <tbody>
+              {loading ? (
+                <tr>
+                  <td
+                    colSpan={9}
+                    style={{ textAlign: "center", padding: "40px" }}
+                  >
+                    <div className="loading-spinner"></div>
+                    <div style={{ marginTop: "12px", color: "#6b7280" }}>
+                      Loading...
+                    </div>
+                  </td>
+                </tr>
+              ) : rows.length ? (
+                rows.map((o) => {
+                  const contact = o.mobile_number || "-";
+                  const projectName = toSentenceCase(
+                    o.project_name || o.project?.name || o.project || "-"
+                  );
 
-                return (
-                  <tr key={o.id}>
-                    <td className="row-actions">
-                      {/* Convert */}
-                      {/* <button
+                  return (
+                    <tr key={o.id}>
+                      <td className="row-actions">
+                        {/* Convert */}
+                        {/* <button
                         className="icon-btn icon-btn-view"
                         title="Convert to Lead"
                         onClick={() => handleConvert(o.id)}
                       >
                         <i className="fa fa-exchange" />
                       </button> */}
-                      {/* Change Status */}
-                      <button
-                        className="icon-btn icon-btn-edit"
-                        title="Change status"
-                        onClick={() => openStatusModal(o)}
-                        style={{ marginLeft: "4px" }}
-                      >
-                        <i className="fa fa-tag" />
-                      </button>
-                    </td>
-                    <td>{o.full_name || "-"}</td>
-                    <td>📱 {contact}</td>
-                    <td>{o.email ? toTitleCase(o.email) : "-"}</td>
-                    <td>{toSentenceCase(o.source_system || "")}</td>
-                    <td>{o.source_name ? toTitleCase(o.source_name) : "-"}</td>
-                    <td>{projectName}</td>
-                    <td>
-                      {o.status_config_label ? (
-                        <span
-                          className="status-badge"
-                          style={{
-                            backgroundColor: `${getStatusColor(
-                              o.status_config_code || ""
-                            )}20`,
-                            color: getStatusColor(o.status_config_code || ""),
-                          }}
+                        {/* Change Status */}
+                        <button
+                          className="icon-btn icon-btn-edit"
+                          title="Change status"
+                          onClick={() => openStatusModal(o)}
+                          style={{ marginLeft: "4px" }}
                         >
-                          {toSentenceCase(o.status_config_label)}
-                        </span>
-                      ) : (
-                        <span
-                          className="status-badge"
-                          style={{
-                            backgroundColor: "#e5e7eb",
-                            color: "#4b5563",
-                          }}
-                        >
-                          Fresh
-                        </span>
-                      )}
-                    </td>
+                          <i className="fa fa-tag" />
+                        </button>
+                      </td>
+                      <td>{o.full_name || "-"}</td>
+                      <td>📱 {contact}</td>
+                      <td>{o.email ? toTitleCase(o.email) : "-"}</td>
+                      <td>{toSentenceCase(o.source_system || "")}</td>
+                      <td>
+                        {o.source_name ? toTitleCase(o.source_name) : "-"}
+                      </td>
+                      <td>{projectName}</td>
+                      <td>
+                        {o.status_config_label ? (
+                          <span
+                            className="status-badge"
+                            style={{
+                              backgroundColor: `${getStatusColor(
+                                o.status_config_code || ""
+                              )}20`,
+                              color: getStatusColor(o.status_config_code || ""),
+                            }}
+                          >
+                            {toSentenceCase(o.status_config_label)}
+                          </span>
+                        ) : (
+                          <span
+                            className="status-badge"
+                            style={{
+                              backgroundColor: "#e5e7eb",
+                              color: "#4b5563",
+                            }}
+                          >
+                            Fresh
+                          </span>
+                        )}
+                      </td>
 
-                    <td>{formatDT(o.created_at)}</td>
-                  </tr>
-                );
-              })
-            ) : (
-              <tr>
-                <td
-                  colSpan={9}
-                  style={{ textAlign: "center", padding: "40px" }}
-                >
-                  <div style={{ fontSize: "48px", marginBottom: "12px" }}>
-                    📭
-                  </div>
-                  <div
-                    style={{
-                      fontSize: "16px",
-                      fontWeight: "600",
-                      color: "#374151",
-                    }}
+                      <td>{formatDT(o.created_at)}</td>
+                    </tr>
+                  );
+                })
+              ) : (
+                <tr>
+                  <td
+                    colSpan={9}
+                    style={{ textAlign: "center", padding: "40px" }}
                   >
-                    No opportunities found
-                  </div>
-                  <div
-                    style={{
-                      fontSize: "14px",
-                      color: "#6b7280",
-                      marginTop: "4px",
-                    }}
-                  >
-                    Try adjusting your filters or search query
-                  </div>
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+                    <div style={{ fontSize: "48px", marginBottom: "12px" }}>
+                      📭
+                    </div>
+                    <div
+                      style={{
+                        fontSize: "16px",
+                        fontWeight: "600",
+                        color: "#374151",
+                      }}
+                    >
+                      No opportunities found
+                    </div>
+                    <div
+                      style={{
+                        fontSize: "14px",
+                        color: "#6b7280",
+                        marginTop: "4px",
+                      }}
+                    >
+                      Try adjusting your filters or search query
+                    </div>
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
 
-      {/* Pagination BELOW table */}
-      <div className="pagination-info">
-        {count > 0 ? (
-          <>
-            {(page - 1) * 10 + 1}-{Math.min(page * 10, count)} of {count}
-          </>
-        ) : (
-          "No results"
-        )}
-        <button
-          className="pagination-btn"
-          onClick={() => {
-            const newPage = page - 1;
-            setPage(newPage);
-            fetchList({ page: newPage });
-          }}
-          disabled={page === 1}
-        >
-          ❮
-        </button>
-        <button
-          className="pagination-btn"
-          onClick={() => {
-            const newPage = page + 1;
-            setPage(newPage);
-            fetchList({ page: newPage });
-          }}
-          disabled={page >= totalPages}
-        >
-          ❯
-        </button>
-      </div>
+        {/* Pagination BELOW table */}
+        <div className="pagination-info">
+          {count > 0 ? (
+            <>
+              {(page - 1) * 10 + 1}-{Math.min(page * 10, count)} of {count}
+            </>
+          ) : (
+            "No results"
+          )}
+          <button
+            className="pagination-btn"
+            onClick={() => {
+              const newPage = page - 1;
+              setPage(newPage);
+              fetchList({ page: newPage });
+            }}
+            disabled={page === 1}
+          >
+            ❮
+          </button>
+          <button
+            className="pagination-btn"
+            onClick={() => {
+              const newPage = page + 1;
+              setPage(newPage);
+              fetchList({ page: newPage });
+            }}
+            disabled={page >= totalPages}
+          >
+            ❯
+          </button>
+        </div>
       </div>
 
       {/* Filter Modal */}

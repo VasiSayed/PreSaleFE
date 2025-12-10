@@ -371,10 +371,10 @@ export default function LeadsList() {
             </button>
 
             <button
-              className="btn-add"
-              style={{ backgroundColor: "#19376D", borderColor: "#19376D" }}
+              className="filter-btn"
               onClick={() => navigate("/leads/new")}
             >
+              <i className="fa fa-plus" />
               Add Lead
             </button>
           </div>
@@ -412,7 +412,8 @@ export default function LeadsList() {
                         .filter(Boolean)
                         .join(" ") ||
                       "-";
-                    const leadName = leadNameRaw !== "-" ? toTitleCase(leadNameRaw) : "-";
+                    const leadName =
+                      leadNameRaw !== "-" ? toTitleCase(leadNameRaw) : "-";
                     const contact =
                       lead.mobile_number ||
                       lead.contact_number ||
@@ -424,11 +425,15 @@ export default function LeadsList() {
                       lead.lead_source_name ||
                       lead.source?.name ||
                       "-";
-                    const sourceFormatted = source !== "-" ? toTitleCase(source) : "-";
+                    const sourceFormatted =
+                      source !== "-" ? toTitleCase(source) : "-";
                     const latestRemarksRaw =
                       (lead.latest_remarks && lead.latest_remarks.trim()) ||
                       "NA";
-                    const latestRemarks = latestRemarksRaw !== "NA" ? toTitleCase(latestRemarksRaw) : "NA";
+                    const latestRemarks =
+                      latestRemarksRaw !== "NA"
+                        ? toTitleCase(latestRemarksRaw)
+                        : "NA";
 
                     const project =
                       lead.project_name ||
