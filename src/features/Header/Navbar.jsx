@@ -1,4 +1,6 @@
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import api from "../../api/axiosInstance";
 import profileImg from "../../assets/profile.jpg";
 import "./Navbar.css";
 
@@ -65,6 +67,31 @@ const ProfileIcon = ({ className = "", size = 20 }) => (
 
 // Navbar Component
 function Navbar({ currentUser, onLogout, showLogout = true }) {
+  const [brandLogo, setBrandLogo] = useState(profileImg);
+  const [brandName, setBrandName] = useState(
+    "Shree Ram Krushna Developer – Deep Shikhar"
+  );
+
+  // Load brand details (logo + name) from my-scope once after login
+  useEffect(() => {
+    let isMounted = true;
+    api
+      .get("/client/my-scope/")
+      .then((res) => {
+        const brand = res?.data?.brand || {};
+        if (!isMounted) return;
+        if (brand.logo_url) setBrandLogo(brand.logo_url);
+        if (brand.company_name) setBrandName(brand.company_name);
+      })
+      .catch((err) => {
+        console.error("Failed to load brand info", err);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   // Convert "SUPER_ADMIN" → "Super Admin"
   const formatLabel = (val) => {
     if (!val) return "";
@@ -95,8 +122,8 @@ function Navbar({ currentUser, onLogout, showLogout = true }) {
       {/* LEFT SECTION */}
       <div className="d-flex align-items-center">
         <img
-          src={profileImg}
-          alt="Profile"
+          src={brandLogo || profileImg}
+          alt={brandName || "Company Logo"}
           className="rounded-circle me-2"
           style={{ width: "60px", height: "60px", marginLeft: 0 }}
         />
@@ -111,7 +138,7 @@ function Navbar({ currentUser, onLogout, showLogout = true }) {
             marginLeft: 8,
           }}
         >
-          Shree Ram Krushna Developer – Deep Shikhar
+          {brandName}
         </span>
       </div>
 

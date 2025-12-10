@@ -6,6 +6,7 @@ import projectImage from "../../assets/project.webp";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { toSentenceCase } from "../../utils/text";
+import PaymentLeadCreateModal from "../../components/Payments/PaymentLeadCreateModal";
 
 const BOOK_API_PREFIX = "/book";
 
@@ -168,6 +169,9 @@ const BookingForm = () => {
   const [agreementEditable, setAgreementEditable] = useState(true);
   const [agreementTouched, setAgreementTouched] = useState(false);
 
+  // Payment Lead Modal
+  const [showPaymentLeadModal, setShowPaymentLeadModal] = useState(false);
+
   // Multi-type attachments (Agreement PDF, Booking Form, Payment Proof, Other)
   const [showPaymentDocModal, setShowPaymentDocModal] = useState(false);
   const [paymentDocs, setPaymentDocs] = useState([]); // ab ye generic attachments array hai
@@ -253,7 +257,6 @@ const BookingForm = () => {
     additionalApplicants: true,
     flatInfo: true,
     taxDetails: true,
-    applicantKyc: true,
     costSummary: true,
     taxConfig: false,
     taxesStatutory: true,
@@ -581,6 +584,20 @@ const BookingForm = () => {
     setParkingTotal(String(amt * count));
   }, [parkingAmount, parkingCount, parkingRequired]);
 
+  // Function to refresh lead profile (to update payments after creation)
+  const refreshLeadProfile = async () => {
+    if (!leadId) return;
+    try {
+      const res = await axiosInstance.get(
+        `/sales/sales-leads/${leadId}/full-info/`
+      );
+      const data = res.data || {};
+      setLeadProfile(data);
+    } catch (err) {
+      console.error("Failed to refresh lead profile", err);
+    }
+  };
+
   useEffect(() => {
     if (!leadId) return;
 
@@ -769,14 +786,19 @@ const BookingForm = () => {
       return;
     }
 
-    const baseValue = Number(amountBeforeTaxes) || 0;
+    // Base for GST and Stamp Duty: unit cost + additional charges + parking total
+    const unitCost = Number(agreementValue || 0);
+    const additionalTotal = Number(additionalChargesTotal) || 0;
+    const parkingTotalNumber = parkingRequired === "YES" ? Number(parkingTotal) || 0 : 0;
+    const baseForTaxes = unitCost + additionalTotal + parkingTotalNumber;
+
     const gstPercent = Number(costTemplate.gst_percent) || 0;
     const stampPercent = Number(costTemplate.stamp_duty_percent) || 0;
     const regAmount = Number(costTemplate.registration_amount) || 0;
     const legalAmount = Number(costTemplate.legal_fee_amount) || 0;
 
-    const calcGst = gstEnabled ? (baseValue * gstPercent) / 100 : 0;
-    const calcStamp = stampDutyEnabled ? (baseValue * stampPercent) / 100 : 0;
+    const calcGst = gstEnabled ? (baseForTaxes * gstPercent) / 100 : 0;
+    const calcStamp = stampDutyEnabled ? (baseForTaxes * stampPercent) / 100 : 0;
     const calcReg = registrationEnabled ? regAmount : 0;
     const calcLegal = legalFeeEnabled ? legalAmount : 0;
 
@@ -786,7 +808,10 @@ const BookingForm = () => {
     setStampDutyAmount(calcStamp);
     setTotalTaxes(calcTotal);
   }, [
-    amountBeforeTaxes,
+    agreementValue,
+    additionalChargesTotal,
+    parkingTotal,
+    parkingRequired,
     costTemplate,
     gstEnabled,
     stampDutyEnabled,
@@ -1781,7 +1806,7 @@ const BookingForm = () => {
     const totalAreaForCharges =
       (isBalconyCarpetPricing ? carpet + balcony : carpet) || carpet + balcony || superBuiltUp;
 
-    // Share Application Fees (flat)
+    // Share Application Fees (flat) - NOT included in GST base
     const shareFee = Number(
       costTemplate.share_application_money_membership_fees || 0
     );
@@ -1789,8 +1814,6 @@ const BookingForm = () => {
     // Development Charges @ PSF × total area
     const devPsqf = Number(costTemplate.development_charges_psf || 0);
     const devAmount = devPsqf * totalAreaForCharges;
-    console.log(devAmount, "yea hai mera devamount", devPsqf);
-    
     
     // Electrical, Water, Gas (flat)
     const electrical = Number(
@@ -1802,16 +1825,17 @@ const BookingForm = () => {
     const provMonths = Number(costTemplate.provisional_maintenance_months || 0);
     const provAmount = provPsqf * totalAreaForCharges * provMonths;
 
-    // Possession base total (GST not applied on shareFee as per earlier logic)
-    const baseTotal = devAmount + electrical + provAmount;
-    console.log('my base totoal',baseTotal);
+    // Legal & Compliance Charges (flat)
+    const legalAmount = legalFeeEnabled ? Number(costTemplate.legal_fee_amount || 0) : 0;
+
+    // Base for GST: Legal + Development + Electrical + Provisional Maintenance
+    const baseForGst = legalAmount + devAmount + electrical + provAmount;
     
-    // GST on possession (18%)
-    const possessionGst = (baseTotal * 18) / 100;
-    console.log(possessionGst);
+    // GST on possession (18%) - applied on baseForGst
+    const possessionGst = (baseForGst * 18) / 100;
     
-    // Total with GST
-    const totalWithGst = baseTotal + possessionGst;
+    // Total with GST (includes shareFee which is not in GST base)
+    const totalWithGst = shareFee + baseForGst + possessionGst;
 
     return {
       shareFee,
@@ -1822,9 +1846,10 @@ const BookingForm = () => {
       provAmount,
       provMonths,
       totalAreaForCharges,
-      baseTotal,
+      legalAmount,
+      baseForGst,
       possessionGst,
-      total: baseTotal,
+      total: baseForGst,
       totalWithGst,
     };
   }, [
@@ -1833,6 +1858,7 @@ const BookingForm = () => {
     balconySqft,
     superBuiltupSqft,
     project,
+    legalFeeEnabled,
   ]);
 
   const effectiveBaseRate = useMemo(() => {
@@ -2056,7 +2082,7 @@ const BookingForm = () => {
 
       // Calculate possession totals with GST
       const possessionBase = possessionCharges
-        ? possessionCharges.baseTotal
+        ? possessionCharges.baseForGst
         : 0;
       const possessionGstAmt = possessionCharges
         ? possessionCharges.possessionGst
@@ -2169,7 +2195,7 @@ const BookingForm = () => {
               // ✅ REMOVED: parking_charges - now in unit_cost_calculation
               possession_gst: possessionCharges.possessionGst,
               possession_gst_percent: 18,
-              base_total: possessionCharges.baseTotal,
+              base_total: possessionCharges.baseForGst,
               total_with_gst: possessionCharges.totalWithGst,
             }
           : null,
@@ -2543,11 +2569,11 @@ const BookingForm = () => {
   //     ? (baseAmountBeforeTaxes * Number(costTemplate.gst_percent || 0)) / 100
   //     : 0;
 
-  // Stamp Duty amount
+  // Stamp Duty amount - applied on unit cost + additional charges + parking total
+  const stampDutyBase = Number(agreementValue || 0) + Number(additionalChargesTotal || 0) + (parkingRequired === "YES" ? Number(parkingTotal || 0) : 0);
   const stampAmount =
     stampDutyEnabled && costTemplate
-      ? (baseAmountBeforeTaxes * Number(costTemplate.stamp_duty_percent || 0)) /
-        100
+      ? (stampDutyBase * Number(costTemplate.stamp_duty_percent || 0)) / 100
       : 0;
 
   // Registration amount (fixed)
@@ -4301,7 +4327,7 @@ const BookingForm = () => {
 
                     {/* ================== POSSESSION RELATED CHARGES ================== */}
                     {/* ✅ NO PARKING - Parking removed from this section */}
-                    {possessionCharges && possessionCharges.baseTotal > 0 && (
+                    {possessionCharges && possessionCharges.totalWithGst > 0 && (
                       <div className="cost-breakdown-section cost-breakdown-possession">
                         <div className="cost-breakdown-header">
                           Possession Related Charges
@@ -4449,93 +4475,6 @@ const BookingForm = () => {
                     )}
                   </div>
                 )}
-              </Section>
-              {/* Applicant KYC (generic docs – separate from gating KYC) */}
-              <Section
-                id="applicantKyc"
-                title="Applicant KYC"
-                open={openSections.applicantKyc}
-                onToggle={toggleSection}
-              >
-                <div className="bf-row">
-                  <div className="bf-col">
-                    <label className="bf-label">PAN Number</label>
-                    <input
-                      className="bf-input"
-                      type="text"
-                      placeholder="ABCDE1234F"
-                    />
-                  </div>
-                  <div className="bf-col">
-                    <label className="bf-label">Aadhar Number</label>
-                    <input
-                      className="bf-input"
-                      type="text"
-                      placeholder="XXXX XXXX 1234"
-                    />
-                  </div>
-                </div>
-
-                <div className="bf-row bf-row-upload">
-                  <div className="bf-col">
-                    <span className="bf-label">
-                      Upload PAN Card (Front &amp; Back)
-                    </span>
-
-                    <input
-                      id="kycPanInput"
-                      type="file"
-                      accept="image/*,application/pdf"
-                      style={{ display: "none" }}
-                      onChange={handleFileChange("kycPan")}
-                    />
-
-                    <div className="bf-btn-group">
-                      <label
-                        htmlFor="kycPanInput"
-                        className="bf-btn-gold"
-                        style={{ cursor: "pointer" }}
-                      >
-                        Upload
-                      </label>
-                    </div>
-
-                    {files.kycPan && (
-                      <div className="bf-file-name">
-                        PAN: {files.kycPan.name}
-                      </div>
-                    )}
-                  </div>
-                  <div className="bf-col">
-                    <span className="bf-label">
-                      Upload Aadhar Card (Front &amp; Back)
-                    </span>
-
-                    <input
-                      id="kycAadharInput"
-                      type="file"
-                      accept="image/*,application/pdf"
-                      style={{ display: "none" }}
-                      onChange={handleFileChange("kycAadhar")}
-                    />
-
-                    <div className="bf-btn-group">
-                      <label
-                        htmlFor="kycAadharInput"
-                        className="bf-btn-gold"
-                        style={{ cursor: "pointer" }}
-                      >
-                        Upload
-                      </label>
-                    </div>
-
-                    {files.kycAadhar && (
-                      <div className="bf-file-name">
-                        Aadhar: {files.kycAadhar.name}
-                      </div>
-                    )}
-                  </div>
-                </div>
               </Section>
 
               {/* Source of Funding */}
@@ -5165,235 +5104,6 @@ const BookingForm = () => {
                 )}
               </Section>
 
-              {/* Lead Payments from CRM (EOI etc.) */}
-              {/* Payments / Receipts against this Lead */}
-              {leadId && (
-                <Section
-                  id="paymentsSummary"
-                  title="Payments / Receipts for this Lead"
-                  open={openSections.paymentsSummary}
-                  onToggle={toggleSection}
-                >
-                  <div className="bf-subcard">
-                    {!payments.length ? (
-                      <p style={{ color: "#6b7280", fontSize: "13px" }}>
-                        There are no payment records for this lead yet.
-                      </p>
-                    ) : (
-                      <>
-                        {/* Table */}
-                        <div style={{ overflowX: "auto" }}>
-                          <table
-                            style={{
-                              width: "100%",
-                              borderCollapse: "collapse",
-                              fontSize: "13px",
-                            }}
-                          >
-                            <thead>
-                              <tr
-                                style={{
-                                  backgroundColor: "#f3f4f6",
-                                  textAlign: "left",
-                                }}
-                              >
-                                <th style={{ padding: "8px" }}>Date</th>
-                                <th style={{ padding: "8px" }}>Type</th>
-                                <th style={{ padding: "8px" }}>Method</th>
-                                <th style={{ padding: "8px" }}>Amount</th>
-                                <th style={{ padding: "8px" }}>Status</th>
-                                <th style={{ padding: "8px" }}>Details</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {payments.map((p) => {
-                                const status = String(
-                                  p.status || ""
-                                ).toUpperCase();
-                                const isPending = status === "PENDING";
-
-                                const dateLabel = p.payment_date
-                                  ? formatDateDDMMYYYY(p.payment_date)
-                                  : "-";
-
-                                const detail =
-                                  p.payment_method === "POS" ||
-                                  p.payment_method === "ONLINE"
-                                    ? p.transaction_no ||
-                                      p.neft_rtgs_ref_no ||
-                                      "-"
-                                    : p.payment_method === "DRAFT_CHEQUE"
-                                    ? p.cheque_number || "-"
-                                    : p.neft_rtgs_ref_no ||
-                                      p.transaction_no ||
-                                      p.cheque_number ||
-                                      "-";
-
-                                return (
-                                  <tr key={p.id}>
-                                    <td
-                                      style={{
-                                        padding: "8px",
-                                        borderBottom: "1px solid #e5e7eb",
-                                      }}
-                                    >
-                                      {dateLabel}
-                                    </td>
-                                    <td
-                                      style={{
-                                        padding: "8px",
-                                        borderBottom: "1px solid #e5e7eb",
-                                      }}
-                                    >
-                                      {p.payment_type || "-"}
-                                    </td>
-                                    <td
-                                      style={{
-                                        padding: "8px",
-                                        borderBottom: "1px solid #e5e7eb",
-                                      }}
-                                    >
-                                      {p.payment_method || "-"}
-                                    </td>
-                                    <td
-                                      style={{
-                                        padding: "8px",
-                                        borderBottom: "1px solid #e5e7eb",
-                                        fontWeight: "500",
-                                      }}
-                                    >
-                                      ₹{formatINR(p.amount || 0)}
-                                    </td>
-                                    <td
-                                      style={{
-                                        padding: "8px",
-                                        borderBottom: "1px solid #e5e7eb",
-                                      }}
-                                    >
-                                      <span
-                                        style={{
-                                          padding: "2px 8px",
-                                          borderRadius: "999px",
-                                          fontSize: "11px",
-                                          fontWeight: 600,
-                                          backgroundColor: isPending
-                                            ? "#fef3c7" // yellow
-                                            : "#dcfce7", // green-ish for non-pending
-                                          color: isPending
-                                            ? "#92400e"
-                                            : "#166534",
-                                        }}
-                                      >
-                                        {status}
-                                      </span>
-                                    </td>
-                                    <td
-                                      style={{
-                                        padding: "8px",
-                                        borderBottom: "1px solid #e5e7eb",
-                                      }}
-                                    >
-                                      {detail}
-                                    </td>
-                                  </tr>
-                                );
-                              })}
-                            </tbody>
-                          </table>
-                        </div>
-
-                        {/* Summary card */}
-                        <div
-                          style={{
-                            marginTop: "16px",
-                            display: "flex",
-                            justifyContent: "flex-end",
-                          }}
-                        >
-                          <div
-                            style={{
-                              minWidth: "320px",
-                              padding: "16px",
-                              backgroundColor: "#f9fafb",
-                              borderRadius: "8px",
-                              border: "1px solid #e5e7eb",
-                            }}
-                          >
-                            <div
-                              style={{
-                                display: "flex",
-                                justifyContent: "space-between",
-                                marginBottom: "6px",
-                                color: "#6b7280",
-                                fontSize: "13px",
-                              }}
-                            >
-                              <span>Total Receivable (Incl. Taxes)</span>
-                              <span>
-                                ₹{formatINR(Number(finalAmount || 0))}
-                              </span>
-                            </div>
-
-                            <div
-                              style={{
-                                display: "flex",
-                                justifyContent: "space-between",
-                                marginBottom: "6px",
-                                color: "#6b7280",
-                                fontSize: "13px",
-                              }}
-                            >
-                              <span>Less: Cleared Payments</span>
-                              <span>− ₹{formatINR(totalClearedPaid)}</span>
-                            </div>
-
-                            <div
-                              style={{
-                                marginTop: "10px",
-                                paddingTop: "10px",
-                                borderTop: "2px solid #e5e7eb",
-                                display: "flex",
-                                justifyContent: "space-between",
-                                alignItems: "center",
-                              }}
-                            >
-                              <span
-                                style={{
-                                  fontSize: "14px",
-                                  fontWeight: "600",
-                                  color: "#374151",
-                                }}
-                              >
-                                Final Amount Payable
-                              </span>
-                              <span
-                                style={{
-                                  fontSize: "22px",
-                                  fontWeight: "700",
-                                  color: "#059669",
-                                }}
-                              >
-                                ₹{formatINR(netPayableAfterReceipts)}
-                              </span>
-                            </div>
-
-                            <div
-                              style={{
-                                marginTop: "4px",
-                                fontSize: "11px",
-                                color: "#6b7280",
-                              }}
-                            >
-                              * Pending payments ko minus nahi kiya gaya hai.
-                            </div>
-                          </div>
-                        </div>
-                      </>
-                    )}
-                  </div>
-                </Section>
-              )}
-
               {/* Attachments & Payment Proofs */}
               <Section
                 id="attachments"
@@ -5683,6 +5393,20 @@ const BookingForm = () => {
                 </button>
               </div>
             </>
+          )}
+
+          {/* Payment Lead Create Modal */}
+          {showPaymentLeadModal && leadId && (
+            <PaymentLeadCreateModal
+              isOpen={showPaymentLeadModal}
+              onClose={() => setShowPaymentLeadModal(false)}
+              leadId={leadId}
+              defaultPaymentType="EOI"
+              onCreated={() => {
+                refreshLeadProfile();
+                toast.success("Payment added successfully!");
+              }}
+            />
           )}
 
           {showPaymentDocModal && (

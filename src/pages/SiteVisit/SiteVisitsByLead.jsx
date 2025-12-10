@@ -3,6 +3,17 @@ import { useParams, useNavigate } from "react-router-dom";
 import axiosInstance from "../../api/axiosInstance";
 import "./SiteVisitList.css";
 
+// Helper: Convert text to title case (first letter of every word capitalized)
+function toTitleCase(text) {
+  if (!text || typeof text !== "string") return text;
+  // Split by spaces and capitalize first letter of each word
+  return text
+    .trim()
+    .split(/\s+/)
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(" ");
+}
+
 export default function SiteVisitsByLead() {
   const { leadId } = useParams();
   const navigate = useNavigate();
@@ -72,10 +83,14 @@ export default function SiteVisitsByLead() {
   // Unit display logic
   const formatUnit = (visit) => {
     if (visit.inventory) {
-      return `${visit.inventory.tower_name} / ${visit.inventory.floor_number} / ${visit.inventory.unit_no}`;
+      const tower = visit.inventory.tower_name || "";
+      const floor = visit.inventory.floor_number || "";
+      const unit = visit.inventory.unit_no || "";
+      return `${toTitleCase(tower)} / ${floor} / ${unit}`;
     }
     if (visit.unit_config) {
-      return visit.unit_config.name || visit.unit_config.code || "NA";
+      const name = visit.unit_config.name || visit.unit_config.code || "NA";
+      return toTitleCase(name);
     }
     return "NA";
   };
@@ -90,8 +105,8 @@ export default function SiteVisitsByLead() {
       remark.length > 120 ? remark.slice(0, 120).trim() + "…" : remark;
 
     return (
-      <span className="latest-remark" title={remark}>
-        {text}
+      <span className="latest-remark" title={toTitleCase(remark)}>
+        {toTitleCase(text)}
       </span>
     );
   };
@@ -112,8 +127,8 @@ export default function SiteVisitsByLead() {
         {leadInfo && (
           <>
             {" "}
-            – <strong>{leadInfo.name}</strong> ({leadInfo.mobile}) –{" "}
-            {leadInfo.project}
+            – <strong>{toTitleCase(leadInfo.name || "")}</strong> ({leadInfo.mobile}) –{" "}
+            {toTitleCase(leadInfo.project || "")}
           </>
         )}
       </p>
@@ -171,7 +186,7 @@ export default function SiteVisitsByLead() {
                   </td>
 
                   <td>{formatDT(visit.scheduled_at)}</td>
-                  <td>{visit.project?.name || "NA"}</td>
+                  <td>{toTitleCase(visit.project?.name || "NA")}</td>
                   <td>{formatUnit(visit)}</td>
 
                   <td>
@@ -182,7 +197,7 @@ export default function SiteVisitsByLead() {
                         color: getStatusColor(visit.status),
                       }}
                     >
-                      {visit.status}
+                      {toTitleCase(visit.status || "")}
                     </span>
                   </td>
 

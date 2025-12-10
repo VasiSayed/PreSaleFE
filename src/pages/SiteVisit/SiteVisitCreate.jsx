@@ -1,8 +1,20 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import api from "../../api/axiosInstance";
+import { SetupAPI } from "../../api/endpoints";
 import "./SiteVisitCreate.css";
 import { toast } from "react-hot-toast";
+
+// Helper: Convert text to title case (first letter of every word capitalized)
+function toTitleCase(text) {
+  if (!text || typeof text !== "string") return text;
+  // Split by spaces and capitalize first letter of each word
+  return text
+    .trim()
+    .split(/\s+/)
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(" ");
+}
 
 export default function SiteVisitCreate() {
   const navigate = useNavigate();
@@ -13,6 +25,10 @@ export default function SiteVisitCreate() {
 
   const [lead, setLead] = useState(null);
   const [project, setProject] = useState(null);
+  const [leadsList, setLeadsList] = useState([]); // For dropdown when no lead_id
+  const [leadSearch, setLeadSearch] = useState(""); // For searchable lead dropdown
+  const [selectedLeadId, setSelectedLeadId] = useState(""); // Selected lead ID
+  const [projectsList, setProjectsList] = useState([]); // Projects list for dropdown
 
   const [availableUnits, setAvailableUnits] = useState([]);
   const [unitConfigs, setUnitConfigs] = useState([]);
@@ -38,19 +54,7 @@ export default function SiteVisitCreate() {
     setForm((f) => ({ ...f, [name]: value }));
   };
 
-  // LOAD LEAD DETAILS
-  useEffect(() => {
-    if (!leadId) return;
-    api
-      .get(`/sales/sales-leads/${leadId}/`)
-      .then((res) => {
-        setLead(res.data);
-        setForm((f) => ({ ...f, lead: leadId }));
-      })
-      .catch(() => toast.error("Failed to load lead"));
-  }, [leadId]);
-
-  // LOAD LEAD (also contains project)
+  // LOAD LEAD (also contains project) - when lead_id provided in URL
   useEffect(() => {
     if (!leadId) return;
 
@@ -73,13 +77,76 @@ export default function SiteVisitCreate() {
       .catch(() => toast.error("Failed to load lead details"));
   }, [leadId]);
 
+  // LOAD LEADS LIST (when no lead_id provided - for dropdown)
+  useEffect(() => {
+    if (leadId) return; // Skip if lead_id is provided
+
+    api
+      .get("/sales/sales-leads/", { params: { page_size: 1000 } })
+      .then((res) => {
+        const items = Array.isArray(res.data) ? res.data : res.data.results || [];
+        setLeadsList(items);
+      })
+      .catch(() => {
+        // Silent fail - dropdown will be empty
+        console.error("Failed to load leads list");
+      });
+  }, [leadId]);
+
+  // LOAD PROJECTS LIST (for project dropdown)
+  useEffect(() => {
+    SetupAPI.myScope()
+      .then((data) => {
+        const list = data?.projects || data?.project_list || data?.results || [];
+        const scopeProjects = list.map((p) => ({
+          id: p.id,
+          name: p.name || p.project_name || `Project #${p.id}`,
+        }));
+        setProjectsList(scopeProjects.filter((p) => p.id));
+      })
+      .catch(() => {
+        console.error("Failed to load projects");
+      });
+  }, []);
+
+  // LOAD LEAD WHEN SELECTED FROM SEARCHABLE DROPDOWN
+  useEffect(() => {
+    if (leadId || !selectedLeadId) return; // Skip if lead_id from URL or no lead selected
+
+    api
+      .get(`/sales/sales-leads/${selectedLeadId}/`)
+      .then((res) => {
+        setLead(res.data);
+
+        setForm((f) => ({
+          ...f,
+          lead: selectedLeadId,
+          project: res.data.project || "", // take project from lead
+        }));
+
+        // Set project from lead
+        if (res.data.project) {
+          const proj = projectsList.find((p) => String(p.id) === String(res.data.project));
+          if (proj) {
+            setProject({
+              id: proj.id,
+              name: proj.name,
+            });
+          }
+        }
+      })
+      .catch(() => toast.error("Failed to load lead details"));
+  }, [selectedLeadId, leadId, projectsList]);
+
 
   // LOAD AVAILABLE INVENTORY
   useEffect(() => {
-    if (!projectId) return;
+    // Use projectId from URL or project from form (which comes from lead)
+    const currentProjectId = projectId || form.project;
+    if (!currentProjectId) return;
 
     api
-      .get(`/client/projects/${projectId}/available-units/`)
+      .get(`/client/projects/${currentProjectId}/available-units/`)
       .then((res) => {
         const data = Array.isArray(res.data)
           ? res.data
@@ -96,7 +163,7 @@ export default function SiteVisitCreate() {
         setTowers(uniqueTowers);
       })
       .catch(() => toast.error("Failed to load units"));
-  }, [projectId]);
+  }, [projectId, form.project]);
 
   // LOAD UNIT CONFIGURATION
   useEffect(() => {
@@ -154,24 +221,25 @@ export default function SiteVisitCreate() {
 
   // SUBMIT
   const handleSubmit = async () => {
-    if (!form.lead || !form.project || !form.scheduled_at) {
+    const leadIdToUse = leadId || selectedLeadId || form.lead;
+    if (!leadIdToUse || !form.project || !form.scheduled_at) {
       toast.error("Required fields missing");
       return;
     }
 
     try {
-await api.post("/sales/site-visits/", {
-  lead_id: Number(form.lead),
-  project_id: Number(form.project),
-  unit_config_id: form.unit_config ? Number(form.unit_config) : null,
-  inventory_id: form.inventory ? Number(form.inventory) : null,
-  scheduled_at: form.scheduled_at,
-  member_name: form.member_name,
-  member_mobile_number: form.member_mobile_number,
-  notes: form.notes,
-});
+      await api.post("/sales/site-visits/", {
+        lead_id: Number(leadIdToUse),
+        project_id: Number(form.project),
+        unit_config_id: form.unit_config ? Number(form.unit_config) : null,
+        inventory_id: form.inventory ? Number(form.inventory) : null,
+        scheduled_at: form.scheduled_at,
+        member_name: form.member_name ? toTitleCase(form.member_name) : "",
+        member_mobile_number: form.member_mobile_number,
+        notes: form.notes ? toTitleCase(form.notes) : "",
+      });
       toast.success("Site Visit Scheduled");
-      navigate(`/sales/lead/site-visit?lead_id=${leadId}`);
+      navigate(`/sales/lead/site-visit?lead_id=${leadIdToUse}`);
     } catch (err) {
       console.error(err);
       toast.error("Failed to create site visit");
@@ -187,24 +255,141 @@ await api.post("/sales/site-visits/", {
 
       {/* FORM */}
       <div className="sv-section">
-        {/* Project + Lead + Unit Config */}
+        {/* Lead + Project + Unit Config */}
         <div className="form-row">
           <div className="form-field">
-            <label className="form-label">Project</label>
-            <input
-              className="form-input"
-              value={project?.name || ""}
-              readOnly
-            />
+            <label className="form-label">Lead (Type to search)</label>
+            {leadId ? (
+              // When lead_id provided from URL (from LeadsList) - read-only
+              <input
+                className="form-input"
+                value={toTitleCase(lead?.full_name || lead?.lead_name || [lead?.first_name, lead?.last_name].filter(Boolean).join(" ") || "")}
+                readOnly
+              />
+            ) : (
+              // When no lead_id (from SiteVisitList) - show searchable dropdown
+              <div className="searchable-select">
+                <input
+                  type="text"
+                  className="form-input"
+                  placeholder="Search by name, email, mobile..."
+                  value={leadSearch}
+                  onChange={(e) => {
+                    setLeadSearch(e.target.value);
+                    if (selectedLeadId && e.target.value) {
+                      setSelectedLeadId("");
+                      setForm((f) => ({ ...f, lead: "", project: "" }));
+                      setProject(null);
+                    }
+                  }}
+                />
+                {(() => {
+                  const filteredLeads = leadsList.filter((l) => {
+                    if (!leadSearch) return false; // Only show when user is typing
+                    const term = leadSearch.toLowerCase();
+                    const leadName = toTitleCase(
+                      l.lead_name ||
+                        [l.first_name, l.last_name].filter(Boolean).join(" ") ||
+                        l.full_name ||
+                        ""
+                    );
+                    const email = (l.email || "").toLowerCase();
+                    const mobile = (l.mobile_number || "").toLowerCase();
+                    const searchString = `${leadName} ${email} ${mobile}`.toLowerCase();
+                    return searchString.includes(term);
+                  });
+
+                  if (!leadSearch && filteredLeads.length === 0) {
+                    return null;
+                  }
+
+                  return (
+                    <select
+                      className="form-input cp-search-dropdown"
+                      style={{ marginTop: "8px" }}
+                      value={selectedLeadId}
+                      onChange={(e) => {
+                        setSelectedLeadId(e.target.value);
+                        if (e.target.value) {
+                          const selected = leadsList.find(
+                            (l) => l.id === parseInt(e.target.value, 10)
+                          );
+                          if (selected) {
+                            const leadName = toTitleCase(
+                              selected.lead_name ||
+                                [selected.first_name, selected.last_name]
+                                  .filter(Boolean)
+                                  .join(" ") ||
+                                selected.full_name ||
+                                `Lead #${selected.id}`
+                            );
+                            setLeadSearch(leadName);
+                            handleChange("lead", e.target.value);
+                          }
+                        }
+                      }}
+                      size={Math.min(filteredLeads.length + 1, 6)}
+                    >
+                      <option value="">
+                        {leadSearch && filteredLeads.length === 0
+                          ? "— No results found —"
+                          : leadSearch
+                          ? "— Select from filtered results —"
+                          : "— Start typing to search —"}
+                      </option>
+                      {filteredLeads.map((l) => {
+                        const leadName = toTitleCase(
+                          l.lead_name ||
+                            [l.first_name, l.last_name].filter(Boolean).join(" ") ||
+                            l.full_name ||
+                            `Lead #${l.id}`
+                        );
+                        return (
+                          <option key={l.id} value={l.id}>
+                            {leadName}
+                          </option>
+                        );
+                      })}
+                    </select>
+                  );
+                })()}
+              </div>
+            )}
           </div>
 
           <div className="form-field">
-            <label className="form-label">Lead</label>
-            <input
-              className="form-input"
-              value={lead?.full_name || ""}
-              readOnly
-            />
+            <label className="form-label">Project</label>
+            {leadId || selectedLeadId ? (
+              // When lead is selected - show project from lead (read-only)
+              <input
+                className="form-input"
+                value={toTitleCase(project?.name || "")}
+                readOnly
+              />
+            ) : (
+              // When no lead selected - show project dropdown
+              <select
+                className="form-input"
+                value={form.project}
+                onChange={(e) => {
+                  handleChange("project", e.target.value);
+                  const proj = projectsList.find((p) => String(p.id) === String(e.target.value));
+                  if (proj) {
+                    setProject({
+                      id: proj.id,
+                      name: proj.name,
+                    });
+                  }
+                }}
+              >
+                <option value="">Select Project</option>
+                {projectsList.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {toTitleCase(p.name || "")}
+                  </option>
+                ))}
+              </select>
+            )}
           </div>
 
           <div className="form-field">
@@ -217,7 +402,7 @@ await api.post("/sales/site-visits/", {
               <option value="">Select</option>
               {unitConfigs.map((c) => (
                 <option key={c.id} value={c.id}>
-                  {c.name}
+                  {toTitleCase(c.name || "")}
                 </option>
               ))}
             </select>
@@ -236,7 +421,7 @@ await api.post("/sales/site-visits/", {
               <option value="">Select Tower</option>
               {towers.map((t) => (
                 <option key={t.id} value={t.id}>
-                  {t.name}
+                  {toTitleCase(t.name || "")}
                 </option>
               ))}
             </select>
@@ -282,7 +467,15 @@ await api.post("/sales/site-visits/", {
             <input
               className="form-input"
               value={form.member_name}
-              onChange={(e) => handleChange("member_name", e.target.value)}
+              onChange={(e) => {
+                const value = e.target.value;
+                handleChange("member_name", value ? toTitleCase(value) : value);
+              }}
+              onBlur={(e) => {
+                if (e.target.value) {
+                  handleChange("member_name", toTitleCase(e.target.value));
+                }
+              }}
             />
           </div>
 
@@ -316,7 +509,15 @@ await api.post("/sales/site-visits/", {
               className="form-input"
               rows={3}
               value={form.notes}
-              onChange={(e) => handleChange("notes", e.target.value)}
+              onChange={(e) => {
+                const value = e.target.value;
+                handleChange("notes", value ? toTitleCase(value) : value);
+              }}
+              onBlur={(e) => {
+                if (e.target.value) {
+                  handleChange("notes", toTitleCase(e.target.value));
+                }
+              }}
             />
           </div>
         </div>
@@ -334,5 +535,4 @@ await api.post("/sales/site-visits/", {
     </div>
   );
 }
-
 

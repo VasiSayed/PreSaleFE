@@ -4,6 +4,17 @@ import axiosInstance from "../../api/axiosInstance";
 import SearchBar from "../../common/SearchBar";
 import "../PreSalesCRM/Leads/LeadsList.css";
 
+// Helper: Convert text to title case (first letter of every word capitalized)
+function toTitleCase(text) {
+  if (!text || typeof text !== "string") return text;
+  // Split by spaces and capitalize first letter of each word
+  return text
+    .trim()
+    .split(/\s+/)
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(" ");
+}
+
 function debounce(fn, delay) {
   let timeoutId;
   return (...args) => {
@@ -177,17 +188,16 @@ export default function CostSheetList() {
                   <td>{t.quotation_no || "-"}</td>
 
                   {/* CUSTOMER NAME */}
-                  <td>{t.customer_name || "-"}</td>
+                  <td>{t.customer_name ? toTitleCase(t.customer_name) : "-"}</td>
 
                   {/* PROJECT NAME */}
-                  <td>{t.project_name || t.project?.name || "-"}</td>
+                  <td>{t.project_name || t.project?.name ? toTitleCase(t.project_name || t.project?.name) : "-"}</td>
 
                   {/* SALES EXECUTIVE */}
                   <td>
-                    {t.prepared_by_name ||
-                      t.prepared_by_username ||
-                      t.prepared_by ||
-                      "-"}
+                    {t.prepared_by_name || t.prepared_by_username || t.prepared_by
+                      ? toTitleCase(t.prepared_by_name || t.prepared_by_username || t.prepared_by)
+                      : "-"}
                   </td>
 
                   {/* VALIDITY DATE */}

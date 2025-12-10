@@ -14,6 +14,31 @@ function debounce(fn, delay) {
   };
 }
 
+// Helper: Convert text to sentence case
+function toSentenceCase(text) {
+  if (!text || typeof text !== "string") return text;
+  // Handle multi-word strings: split by spaces, capitalize first word, lowercase rest
+  const words = text.trim().split(/\s+/);
+  if (words.length === 0) return text;
+  if (words.length === 1) {
+    return text.charAt(0).toUpperCase() + text.slice(1).toLowerCase();
+  }
+  // First word capitalized, rest lowercase
+  return words[0].charAt(0).toUpperCase() + words[0].slice(1).toLowerCase() + 
+    " " + words.slice(1).map(w => w.toLowerCase()).join(" ");
+}
+
+// Helper: Convert text to title case (first letter of every word capitalized)
+function toTitleCase(text) {
+  if (!text || typeof text !== "string") return text;
+  // Split by spaces and capitalize first letter of each word
+  return text
+    .trim()
+    .split(/\s+/)
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(" ");
+}
+
 export default function OppurnityList() {
   const navigate = useNavigate();
   const [rows, setRows] = useState([]);
@@ -54,17 +79,17 @@ export default function OppurnityList() {
   const statusLabelForCode = (code) => {
     if (!code) return "";
     const cfg = statusConfigs.find((c) => c.code === code);
-    if (cfg) return cfg.label;
+    if (cfg) return toSentenceCase(cfg.label);
 
     if (code === "NEW") return "New";
-    if (code === "IN_REVIEW") return "In Review";
+    if (code === "IN_REVIEW") return "In review";
     if (code === "CONVERTED") return "Converted";
 
-    // fallback: QUALIFIED_LEAD -> "Qualified Lead"
+    // fallback: QUALIFIED_LEAD -> "Qualified lead"
     return code
       .toLowerCase()
       .split("_")
-      .map((s) => s.charAt(0).toUpperCase() + s.slice(1))
+      .map((s, i) => i === 0 ? s.charAt(0).toUpperCase() + s.slice(1) : s)
       .join(" ");
   };
 
@@ -114,9 +139,9 @@ export default function OppurnityList() {
         const summary = data.summary || {};
 
         toast.success(
-          `Imported: ${summary.processed || 0}, Skipped: ${
+          `Imported: ${summary.processed || 0}, skipped: ${
             summary.skipped || 0
-          }, Errors: ${summary.errors || 0}`
+          }, errors: ${summary.errors || 0}`
         );
 
         // list refresh
@@ -527,12 +552,12 @@ const downloadSampleExcel = () => {
         "";
 
       let msg = label
-        ? `Status updated to "${label}".`
+        ? `Status updated to "${toSentenceCase(label)}".`
         : "Status updated successfully.";
 
       if (data.auto_converted) {
         if (data.sales_lead_id) {
-          msg = `${msg} Auto-converted to Sales Lead #${data.sales_lead_id}.`;
+          msg = `${msg} Auto-converted to sales lead #${data.sales_lead_id}.`;
         } else {
           msg = `${msg} Auto-converted to lead.`;
         }
@@ -584,7 +609,7 @@ const downloadSampleExcel = () => {
       value: code,
       label: statusLabelForCode(code),
     }));
-    return [{ value: "", label: "All Status" }, ...opts];
+    return [{ value: "", label: "All status" }, ...opts];
   }, [allStatusCodes, statusConfigs]); // statusLabelForCode depends on configs
 
   const statusChangeOptions = useMemo(
@@ -632,7 +657,7 @@ const downloadSampleExcel = () => {
               className="filter-btn"
               onClick={downloadSampleExcel}
             >
-              ⬇ Sample Excel
+              ⬇ Sample excel
             </button>
 
             <button
@@ -641,7 +666,7 @@ const downloadSampleExcel = () => {
               onClick={() => document.getElementById("opp-excel-input")?.click()}
               disabled={excelUploading}
             >
-              {excelUploading ? "IMPORTING..." : "📥 Import Excel"}
+              {excelUploading ? "Importing..." : "📥 Import excel"}
             </button>
 
             <button
@@ -649,7 +674,7 @@ const downloadSampleExcel = () => {
               onClick={() => navigate("/sales/opportunities/add")}
             >
               <i className="fa fa-plus" style={{ marginRight: "6px" }} />
-              Add Opportunity
+              Add opportunity
             </button>
           </div>
         </div>
@@ -717,8 +742,9 @@ const downloadSampleExcel = () => {
             ) : rows.length ? (
               rows.map((o) => {
                 const contact = o.mobile_number || "-";
-                const projectName =
-                  o.project_name || o.project?.name || o.project || "-";
+                const projectName = toSentenceCase(
+                  o.project_name || o.project?.name || o.project || "-"
+                );
 
                 return (
                   <tr key={o.id}>
@@ -734,7 +760,7 @@ const downloadSampleExcel = () => {
                       {/* Change Status */}
                       <button
                         className="icon-btn icon-btn-edit"
-                        title="Change Status"
+                        title="Change status"
                         onClick={() => openStatusModal(o)}
                         style={{ marginLeft: "4px" }}
                       >
@@ -743,9 +769,9 @@ const downloadSampleExcel = () => {
                     </td>
                     <td>{o.full_name || "-"}</td>
                     <td>📱 {contact}</td>
-                    <td>{o.email || "-"}</td>
-                    <td>{o.source_system}</td>
-                    <td>{o.source_name || "-"}</td>
+                    <td>{o.email ? toTitleCase(o.email) : "-"}</td>
+                    <td>{toSentenceCase(o.source_system || "")}</td>
+                    <td>{o.source_name ? toTitleCase(o.source_name) : "-"}</td>
                     <td>{projectName}</td>
                     <td>
                       {o.status_config_label ? (
@@ -758,7 +784,7 @@ const downloadSampleExcel = () => {
                             color: getStatusColor(o.status_config_code || ""),
                           }}
                         >
-                          {o.status_config_label}
+                          {toSentenceCase(o.status_config_label)}
                         </span>
                       ) : (
                         <span
@@ -869,7 +895,7 @@ const downloadSampleExcel = () => {
               >
                 {statusFilterOptions.map((s) => (
                   <option key={s.value || "ALL"} value={s.value}>
-                    {s.label}
+                    {toSentenceCase(s.label)}
                   </option>
                 ))}
               </select>
@@ -895,14 +921,14 @@ const downloadSampleExcel = () => {
                         checked={selectedProjectIds.includes(idStr)}
                         onChange={(e) => toggleProject(idStr, e.target.checked)}
                       />{" "}
-                      {p.name}
+                      {toSentenceCase(p.name)}
                     </label>
                   );
                 })}
               </div>
 
               {/* Date range */}
-              <label className="filter-label">Start Date</label>
+              <label className="filter-label">Start date</label>
               <input
                 type="date"
                 className="filter-input"
@@ -910,7 +936,7 @@ const downloadSampleExcel = () => {
                 onChange={(e) => setStartDate(e.target.value)}
               />
 
-              <label className="filter-label">End Date</label>
+              <label className="filter-label">End date</label>
               <input
                 type="date"
                 className="filter-input"
@@ -924,7 +950,7 @@ const downloadSampleExcel = () => {
                 Reset
               </button>
               <button className="btn-primary" onClick={applyFilters}>
-                Apply Filters
+                Apply filters
               </button>
             </div>
           </div>
@@ -936,7 +962,7 @@ const downloadSampleExcel = () => {
         <div className="filter-modal-overlay">
           <div className="filter-modal">
             <div className="filter-modal-header">
-              <h3>Change Opportunity Status</h3>
+              <h3>Change opportunity status</h3>
               <button
                 className="filter-close"
                 onClick={() => setStatusModalOpen(false)}
@@ -960,17 +986,19 @@ const downloadSampleExcel = () => {
                       {statusTarget.full_name || "-"}
                     </div>
                     <div>
-                      <strong>Current Status:</strong>{" "}
-                      {statusTarget.status_config_label ||
-                        statusTarget.status_config_code ||
-                        statusLabelForCode(statusTarget.status) ||
-                        "-"}
+                      <strong>Current status:</strong>{" "}
+                      {toSentenceCase(
+                        statusTarget.status_config_label ||
+                          statusTarget.status_config_code ||
+                          statusLabelForCode(statusTarget.status) ||
+                          "-"
+                      )}
                     </div>
                   </>
                 )}
               </div>
 
-              <label className="filter-label">New Status</label>
+              <label className="filter-label">New status</label>
               <select
                 className="filter-select"
                 value={statusChangeValue}
@@ -979,7 +1007,7 @@ const downloadSampleExcel = () => {
                 <option value="">Select status</option>
                 {statusChangeOptions.map((cfg) => (
                   <option key={cfg.id} value={cfg.id}>
-                    {cfg.label}
+                    {toSentenceCase(cfg.label)}
                     {cfg.can_convert ? " (Auto-convert)" : ""}
                   </option>
                 ))}
@@ -1004,7 +1032,7 @@ const downloadSampleExcel = () => {
                 Cancel
               </button>
               <button className="btn-primary" onClick={submitStatusChange}>
-                Update Status
+                Update status
               </button>
             </div>
           </div>

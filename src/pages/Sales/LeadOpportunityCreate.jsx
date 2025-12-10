@@ -4,16 +4,41 @@ import axiosInstance from "../../api/axiosInstance";
 import { toast } from "react-toastify";
 import "../PreSalesCRM/Leads/SaleAddLead.css";
 
+// Helper: Convert text to sentence case
+function toSentenceCase(text) {
+  if (!text || typeof text !== "string") return text;
+  // Handle multi-word strings: split by spaces, capitalize first word, lowercase rest
+  const words = text.trim().split(/\s+/);
+  if (words.length === 0) return text;
+  if (words.length === 1) {
+    return text.charAt(0).toUpperCase() + text.slice(1).toLowerCase();
+  }
+  // First word capitalized, rest lowercase
+  return words[0].charAt(0).toUpperCase() + words[0].slice(1).toLowerCase() + 
+    " " + words.slice(1).map(w => w.toLowerCase()).join(" ");
+}
+
+// Helper: Convert text to title case (first letter of every word capitalized)
+function toTitleCase(text) {
+  if (!text || typeof text !== "string") return text;
+  // Split by spaces and capitalize first letter of each word
+  return text
+    .trim()
+    .split(/\s+/)
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(" ");
+}
+
 const SOURCE_SYSTEM_OPTIONS = [
-  { value: "CALLING", label: "Calling Data Upload" },
-  { value: "WEB_FORM", label: "Website Form" },
-  { value: "PORTAL", label: "Property Portal" },
-  { value: "META", label: "Meta / Facebook Ads" },
-  { value: "GOOGLE_ADS", label: "Google Ads" },
-  { value: "GOOGLE_SHEET", label: "Google Sheet" },
+  { value: "CALLING", label: "Calling data upload" },
+  { value: "WEB_FORM", label: "Website form" },
+  { value: "PORTAL", label: "Property portal" },
+  { value: "META", label: "Meta / Facebook ads" },
+  { value: "GOOGLE_ADS", label: "Google ads" },
+  { value: "GOOGLE_SHEET", label: "Google sheet" },
   { value: "WHATSAPP", label: "WhatsApp" },
   { value: "CHATBOT", label: "Chatbot" },
-  { value: "OTHER", label: "Other / Manual" },
+  { value: "OTHER", label: "Other / manual" },
 ];
 
 function getScopeFromLocalStorage() {
@@ -64,8 +89,20 @@ const LeadOpportunityCreate = () => {
     }));
   };
 
+  // Handle blur event to format fields to Title Case
+  const handleBlur = (e) => {
+    const { name, value } = e.target;
+    // Format all text fields to Title Case except mobile_number (which should stay as is)
+    if ((name === "source_name" || name === "email" || name === "full_name" || name === "remark") && value) {
+      setForm((prev) => ({
+        ...prev,
+        [name]: toTitleCase(value),
+      }));
+    }
+  };
+
   const getProjectLabel = (p) =>
-    p.name || p.project_name || p.display_name || `Project #${p.id}`;
+    toSentenceCase(p.name || p.project_name || p.display_name || `Project #${p.id}`);
 
   // -------------------------------
   // Load assignable users by project
@@ -242,8 +279,8 @@ const LeadOpportunityCreate = () => {
     <div className="setup-section">
       <div className="section-content">
         <h2 style={{ fontSize: "20px", fontWeight: 600, color: "#1f2937", marginBottom: "8px" }}>
-          New Lead Opportunity{" "}
-          {scope?.brand?.company_name ? `– ${scope.brand.company_name}` : ""}
+          New lead opportunity{" "}
+          {scope?.brand?.company_name ? `– ${toSentenceCase(scope.brand.company_name)}` : ""}
         </h2>
         <p style={{ marginBottom: "16px", fontSize: "13px", color: "#4b5563" }}>
           Create a manual lead opportunity for a project. We auto-check if the
@@ -273,7 +310,7 @@ const LeadOpportunityCreate = () => {
             </div>
 
             <div className="form-field">
-              <label className="form-label">Source System</label>
+              <label className="form-label">Source system</label>
               <select
                 name="source_system"
                 value={form.source_system}
@@ -289,13 +326,14 @@ const LeadOpportunityCreate = () => {
             </div>
 
             <div className="form-field">
-              <label className="form-label">Source Name / Campaign</label>
+              <label className="form-label">Source name / campaign</label>
               <input
                 type="text"
                 name="source_name"
                 value={form.source_name}
                 onChange={handleChange}
-                placeholder="e.g. Calling Sheet Jan 2025"
+                onBlur={handleBlur}
+                placeholder="e.g. Calling sheet Jan 2025"
                 className="form-input"
               />
             </div>
@@ -305,13 +343,14 @@ const LeadOpportunityCreate = () => {
           <div className="form-row">
             <div className="form-field">
               <label className="form-label">
-                Full Name <span className="required">*</span>
+                Full name <span className="required">*</span>
               </label>
               <input
                 type="text"
                 name="full_name"
                 value={form.full_name}
                 onChange={handleChange}
+                onBlur={handleBlur}
                 className="form-input"
               />
             </div>
@@ -323,13 +362,14 @@ const LeadOpportunityCreate = () => {
                 name="email"
                 value={form.email}
                 onChange={handleChange}
+                onBlur={handleBlur}
                 className="form-input"
               />
             </div>
 
             <div className="form-field">
               <label className="form-label">
-                Mobile Number <span className="required">*</span>
+                Mobile number <span className="required">*</span>
               </label>
               <input
                 type="tel"
@@ -356,7 +396,7 @@ const LeadOpportunityCreate = () => {
           <div className="form-row">
             <div className="form-field">
               <label className="form-label">
-                Owner / Assign To (optional)
+                Owner / assign to (optional)
               </label>
               <select
                 name="owner_id"
@@ -367,8 +407,8 @@ const LeadOpportunityCreate = () => {
                 <option value="">Select</option>
                 {assignableUsers.map((u) => (
                   <option key={u.id} value={u.id}>
-                    {u.display_name || `User #${u.id}`}{" "}
-                    {u.role ? `(${u.role})` : ""}
+                    {toSentenceCase(u.display_name || `User #${u.id}`)}{" "}
+                    {u.role ? `(${toSentenceCase(u.role)})` : ""}
                   </option>
                 ))}
               </select>
@@ -383,6 +423,7 @@ const LeadOpportunityCreate = () => {
                 name="remark"
                 value={form.remark}
                 onChange={handleChange}
+                onBlur={handleBlur}
                 rows={3}
                 className="form-textarea"
               />
@@ -407,10 +448,10 @@ const LeadOpportunityCreate = () => {
                   className="btn-primary"
                 >
                   {duplicatePresent
-                    ? "Existing Lead Found"
+                    ? "Existing lead found"
                     : submitting
                     ? "Saving..."
-                    : "Create Opportunity"}
+                    : "Create opportunity"}
                 </button>
               </div>
             </div>

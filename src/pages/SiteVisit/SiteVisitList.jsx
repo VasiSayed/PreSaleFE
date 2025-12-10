@@ -12,6 +12,17 @@ function debounce(fn, delay) {
   };
 }
 
+// Helper: Convert text to title case (first letter of every word capitalized)
+function toTitleCase(text) {
+  if (!text || typeof text !== "string") return text;
+  // Split by spaces and capitalize first letter of each word
+  return text
+    .trim()
+    .split(/\s+/)
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(" ");
+}
+
 export default function SiteVisitList() {
   const navigate = useNavigate();
 
@@ -155,7 +166,7 @@ export default function SiteVisitList() {
     { value: "COMPLETED", label: "Completed" },
     { value: "CANCELLED", label: "Cancelled" },
     { value: "NO_SHOW", label: "No Show" },
-    { value: "RESCHEDULED", label: "Rescheduled" }, // 👈 bonus: filter for RESCHEDULED
+    { value: "RESCHEDULED", label: "Rescheduled" },
   ];
 
   const resetFilters = () => {
@@ -213,8 +224,8 @@ export default function SiteVisitList() {
       remark.length > 120 ? remark.slice(0, 120).trim() + "…" : remark;
 
     return (
-      <span className="latest-remark" title={remark}>
-        {text}
+      <span className="latest-remark" title={toTitleCase(remark)}>
+        {toTitleCase(text)}
       </span>
     );
   };
@@ -239,6 +250,16 @@ export default function SiteVisitList() {
             <button className="filter-btn" onClick={() => setModalOpen(true)}>
               <i className="fa fa-filter" /> Filters
             </button>
+
+            
+            <button
+            className="filter-btn"
+            onClick={() => navigate('/sales/lead/site-visit/create')}
+          >
+            <i className="fa fa-filter" /> Add Site Visit
+          </button>
+
+
           </div>
         </div>
 
@@ -253,7 +274,7 @@ export default function SiteVisitList() {
               <th>Project</th>
               <th>Latest Visit</th>
               <th>Status</th>
-              <th>Total Visits schedule</th>
+              <th>Total Visits Schedule</th>
               <th>Latest Remark</th>
             </tr>
           </thead>
@@ -288,13 +309,13 @@ export default function SiteVisitList() {
                   </td>
 
                   <td>
-                    <div className="lead-name">{v.lead_name}</div>
+                    <div className="lead-name">{toTitleCase(v.lead_name || "")}</div>
                   </td>
                   <td>
                     <div className="mobile-number">📱 {v.mobile}</div>
                   </td>
                   <td>
-                    <div className="project-name">{v.project}</div>
+                    <div className="project-name">{toTitleCase(v.project || "")}</div>
                   </td>
                   <td>{formatDT(v.latest_scheduled_at)}</td>
                   <td>
@@ -305,7 +326,7 @@ export default function SiteVisitList() {
                         color: getStatusColor(v.latest_status),
                       }}
                     >
-                      {v.latest_status}
+                      {toTitleCase(v.latest_status || "")}
                     </span>
                   </td>
                   <td>
@@ -421,7 +442,7 @@ export default function SiteVisitList() {
                 <option value="">All Projects</option>
                 {projects.map((p) => (
                   <option key={p.id} value={p.id}>
-                    {p.name}
+                    {toTitleCase(p.name || "")}
                   </option>
                 ))}
               </select>

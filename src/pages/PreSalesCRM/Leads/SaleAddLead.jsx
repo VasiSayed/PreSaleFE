@@ -29,6 +29,17 @@ const formatIndianNumber = (raw) => {
   return `${restWithCommas},${last3}`;
 };
 
+// Helper: Convert text to title case (first letter of every word capitalized)
+function toTitleCase(text) {
+  if (!text || typeof text !== "string") return text;
+  // Split by spaces and capitalize first letter of each word
+  return text
+    .trim()
+    .split(/\s+/)
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(" ");
+}
+
 // CP Mode
 const CP_MODE = {
   REGISTERED: "REGISTERED",
@@ -499,6 +510,9 @@ const SaleAddLead = ({ handleLeadSubmit, leadId: propLeadId }) => {
   const [checkingPhone, setCheckingPhone] = useState(false);
   const [showLookupModal, setShowLookupModal] = useState(false);
 
+  // Field validation errors
+  const [fieldErrors, setFieldErrors] = useState({});
+
   // -------- determine if we are editing (from prop or URL) -------- ⭐ NEW
   useEffect(() => {
     const urlLeadId =
@@ -835,6 +849,29 @@ const SaleAddLead = ({ handleLeadSubmit, leadId: propLeadId }) => {
         newValue = digits ? formatIndianNumber(digits) : "";
       }
 
+      // ✅ 2) Mobile number and Tel fields: Only allow digits
+      if (name === "mobile_number" || name === "tel_res" || name === "tel_office") {
+        const digits = String(value || "").replace(/\D/g, "");
+        newValue = digits;
+      }
+
+      // ✅ Auto-format text fields to Title Case (except mobile_number, tel_res, tel_office, pin_code, annual_income)
+      const textFieldsToFormat = [
+        "first_name",
+        "last_name",
+        "email",
+        "company",
+        "flat_no",
+        "area",
+        "city",
+        "state",
+        "country",
+        "description",
+      ];
+      if (textFieldsToFormat.includes(name) && typeof newValue === "string" && newValue.trim()) {
+        newValue = toTitleCase(newValue);
+      }
+
       // ✅ 2) Form ka naya object ek hi baar banao
       const next = { ...prev, [name]: newValue };
 
@@ -871,6 +908,63 @@ const SaleAddLead = ({ handleLeadSubmit, leadId: propLeadId }) => {
 
       return next;
     });
+  };
+
+  // Validation functions
+  const validateMobileNumber = (value) => {
+    if (!value || value.trim() === "") return null; // Empty is handled by required validation
+    const digits = value.replace(/\D/g, "");
+    if (digits.length !== 10) {
+      return "Mobile number must be exactly 10 digits";
+    }
+    return null;
+  };
+
+  const validateTelField = (value) => {
+    if (!value || value.trim() === "") return null; // Optional field
+    const digits = value.replace(/\D/g, "");
+    // Tel fields should be between 6-15 digits (landline or mobile format)
+    if (digits.length < 6 || digits.length > 15) {
+      return "Phone number must be between 6-15 digits";
+    }
+    return null;
+  };
+
+  // Handle blur event to format fields to Title Case and validate
+  const handleBlur = (name, value) => {
+    // Format all text fields to Title Case except mobile_number, tel_res, tel_office, pin_code, annual_income (which should stay as is)
+    const textFields = [
+      "first_name",
+      "last_name",
+      "email",
+      "company",
+      "flat_no",
+      "area",
+      "city",
+      "state",
+      "country",
+      "description",
+    ];
+    if (textFields.includes(name) && value) {
+      setForm((prev) => ({
+        ...prev,
+        [name]: toTitleCase(value),
+      }));
+    }
+
+    // Validate phone fields
+    let error = null;
+    if (name === "mobile_number") {
+      error = validateMobileNumber(value);
+    } else if (name === "tel_res" || name === "tel_office") {
+      error = validateTelField(value);
+    }
+
+    // Update field errors
+    setFieldErrors((prev) => ({
+      ...prev,
+      [name]: error,
+    }));
   };
 
   const handleSendEmailOtp = async () => {
@@ -1279,6 +1373,7 @@ const SaleAddLead = ({ handleLeadSubmit, leadId: propLeadId }) => {
 
   const validateRequired = () => {
     const missing = [];
+    const validationErrors = {};
 
     FIELDS.forEach((field) => {
       if (!field.required || isFieldHidden(field)) return;
@@ -1305,6 +1400,32 @@ const SaleAddLead = ({ handleLeadSubmit, leadId: propLeadId }) => {
       // missing.push("Channel Partner (Registered)");
     }
 
+    // Validate mobile number
+    if (form.mobile_number) {
+      const mobileError = validateMobileNumber(form.mobile_number);
+      if (mobileError) {
+        validationErrors.mobile_number = mobileError;
+      }
+    }
+
+    // Validate tel fields
+    if (form.tel_res) {
+      const telResError = validateTelField(form.tel_res);
+      if (telResError) {
+        validationErrors.tel_res = telResError;
+      }
+    }
+
+    if (form.tel_office) {
+      const telOfficeError = validateTelField(form.tel_office);
+      if (telOfficeError) {
+        validationErrors.tel_office = telOfficeError;
+      }
+    }
+
+    // Update field errors
+    setFieldErrors(validationErrors);
+
     // Duplicate lead validation (create mode only)
     if (!isEditing && hasExistingLeadInProject) {
       showToast(
@@ -1318,6 +1439,12 @@ const SaleAddLead = ({ handleLeadSubmit, leadId: propLeadId }) => {
       window.alert("Please fill required fields:\n" + missing.join("\n"));
       return false;
     }
+
+    if (Object.keys(validationErrors).length > 0) {
+      showToast("Please fix validation errors in the form", "error");
+      return false;
+    }
+
     return true;
   };
 
@@ -1735,6 +1862,7 @@ const SaleAddLead = ({ handleLeadSubmit, leadId: propLeadId }) => {
             className="form-textarea"
             value={form[field.name] || ""}
             onChange={(e) => handleChange(field.name, e.target.value)}
+            onBlur={(e) => handleBlur(field.name, e.target.value)}
             disabled={disabled}
           />
         </div>
@@ -1775,7 +1903,7 @@ const SaleAddLead = ({ handleLeadSubmit, leadId: propLeadId }) => {
     }
 
     // Special handling for mobile_number field with duplicate detection
-    if (field.name === "mobile_number" && !isEditing) {
+    if (field.name === "mobile_number") {
       return (
         <div
           key={field.name}
@@ -1784,13 +1912,32 @@ const SaleAddLead = ({ handleLeadSubmit, leadId: propLeadId }) => {
           {label}
           <input
             id={id}
-            className={baseInputClass}
-            type={field.type === "number" ? "number" : field.type || "text"}
+            className={baseInputClass + (fieldErrors[field.name] ? " form-input-error" : "")}
+            type="text"
+            inputMode="numeric"
+            pattern="[0-9]*"
             value={form[field.name] || ""}
-            onChange={(e) => handleChange(field.name, e.target.value)}
+            onChange={(e) => {
+              handleChange(field.name, e.target.value);
+              // Clear error on change
+              if (fieldErrors[field.name]) {
+                setFieldErrors((prev) => {
+                  const next = { ...prev };
+                  delete next[field.name];
+                  return next;
+                });
+              }
+            }}
+            onBlur={(e) => handleBlur(field.name, e.target.value)}
             disabled={disabled}
-            placeholder={field.placeholder || ""}
+            placeholder={field.placeholder || "10 digit mobile number"}
+            maxLength={10}
           />
+          {fieldErrors[field.name] && (
+            <div style={{ fontSize: "12px", color: "#ef4444", marginTop: "4px" }}>
+              {fieldErrors[field.name]}
+            </div>
+          )}
         </div>
       );
     }
@@ -1812,13 +1959,32 @@ const SaleAddLead = ({ handleLeadSubmit, leadId: propLeadId }) => {
         {label}
         <input
           id={id}
-          className={baseInputClass}
-          type={field.type === "number" ? "number" : field.type || "text"}
+          className={baseInputClass + (fieldErrors[field.name] ? " form-input-error" : "")}
+          type={isTelField ? "text" : (field.type === "number" ? "number" : field.type || "text")}
+          inputMode={isTelField ? "numeric" : undefined}
+          pattern={isTelField ? "[0-9]*" : undefined}
           value={form[field.name] || ""}
-          onChange={(e) => handleChange(field.name, e.target.value)}
+          onChange={(e) => {
+            handleChange(field.name, e.target.value);
+            // Clear error on change
+            if (fieldErrors[field.name]) {
+              setFieldErrors((prev) => {
+                const next = { ...prev };
+                delete next[field.name];
+                return next;
+              });
+            }
+          }}
+          onBlur={(e) => handleBlur(field.name, e.target.value)}
           disabled={disabled}
-          placeholder={field.placeholder || ""}
+          placeholder={isTelField ? "6-15 digits" : (field.placeholder || "")}
+          maxLength={isTelField ? 15 : undefined}
         />
+        {fieldErrors[field.name] && (
+          <div style={{ fontSize: "12px", color: "#ef4444", marginTop: "4px" }}>
+            {fieldErrors[field.name]}
+          </div>
+        )}
       </div>
     );
   };
@@ -2091,7 +2257,10 @@ const SaleAddLead = ({ handleLeadSubmit, leadId: propLeadId }) => {
                 className="form-input"
                 value={quickCpForm.name}
                 onChange={(e) =>
-                  setQuickCpForm((prev) => ({ ...prev, name: e.target.value }))
+                  setQuickCpForm((prev) => ({
+                    ...prev,
+                    name: e.target.value ? toTitleCase(e.target.value) : "",
+                  }))
                 }
               />
             </div>
@@ -2109,7 +2278,7 @@ const SaleAddLead = ({ handleLeadSubmit, leadId: propLeadId }) => {
                   onChange={(e) => {
                     setQuickCpForm((prev) => ({
                       ...prev,
-                      email: e.target.value,
+                      email: e.target.value ? toTitleCase(e.target.value) : "",
                     }));
                     setQuickCpEmailVerified(false);
                     setQuickCpOtpCode("");
@@ -2204,7 +2373,7 @@ const SaleAddLead = ({ handleLeadSubmit, leadId: propLeadId }) => {
                 onChange={(e) =>
                   setQuickCpForm((prev) => ({
                     ...prev,
-                    company_name: e.target.value,
+                    company_name: e.target.value ? toTitleCase(e.target.value) : "",
                   }))
                 }
               />

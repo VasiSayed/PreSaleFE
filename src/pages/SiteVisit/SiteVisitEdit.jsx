@@ -4,6 +4,17 @@ import axiosInstance from "../../api/axiosInstance";
 import "./SiteVisitEdit.css";
 import { toast } from "react-hot-toast";
 
+// Helper: Convert text to title case (first letter of every word capitalized)
+function toTitleCase(text) {
+  if (!text || typeof text !== "string") return text;
+  // Split by spaces and capitalize first letter of each word
+  return text
+    .trim()
+    .split(/\s+/)
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(" ");
+}
+
 const SiteVisitEdit = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -109,7 +120,7 @@ const SiteVisitEdit = () => {
           <div className="sv-display-row">
             <div className="sv-display-item">
               <label>Lead Name</label>
-              <div className="sv-display-value">{form.lead_name}</div>
+              <div className="sv-display-value">{toTitleCase(form.lead_name || "")}</div>
             </div>
 
             <div className="sv-display-item">
@@ -122,13 +133,13 @@ const SiteVisitEdit = () => {
           <div className="sv-display-row">
             <div className="sv-display-item">
               <label>Project</label>
-              <div className="sv-display-value">{form.project_name}</div>
+              <div className="sv-display-value">{toTitleCase(form.project_name || "")}</div>
             </div>
 
             <div className="sv-display-item">
               <label>Unit</label>
               <div className="sv-display-value">
-                {form.inventory_unit_no} ({form.inventory_tower} – Floor{" "}
+                {form.inventory_unit_no} ({toTitleCase(form.inventory_tower || "")} – Floor{" "}
                 {form.inventory_floor})
               </div>
             </div>
@@ -138,7 +149,7 @@ const SiteVisitEdit = () => {
           <div className="sv-display-row">
             <div className="sv-display-item">
               <label>Member Name</label>
-              <div className="sv-display-value">{form.member_name}</div>
+              <div className="sv-display-value">{toTitleCase(form.member_name || "")}</div>
             </div>
 
             <div className="sv-display-item">
@@ -152,7 +163,7 @@ const SiteVisitEdit = () => {
             <div className="sv-display-item">
               <label>Status</label>
               <div className={`sv-status ${form.status?.toLowerCase()}`}>
-                {form.status}
+                {toTitleCase(form.status || "")}
               </div>
             </div>
 

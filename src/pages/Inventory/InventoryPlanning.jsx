@@ -35,6 +35,7 @@ const InventoryPlanning = () => {
   const [error, setError] = useState("");
 
   const [statusFilter, setStatusFilter] = useState("ALL");
+  const [expandedTowers, setExpandedTowers] = useState(new Set());
 
   const projectIdFromUrl = searchParams.get("project_id");
   const initialProjectId =
@@ -117,6 +118,20 @@ const InventoryPlanning = () => {
       navigate(`/inventory/unit/${unitId}`);
     }
   };
+
+  const toggleTowerExpansion = (towerId) => {
+    setExpandedTowers((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(towerId)) {
+        newSet.delete(towerId);
+      } else {
+        newSet.add(towerId);
+      }
+      return newSet;
+    });
+  };
+
+  const isTowerExpanded = (towerId) => expandedTowers.has(towerId);
 
   const getUnitStatusClass = (unit) => {
     const inv = unit.inventory;
@@ -321,10 +336,23 @@ const InventoryPlanning = () => {
               const towerCounts = computeTowerCounts(tower);
               const floors = sortedFloors(tower);
 
+              const isExpanded = isTowerExpanded(tower.id);
+
               return (
                 <div key={tower.id} className="tower-card-planning">
                   {/* tower header (still total counts) */}
-                  <div className="tower-card-header">
+                  <div
+                    className="tower-card-header"
+                    onClick={() => toggleTowerExpansion(tower.id)}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        toggleTowerExpansion(tower.id);
+                      }
+                    }}
+                  >
                     <div className="tower-badge">{getTowerBadge(tower)}</div>
 
                     <div className="tower-summary-row">
@@ -347,10 +375,29 @@ const InventoryPlanning = () => {
                         </div>
                       </div>
                     </div>
+
+                    <div className={`tower-chevron ${isExpanded ? "chevron-open" : "chevron-closed"}`}>
+                      <svg
+                        width="20"
+                        height="20"
+                        viewBox="0 0 20 20"
+                        fill="none"
+                        xmlns="http://www.w3.org/2000/svg"
+                      >
+                        <path
+                          d="M5 7.5L10 12.5L15 7.5"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                    </div>
                   </div>
 
                   {/* floors */}
-                  <div className="tower-card-body">
+                  {isExpanded && (
+                    <div className="tower-card-body">
                     <div className="tower-section-heading">
                       Floor &amp; Room
                     </div>
@@ -452,7 +499,8 @@ const InventoryPlanning = () => {
                         No floors found for this tower.
                       </div>
                     )}
-                  </div>
+                    </div>
+                  )}
                 </div>
               );
             })

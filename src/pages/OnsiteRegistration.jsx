@@ -1,9 +1,8 @@
 // import React, { useEffect, useMemo, useState } from "react";
-// import { useNavigate } from "react-router-dom"; 
+// import { useNavigate } from "react-router-dom";
 // import api from "../api/axiosInstance"; // adjust path if needed
 // import { showToast } from "../utils/toast";
 // import "./OnsiteRegistration.css";
-
 
 // const SCOPE_URL = "/client/my-scope/";
 // const ONSITE_API = "/sales/onsite-registration/";
@@ -108,7 +107,6 @@
 //       const leads = lookupResult.leads || [];
 //       return leads.find((lead) => Number(lead.project) === pid) || null;
 //     }, [lookupResult, form.project_id]);
-
 
 //   // Quick CP create modal + form
 //   const [showQuickCpModal, setShowQuickCpModal] = useState(false);
@@ -1900,7 +1898,6 @@ export default function OnsiteRegistration() {
   const [successLeadId, setSuccessLeadId] = useState(null);
   const [successLeadName, setSuccessLeadName] = useState("");
 
-
   // const handleSubmit = async (e) => {
   //   e.preventDefault();
   //   if (submitting) return;
@@ -2404,42 +2401,34 @@ export default function OnsiteRegistration() {
 
             <div className="onsite-field">
               <label className="onsite-label">Nationality</label>
-              <div className="onsite-radio-group">
+              <select
+                className="onsite-input"
+                value={form.nationality}
+                onChange={(e) => handleChange("nationality", e.target.value)}
+              >
+                <option value="">Select Nationality</option>
                 {NATIONALITY_OPTIONS.map((opt) => (
-                  <label key={opt.value} className="onsite-radio-option">
-                    <input
-                      type="radio"
-                      name="nationality"
-                      value={opt.value}
-                      checked={form.nationality === opt.value}
-                      onChange={(e) =>
-                        handleChange("nationality", e.target.value)
-                      }
-                    />
-                    <span>{opt.label}</span>
-                  </label>
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
                 ))}
-              </div>
+              </select>
             </div>
 
             <div className="onsite-field">
               <label className="onsite-label">Age (in years)</label>
-              <div className="onsite-radio-group">
+              <select
+                className="onsite-input"
+                value={form.age_group}
+                onChange={(e) => handleChange("age_group", e.target.value)}
+              >
+                <option value="">Select Age</option>
                 {AGE_GROUP_OPTIONS.map((opt) => (
-                  <label key={opt.value} className="onsite-radio-option">
-                    <input
-                      type="radio"
-                      name="age_group"
-                      value={opt.value}
-                      checked={form.age_group === opt.value}
-                      onChange={(e) =>
-                        handleChange("age_group", e.target.value)
-                      }
-                    />
-                    <span>{opt.label}</span>
-                  </label>
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
                 ))}
-              </div>
+              </select>
             </div>
           </div>
 

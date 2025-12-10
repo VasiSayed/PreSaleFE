@@ -13,6 +13,17 @@ function debounce(fn, delay) {
   };
 }
 
+// Helper: Convert text to title case (first letter of every word capitalized)
+function toTitleCase(text) {
+  if (!text || typeof text !== "string") return text;
+  // Split by spaces and capitalize first letter of each word
+  return text
+    .trim()
+    .split(/\s+/)
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(" ");
+}
+
 export default function LeadsList() {
   const navigate = useNavigate();
 
@@ -378,7 +389,7 @@ export default function LeadsList() {
               <thead>
                 <tr>
                   <th style={{ width: "120px" }}>Actions</th>
-                  <th>Lead ID</th>
+                  <th>ID</th>
                   <th>Lead Name</th>
                   <th>Contact</th>
                   <th>Email</th>
@@ -395,26 +406,29 @@ export default function LeadsList() {
                   rows.map((lead) => {
                     const leadId =
                       lead.lead_code || lead.code || `L-${lead.id}`;
-                    const leadName =
+                    const leadNameRaw =
                       lead.lead_name ||
                       [lead.first_name, lead.last_name]
                         .filter(Boolean)
                         .join(" ") ||
                       "-";
+                    const leadName = leadNameRaw !== "-" ? toTitleCase(leadNameRaw) : "-";
                     const contact =
                       lead.mobile_number ||
                       lead.contact_number ||
                       lead.phone ||
                       "-";
-                    const email = lead.email || "-";
+                    const email = lead.email ? toTitleCase(lead.email) : "-";
                     const source =
                       lead.source_name ||
                       lead.lead_source_name ||
                       lead.source?.name ||
                       "-";
-                      const latestRemarks =
-                        (lead.latest_remarks && lead.latest_remarks.trim()) ||
-                        "NA";
+                    const sourceFormatted = source !== "-" ? toTitleCase(source) : "-";
+                    const latestRemarksRaw =
+                      (lead.latest_remarks && lead.latest_remarks.trim()) ||
+                      "NA";
+                    const latestRemarks = latestRemarksRaw !== "NA" ? toTitleCase(latestRemarksRaw) : "NA";
 
                     const project =
                       lead.project_name ||
@@ -466,7 +480,7 @@ export default function LeadsList() {
                         <td className="lead-name">{leadName}</td>
                         <td>{contact}</td>
                         <td className="email-cell">{email}</td>
-                        <td>{source}</td>
+                        <td>{sourceFormatted}</td>
                         <td>{project}</td>
                         <td>{budget}</td>
 

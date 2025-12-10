@@ -283,6 +283,17 @@ import SearchBar from "../../common/SearchBar";
 import "./MyBookings.css";
 import "../PreSalesCRM/Leads/LeadsList.css";
 
+// Helper: Convert text to title case (first letter of every word capitalized)
+function toTitleCase(text) {
+  if (!text || typeof text !== "string") return text;
+  // Split by spaces and capitalize first letter of each word
+  return text
+    .trim()
+    .split(/\s+/)
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(" ");
+}
+
 function debounce(fn, delay) {
   let timeoutId;
   return (...args) => {
@@ -574,9 +585,9 @@ const MyBookings = () => {
                           </td>
 
                           <td>{bookingId}</td>
-                          <td>{b.primary_full_name || "-"}</td>
-                          <td>{b.project_name || b.project || "-"}</td>
-                          <td>{unitLabel}</td>
+                          <td>{b.primary_full_name ? toTitleCase(b.primary_full_name) : "-"}</td>
+                          <td>{b.project_name || b.project ? toTitleCase(b.project_name || b.project) : "-"}</td>
+                          <td>{unitLabel !== "-" ? toTitleCase(unitLabel) : "-"}</td>
 
                           <td className="booking-amount-cell">
                             {b.total_advance != null &&
