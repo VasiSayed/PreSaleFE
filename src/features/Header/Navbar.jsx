@@ -72,9 +72,32 @@ function Navbar({ currentUser, onLogout, showLogout = true }) {
     "Shree Ram Krushna Developer – Deep Shikhar"
   );
 
-  // Load brand details (logo + name) from my-scope once after login
+  const [primaryColor, setPrimaryColor] = useState('#102a54'); // Default color
+  const [fontFamily, setFontFamily] = useState("'Inter', 'Segoe UI', 'Roboto', 'Open Sans', sans-serif"); // Default font
+
+  // Load brand details (logo + name + colors + font) from my-scope once after login
   useEffect(() => {
     let isMounted = true;
+
+    // First try to load from localStorage
+    try {
+      const myScopeStr = localStorage.getItem('MY_SCOPE');
+      if (myScopeStr) {
+        const myScope = JSON.parse(myScopeStr);
+        const brand = myScope?.brand || {};
+        
+        if (!isMounted) return;
+        
+        if (brand.logo_url) setBrandLogo(brand.logo_url);
+        if (brand.company_name) setBrandName(brand.company_name);
+        if (brand.primary_color) setPrimaryColor(brand.primary_color);
+        if (brand.font) setFontFamily(brand.font);
+      }
+    } catch (err) {
+      console.error("Failed to load brand info from localStorage", err);
+    }
+
+    // Also fetch from API as fallback/update
     api
       .get("/client/my-scope/")
       .then((res) => {
@@ -82,6 +105,8 @@ function Navbar({ currentUser, onLogout, showLogout = true }) {
         if (!isMounted) return;
         if (brand.logo_url) setBrandLogo(brand.logo_url);
         if (brand.company_name) setBrandName(brand.company_name);
+        if (brand.primary_color) setPrimaryColor(brand.primary_color);
+        if (brand.font) setFontFamily(brand.font);
       })
       .catch((err) => {
         console.error("Failed to load brand info", err);
@@ -112,11 +137,12 @@ function Navbar({ currentUser, onLogout, showLogout = true }) {
         margin: 0,
         padding: "12px 32px 12px 12px",
         width: "100%",
-        backgroundColor: "#102a54",
+        backgroundColor: primaryColor,
         borderRadius: 0,
         display: "flex",
         alignItems: "center",
         justifyContent: "space-between",
+        fontFamily: fontFamily,
       }}
     >
       {/* LEFT SECTION */}
@@ -132,8 +158,7 @@ function Navbar({ currentUser, onLogout, showLogout = true }) {
           style={{
             fontSize: "1.8rem",
             fontWeight: "600",
-            fontFamily:
-              "'Inter', 'Segoe UI', 'Roboto', 'Open Sans', sans-serif",
+            fontFamily: fontFamily,
             letterSpacing: "-0.5px",
             marginLeft: 8,
           }}
@@ -166,7 +191,12 @@ function Navbar({ currentUser, onLogout, showLogout = true }) {
 
         {/* Logout */}
         {showLogout && (
-          <button onClick={onLogout} className="logout-btn" title="Logout">
+          <button 
+            onClick={onLogout} 
+            className="logout-btn" 
+            title="Logout"
+            style={{ fontFamily: fontFamily }}
+          >
             Logout
           </button>
         )}
