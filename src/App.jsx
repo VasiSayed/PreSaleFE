@@ -209,7 +209,6 @@
 //   );
 // }
 
-
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -251,6 +250,7 @@ import DocumentBrowser from "./pages/Documents/DocumentBrowser";
 import OnsiteRegistration from "./pages/OnsiteRegistration";
 import BookingApprovals from "./pages/Booking/BookingApprovals";
 import LeadOpportunityCreate from "./pages/Sales/LeadOpportunityCreate";
+import UpcommingEvent from "../src/pages/UpcomingActivities";
 import KycBlack from "./pages/Kycblack/Kycpage";
 import { Toaster } from "react-hot-toast";
 import ProfilePage from "./pages/Profile";
@@ -266,7 +266,7 @@ export default function App() {
 
         {/* ✅ ToastContainer (react-toastify) - CHANGED POSITION to "top-center" */}
         <ToastContainer
-          position="top-center" 
+          position="top-center"
           autoClose={6000}
           hideProgressBar={false}
           newestOnTop
@@ -309,6 +309,7 @@ export default function App() {
               <Route path="/leads" element={<LeadsList />} />
               <Route path="/Kycblack" element={<KycBlack />} />
               <Route path="/profile" element={<ProfilePage />} />
+              <Route path="/upcommingevent" element={<UpcommingEvent />} />
 
               <Route
                 path="/lead-setup/additional-info"
@@ -383,7 +384,11 @@ export default function App() {
                 element={<CostSheetTemplatesList />}
               />
               <Route path="/sales/opportunities" element={<OppurnityList />} />
-              <Route path="/sales/opportunities/add" element={<LeadOpportunityCreate />} />
+              <Route
+                path="/sales/opportunities/add"
+                element={<LeadOpportunityCreate />}
+              />
+
               <Route
                 path="/costsheet/templates/:id"
                 element={<CostSheetTemplateCreate />}

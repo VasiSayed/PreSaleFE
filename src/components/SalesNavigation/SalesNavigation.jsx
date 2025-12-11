@@ -360,6 +360,12 @@ export default function SalesNavigation() {
           route: "/dashboard",
           section: "pre-sales",
         },
+        // {
+        //   id: "upcomming",
+        //   label: "Upcomming Events",
+        //   route: "/upcommingevent",
+        //   section: "pre-sales",
+        // },
         {
           id: "opportunities",
           label: "Opportunities",
