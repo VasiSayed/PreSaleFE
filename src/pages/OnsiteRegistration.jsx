@@ -2995,12 +2995,18 @@ export default function OnsiteRegistration() {
               Dear <strong>{successLeadName || "Customer"}</strong>,
             </p>
             <p style={{ fontSize: 14, color: "#4b5563", marginBottom: 16 }}>
-              Your details have been securely captured and are safe with us.
+              Thank you so much for taking the time to fill out our registration form and for trusting us with your personal details. We truly appreciate it.
+
             </p>
             <p style={{ fontSize: 13, color: "#6b7280", marginBottom: 24 }}>
-              You can now review this enquiry on the lead details screen.
-            </p>
+              
+              Please rest assured that your information is safe with us. We respect your privacy, and you will never receive unnecessary calls or messages from our side — whether or not you decide to purchase a property with us.
 
+            </p>
+            <p style={{ fontSize: 13, color: "#6b7280", marginBottom: 24 }}>
+              Warm Regards,<br></br>
+              Team Shree Ram Krushna Developers
+            </p>
             <div className="modal-actions" style={{ justifyContent: "center" }}>
               <button
                 type="button"
