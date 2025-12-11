@@ -6827,6 +6827,9 @@ const BookingForm = () => {
           if (data.project.price_per_parking) {
             setPricePerParking(Number(data.project.price_per_parking) || 0);
           }
+          if (data.project?.address) {
+            setOffice((prev) => prev || data.project.address);
+          }
         }
         // Optional: Update payment plans if different from project-level
         if (data.payment_plans && data.payment_plans.length > 0) {
@@ -7624,8 +7627,26 @@ const BookingForm = () => {
       toast.error("Please enter a valid PAN number for primary applicant.");
       return;
     }
+    // Validate PAN card uploads (Front and Back are mandatory)
+    if (!files.primaryPanFront) {
+      toast.error("Please upload PAN card front side image for primary applicant.");
+      return;
+    }
+    if (!files.primaryPanBack) {
+      toast.error("Please upload PAN card back side image for primary applicant.");
+      return;
+    }
     if (!primaryAadharNo || !validateAadhar(primaryAadharNo)) {
       toast.error("Please enter a valid Aadhar number for primary applicant.");
+      return;
+    }
+    // Validate Aadhar card uploads (Front and Back are mandatory)
+    if (!files.primaryAadharFront) {
+      toast.error("Please upload Aadhar card front side image for primary applicant.");
+      return;
+    }
+    if (!files.primaryAadharBack) {
+      toast.error("Please upload Aadhar card back side image for primary applicant.");
       return;
     }
     if (email1 && !validateEmail(email1)) {
@@ -7670,6 +7691,32 @@ const BookingForm = () => {
             `Invalid Aadhar for applicant ${i + 2}: ${app.full_name}`
           );
           return;
+        }
+        
+        // Validate PAN card uploads for additional applicants (if PAN is provided)
+        if (app.pan && app.pan.trim()) {
+          const filePrefix = ["second", "third", "fourth"][i];
+          if (!files[`${filePrefix}PanFront`]) {
+            toast.error(`Please upload PAN card front side image for applicant ${i + 2}: ${app.full_name}`);
+            return;
+          }
+          if (!files[`${filePrefix}PanBack`]) {
+            toast.error(`Please upload PAN card back side image for applicant ${i + 2}: ${app.full_name}`);
+            return;
+          }
+        }
+        
+        // Validate Aadhar card uploads for additional applicants (if Aadhar is provided)
+        if (app.aadhar && app.aadhar.trim()) {
+          const filePrefix = ["second", "third", "fourth"][i];
+          if (!files[`${filePrefix}AadharFront`]) {
+            toast.error(`Please upload Aadhar card front side image for applicant ${i + 2}: ${app.full_name}`);
+            return;
+          }
+          if (!files[`${filePrefix}AadharBack`]) {
+            toast.error(`Please upload Aadhar card back side image for applicant ${i + 2}: ${app.full_name}`);
+            return;
+          }
         }
       }
     }
@@ -8550,7 +8597,8 @@ const BookingForm = () => {
 
                   <div className="bf-col bf-upload-btn-group">
                     <span className="bf-label">
-                      {toSentenceCase("First Applicant PAN")}
+                      {toSentenceCase("First Applicant PAN")}{" "}
+                      <span className="bf-required">*</span>
                     </span>
 
                     <input
@@ -8621,7 +8669,8 @@ const BookingForm = () => {
 
                   <div className="bf-col bf-upload-btn-group">
                     <span className="bf-label">
-                      {toSentenceCase("First Applicant Aadhar")}
+                      {toSentenceCase("First Applicant Aadhar")}{" "}
+                      <span className="bf-required">*</span>
                     </span>
 
                     <input

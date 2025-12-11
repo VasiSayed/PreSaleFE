@@ -20,7 +20,7 @@ function toTitleCase(text) {
   return text
     .trim()
     .split(/\s+/)
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
     .join(" ");
 }
 
@@ -245,7 +245,7 @@ export default function LeadsList() {
       "Investment", // purpose
       "New Lead", // stage (LeadStage.name)
       "cp1@example.com", // cp_email (role = CHANNEL_PARTNER)
-      "vasisayed09421@gmail.com"
+      "vasisayed09421@gmail.com",
     ];
 
     const csvContent = `${header.join(",")}\n${sampleRow.join(",")}`;
