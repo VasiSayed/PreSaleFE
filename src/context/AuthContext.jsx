@@ -9,6 +9,7 @@ const AuthContext = createContext(null);
 export function AuthProvider({ children }) {
   const [access, setAccess] = useState(() => localStorage.getItem("access"));
   const [refresh, setRefresh] = useState(() => localStorage.getItem("refresh"));
+
   const [user, setUser] = useState(() => {
     const storedUser = localStorage.getItem("user");
     return storedUser ? JSON.parse(storedUser) : null;
@@ -20,10 +21,16 @@ export function AuthProvider({ children }) {
     return stored ? JSON.parse(stored) : null;
   });
 
+  // 🆕 authorised projects (payload from /login)
+  const [authorizedProjects, setAuthorizedProjects] = useState(() => {
+    const stored = localStorage.getItem("AUTHORIZE_PROJECTS");
+    return stored ? JSON.parse(stored) : [];
+  });
+
   const navigate = useNavigate();
   const isAuthed = !!access;
 
-  // 🔹 my-scope fetcher
+  // 🔹 my-scope fetcher (same as before)
   const fetchAndStoreScope = async () => {
     try {
       const res = await axiosInstance.get("/client/my-scope/");
@@ -36,12 +43,65 @@ export function AuthProvider({ children }) {
     }
   };
 
-  // 🔹 Common helper: apply tokens + user (+ brand) to state + localStorage
+  // 🔹 Helper: handle projects + ACTIVE_PROJECT
+  const applyProjectsFromLogin = (projects) => {
+    if (!Array.isArray(projects)) {
+      // nothing to store
+      localStorage.removeItem("AUTHORIZE_PROJECTS");
+      setAuthorizedProjects([]);
+      return;
+    }
+
+    // Store raw list
+    localStorage.setItem("AUTHORIZE_PROJECTS", JSON.stringify(projects));
+    setAuthorizedProjects(projects);
+
+    const projectIds = projects.map((p) => String(p.id));
+    const storedActiveId = localStorage.getItem("ACTIVE_PROJECT_ID") || null;
+
+    // Check if stored active is still valid in new list
+    let activeId = null;
+    if (storedActiveId && projectIds.includes(storedActiveId)) {
+      activeId = storedActiveId;
+    }
+
+    if (!activeId) {
+      // No valid previous active
+      if (projects.length === 1) {
+        // ✅ single project → auto active
+        activeId = String(projects[0].id);
+        const activeName = projects[0].name || "";
+
+        localStorage.setItem("ACTIVE_PROJECT_ID", activeId);
+        localStorage.setItem("ACTIVE_PROJECT_NAME", activeName);
+        // backward compatibility
+        localStorage.setItem("PROJECT_ID", activeId);
+      } else {
+        // multiple projects and no valid old active → user will choose
+        localStorage.removeItem("ACTIVE_PROJECT_ID");
+        localStorage.removeItem("ACTIVE_PROJECT_NAME");
+        localStorage.removeItem("PROJECT_ID");
+      }
+    } else {
+      // Old active id still valid → keep it
+      const activeProject = projects.find(
+        (p) => String(p.id) === String(activeId)
+      );
+      const activeName = activeProject?.name || "";
+
+      localStorage.setItem("ACTIVE_PROJECT_ID", activeId);
+      localStorage.setItem("ACTIVE_PROJECT_NAME", activeName);
+      localStorage.setItem("PROJECT_ID", activeId);
+    }
+  };
+
+  // 🔹 Common helper: apply tokens + user (+ brand + projects)
   const applyAuthResponse = (data) => {
     const a = data?.access;
     const r = data?.refresh;
     const u = data?.user;
     const b = data?.brand ?? null;
+    const projects = data?.projects ?? null; // 🆕
 
     if (!a || !r) {
       throw new Error("Invalid credentials or token payload");
@@ -63,6 +123,11 @@ export function AuthProvider({ children }) {
     if (b) {
       localStorage.setItem("BRAND_THEME", JSON.stringify(b));
       setBrand(b);
+    }
+
+    // 🆕 Store authorised projects + decide ACTIVE_PROJECT
+    if (projects) {
+      applyProjectsFromLogin(projects);
     }
 
     // 🔹 Fetch & store scope (projects, roles, etc.) in background
@@ -88,20 +153,22 @@ export function AuthProvider({ children }) {
     localStorage.removeItem("access");
     localStorage.removeItem("refresh");
 
-    // Clear stored user + project context
+    // Clear stored user + scope
     localStorage.removeItem("user");
     localStorage.removeItem("MY_SCOPE");
-    localStorage.removeItem("ACTIVE_PROJECT_ID");
-    localStorage.removeItem("PROJECT_ID");
 
-    // 🧠 IMPORTANT: DO NOT remove BRAND_THEME
-    // so login page can still show logo & colors
+    // ⚠️ IMPORTANT:
+    // - DO NOT remove BRAND_THEME (login page theme)
+    // - DO NOT remove ACTIVE_PROJECT_ID / ACTIVE_PROJECT_NAME
+    // so user ka last active project + theme logout ke baad bhi dikh sakte hain
+
+    // But authorised_projects is per-session → clear it
+    localStorage.removeItem("AUTHORIZE_PROJECTS");
 
     setUser(null);
     setAccess(null);
     setRefresh(null);
-    // keep brand as-is in state too (optional, but convenient)
-    // if you want to reset it from backend, next login will override anyway
+    setAuthorizedProjects([]);
 
     navigate("/login", { replace: true });
   };
@@ -111,13 +178,14 @@ export function AuthProvider({ children }) {
       access,
       refresh,
       user,
-      brand, // 🆕 expose brand
+      brand,
+      authorizedProjects, // 🆕 expose this
       isAuthed,
       login,
       loginWithOtp,
       logout,
     }),
-    [access, refresh, user, brand, isAuthed]
+    [access, refresh, user, brand, authorizedProjects, isAuthed]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

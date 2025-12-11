@@ -1092,63 +1092,64 @@
   color: #374151 !important;
 }
 
-/* ================== GRAND TOTAL BANNER ================== */
+/* ======================
+   GRAND TOTAL - CLEAN WHITE BOX
+   ====================== */
 
-/* Grand Total - Purple Banner */
 .cost-breakdown-grand-total {
-  background: linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%);
-  color: white;
-  padding: 20px 16px;
-  border-radius: 8px;
+  background: #ffffff;                      /* White background */
+  border: 1px solid #e5e7eb;                /* Light grey border */
+  padding: 18px 20px;
+  border-radius: 10px;                      /* Smooth rounded edges */
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-size: 18px;
-  font-weight: 700;
+  font-size: 16px;
+  font-weight: 600;
+  color: #102a54;                           /* Dark blue text */
   margin-top: 20px;
-  box-shadow: 0 4px 6px -1px rgba(124, 58, 237, 0.3);
 }
 
+/* Left label */
 .cost-breakdown-grand-total span:first-child {
-  letter-spacing: 0.5px;
+  font-weight: 600;
+  color: #102a54;
 }
 
+/* Right value */
 .cost-breakdown-grand-total span:last-child {
-  font-size: 22px;
+  font-size: 20px;
+  font-weight: 700;
+  color: #102a54;
+  min-width: 80px;
+  text-align: right;
 }
 
 /* ================== RESPONSIVE ================== */
 
 @media (max-width: 768px) {
   .cost-breakdown-grand-total {
-    font-size: 16px;
-    padding: 16px 12px;
+    padding: 14px 16px;
+    font-size: 14px;
   }
-  
+
   .cost-breakdown-grand-total span:last-child {
     font-size: 18px;
-  }
-  
-  .cost-breakdown-row {
-    font-size: 12px;
-    padding: 8px 10px;
-  }
-  
-  .cost-breakdown-row span:last-child {
-    min-width: 120px;
   }
 }
 
 @media (max-width: 480px) {
-  .cost-breakdown-row {
+  .cost-breakdown-grand-total {
     flex-direction: column;
     align-items: flex-start;
-    gap: 4px;
-  }
-  
-  .cost-breakdown-row span:last-child {
+    gap: 6px;
     text-align: left;
-    min-width: auto;
+  }
+
+  .cost-breakdown-grand-total span:last-child {
+    width: 100%;
+    text-align: left;
+    font-size: 16px;
   }
 }
 

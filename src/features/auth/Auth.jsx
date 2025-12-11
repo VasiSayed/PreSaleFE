@@ -217,26 +217,17 @@ export default function Auth() {
   const doAfterLogin = async (data) => {
     const userRole = data?.user?.role || "SALES";
 
-    try {
-      const scopeRes = await api.get("/client/my-scope/", {
-        params: { include_units: true },
-      });
+// NEW: only store MY_SCOPE, do not touch ACTIVE_PROJECT here
+try {
+  const scopeRes = await api.get("/client/my-scope/", {
+    params: { include_units: true },
+  });
 
-      const scopeData = scopeRes.data || {};
-
-      localStorage.setItem("MY_SCOPE", JSON.stringify(scopeData));
-
-      if (scopeData.projects && scopeData.projects.length > 0) {
-        const firstProjectId = scopeData.projects[0].id;
-        if (firstProjectId) {
-          localStorage.setItem("ACTIVE_PROJECT_ID", String(firstProjectId));
-          localStorage.setItem("PROJECT_ID", String(firstProjectId));
-        }
-      }
-    } catch (scopeErr) {
-      console.error("Failed to fetch /client/my-scope/:", scopeErr);
-    }
-
+  const scopeData = scopeRes.data || {};
+  localStorage.setItem("MY_SCOPE", JSON.stringify(scopeData));
+} catch (scopeErr) {
+  console.error("Failed to fetch /client/my-scope/:", scopeErr);
+} 
     if (userRole === "SALES") {
       nav("/dashboard", { replace: true });
     } else {

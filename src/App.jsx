@@ -38,9 +38,10 @@
 // import DocumentBrowser from "./pages/Documents/DocumentBrowser";
 // import OnsiteRegistration from "./pages/OnsiteRegistration";
 // import BookingApprovals from "./pages/Booking/BookingApprovals";
-
+// import LeadOpportunityCreate from "./pages/Sales/LeadOpportunityCreate";
+// import KycBlack from "./pages/Kycblack/Kycpage";
 // import { Toaster } from "react-hot-toast";
-
+// import ProfilePage from "./pages/Profile";
 // import { ToastContainer } from "react-toastify";
 // import "react-toastify/dist/ReactToastify.css";
 
@@ -94,6 +95,9 @@
 //               <Route path="/leads/new" element={<SaleAddLead />} />
 //               <Route path="/leads/new/:leadId" element={<SaleAddLead />} />
 //               <Route path="/leads" element={<LeadsList />} />
+//               <Route path="/Kycblack" element={<KycBlack />} />
+//               <Route path="/profile" element={<ProfilePage />} />
+
 //               <Route
 //                 path="/lead-setup/additional-info"
 //                 element={<LeadAdditionalInfoPage />}
@@ -167,6 +171,7 @@
 //                 element={<CostSheetTemplatesList />}
 //               />
 //               <Route path="/sales/opportunities" element={<OppurnityList />} />
+//               <Route path="/sales/opportunities/add" element={<LeadOpportunityCreate />} />
 //               <Route
 //                 path="/costsheet/templates/:id"
 //                 element={<CostSheetTemplateCreate />}
@@ -203,6 +208,7 @@
 //     </BrowserRouter>
 //   );
 // }
+
 
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
@@ -255,13 +261,13 @@ export default function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
-        {/* Existing Toaster */}
-        <Toaster position="top-right" reverseOrder={false} />
+        {/* react-hot-toast Toaster - Position remains "center" for utility toasts */}
+        <Toaster position="center" reverseOrder={false} />
 
-        {/* ✅ ADD THIS NEW TOASTCONTAINER */}
+        {/* ✅ ToastContainer (react-toastify) - CHANGED POSITION to "top-center" */}
         <ToastContainer
-          position="top-right"
-          autoClose={3000}
+          position="top-center" 
+          autoClose={6000}
           hideProgressBar={false}
           newestOnTop
           closeOnClick

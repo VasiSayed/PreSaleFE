@@ -1,11 +1,10 @@
-// // src/pages/CostSheet/CostSheetCreate.jsx
+
 // import React, { useEffect, useMemo, useState, useRef } from "react";
 // import { useParams, useNavigate } from "react-router-dom";
 // import api from "../../api/axiosInstance";
 // import { toast } from "react-hot-toast";
 // import "./CostSheetCreate.css";
 // import { formatINR } from "../../utils/number";
-// import { toSentenceCase } from "../../utils/text";
 
 // // Generic collapsible section with chevron
 // const SectionCard = ({ title, children, defaultOpen = true }) => {
@@ -28,7 +27,7 @@
 // };
 
 // const CostSheetCreate = () => {
-//   const { leadId } = useParams(); // route: /cost-sheets/create/:leadId
+//   const { leadId } = useParams();
 //   const navigate = useNavigate();
 
 //   const [loading, setLoading] = useState(true);
@@ -54,19 +53,17 @@
 //   };
 //   const [discountFocused, setDiscountFocused] = useState(false);
 
-//   const [towers, setTowers] = useState([]); // nested tower -> floor -> inventories
-//   const [inventoryMap, setInventoryMap] = useState({}); // inventory_id -> inventory
+//   const [towers, setTowers] = useState([]);
+//   const [inventoryMap, setInventoryMap] = useState({});
 
-//   // dates from backend
-//   const [apiToday, setApiToday] = useState(""); // "today" from init API
-//   const [validTillLimit, setValidTillLimit] = useState(""); // max allowed valid_till
+//   const [apiToday, setApiToday] = useState("");
+//   const [validTillLimit, setValidTillLimit] = useState("");
 
 //   // ----------- Header form -----------
 //   const [quotationDate, setQuotationDate] = useState("");
 //   const [validTill, setValidTill] = useState("");
 //   const [status, setStatus] = useState("DRAFT");
 //   const [preparedBy, setPreparedBy] = useState("");
-//   //  const [quotationNo, setQuotationNo] = useState("");
 
 //   // ----------- Attachments -----------
 //   const [attachments, setAttachments] = useState([]);
@@ -88,21 +85,22 @@
 //   const [unitNo, setUnitNo] = useState("");
 
 //   // ----------- Base pricing -----------
-//   const [areaBasis, setAreaBasis] = useState("RERA"); // RERA / CARPET / SALEABLE
+//   // ✅ FIXED: Support all area combinations
+//   const [areaBasis, setAreaBasis] = useState("RERA");
+//   // Options: RERA, CARPET, SALEABLE, BUILTUP, RERA+BALCONY, CARPET+BALCONY
 //   const [baseAreaSqft, setBaseAreaSqft] = useState("");
-//   const [baseRatePsf, setBaseRatePsf] = useState(""); // editable – from inventory/project
+//   const [baseRatePsf, setBaseRatePsf] = useState("");
 
-//   // 💡 New discount logic
-//   const [discountType, setDiscountType] = useState("Fixed"); // "Percentage" | "Fixed"
-//   const [discountValue, setDiscountValue] = useState(""); // user input
+//   // Discount logic
+//   const [discountType, setDiscountType] = useState("Fixed");
+//   const [discountValue, setDiscountValue] = useState("");
 
 //   const baseValue = useMemo(() => {
 //     const a = parseFloat(baseAreaSqft) || 0;
 //     const r = parseFloat(baseRatePsf) || 0;
-//     return a * r; // ≈ Agreement value before discount
+//     return a * r;
 //   }, [baseAreaSqft, baseRatePsf]);
 
-//   // Derived: discountPercent, discountAmount, netBaseValue
 //   const { discountPercent, discountAmount, netBaseValue } = useMemo(() => {
 //     const bv = baseValue || 0;
 //     const rawVal = parseFloat(discountValue) || 0;
@@ -118,12 +116,11 @@
 //     if (discountType === "Percentage") {
 //       const discAmt = (bv * rawVal) / 100;
 //       return {
-//         discountPercent: rawVal, // user entered %
+//         discountPercent: rawVal,
 //         discountAmount: discAmt,
 //         netBaseValue: bv - discAmt,
 //       };
 //     } else {
-//       // Fixed (flat amount)
 //       const discAmt = rawVal;
 //       const pct = bv ? (discAmt * 100) / bv : 0;
 //       return {
@@ -149,9 +146,10 @@
 //       : null;
 
 //   // ----------- Payment plan -----------
-//   const [paymentPlanType, setPaymentPlanType] = useState("MASTER"); // MASTER or CUSTOM
+//   const [planRequired, setPlanRequired] = useState(true);
+//   const [paymentPlanType, setPaymentPlanType] = useState("MASTER");
 //   const [selectedPlanId, setSelectedPlanId] = useState("");
-//   const [planRows, setPlanRows] = useState([]); // {name, percentage, due_date, slab_id?}
+//   const [planRows, setPlanRows] = useState([]);
 //   const [planError, setPlanError] = useState("");
 
 //   const handleDueDateFocus = (index) => {
@@ -183,185 +181,220 @@
 //     { name: "Amenity Charges", type: "Fixed", value: "", amount: "" },
 //   ]);
 
-//   // Parking (top toggle + dropdown drives this)
-//   const [hasParking, setHasParking] = useState(false);
+//   // Parking
+//   const [parkingRequired, setParkingRequired] = useState("NO"); // YES / NO
 //   const [parkingCount, setParkingCount] = useState("");
+//   const [parkingPrice, setParkingPrice] = useState("");
+//   const [parkingPriceFocused, setParkingPriceFocused] = useState(false);
+
+//   // Possession charges
+//   const [isPossessionCharges, setIsPossessionCharges] = useState(false);
+//   const [possessionGstPercent, setPossessionGstPercent] = useState(0);
+
+//   // Tax checkboxes (to enable/disable taxes)
+//   const [gstEnabled, setGstEnabled] = useState(true);
+//   const [stampDutyEnabled, setStampDutyEnabled] = useState(true);
+//   const [registrationEnabled, setRegistrationEnabled] = useState(true);
+//   const [legalFeeEnabled, setLegalFeeEnabled] = useState(true);
 
 //   const additionalChargesTotal = useMemo(
 //     () => charges.reduce((sum, c) => sum + (parseFloat(c.amount || 0) || 0), 0),
 //     [charges]
 //   );
 
-//   // Base + additional (WITHOUT statutory – those are added in tax base)
-//   const amountBeforeTaxes = useMemo(
-//     () => (netBaseValue || 0) + (additionalChargesTotal || 0),
-//     [netBaseValue, additionalChargesTotal]
-//   );
-
 //   const baseAreaNum = parseFloat(baseAreaSqft || 0) || 0;
 //   const effectiveBaseRate =
 //     baseAreaNum && netBaseValue ? netBaseValue / baseAreaNum : 0;
 
-//   // ----------- Statutory charges (parking, dev, maintenance, etc.) -----------
-// const {
-//   parkingAmount,
-//   membershipAmount,
-//   developmentChargesAmount,
-//   electricalChargesAmount,
-//   provisionalMaintenanceAmount,
-//   statutoryChargesTotal,
-// } = useMemo(() => {
-//   const selectedInv =
-//     selectedInventoryId && inventoryMap[String(selectedInventoryId)]
-//       ? inventoryMap[String(selectedInventoryId)]
-//       : null;
-
-//   const carpetAreaSqft =
-//     parseFloat((selectedInv && selectedInv.carpet_sqft) || baseAreaSqft || 0) ||
-//     0;
-
-//   // Car parking (same as before)
-//   const pricePerParking =
-//     project && project.price_per_parking
-//       ? Number(project.price_per_parking)
-//       : 0;
-
-//   const parkingCountNum = Number(parkingCount || 0) || 0;
-//   const parkingAmt = pricePerParking * parkingCountNum;
-
-//   // ✅ Share application / membership = FIXED AMOUNT (jitna template me hai utna hi)
-//   const membershipAmt =
-//     template && template.share_application_money_membership_fees
-//       ? Number(template.share_application_money_membership_fees)
-//       : 0;
-
-//   // Development charges per sq. ft. on carpet area (same as before)
-//   const devRate =
-//     template && template.development_charges_psf
-//       ? Number(template.development_charges_psf)
-//       : 0;
-//   const devAmt = devRate * carpetAreaSqft;
-
-//   // ✅ Electrical / water / piped gas = FIXED AMOUNT (no × carpet area)
-//   const elecAmt =
-//     template && template.electrical_watern_n_all_charges
-//       ? Number(template.electrical_watern_n_all_charges)
-//       : 0;
-
-//   // Provisional maintenance per sq. ft. (same as before)
-//   const provRate =
-//     template && template.provisional_maintenance_psf
-//       ? Number(template.provisional_maintenance_psf)
-//       : 0;
-//   const provAmt = provRate * carpetAreaSqft;
-
-//   const statutoryTotal =
-//     parkingAmt + membershipAmt + devAmt + elecAmt + provAmt;
-
-//   return {
-//     parkingAmount: parkingAmt,
-//     membershipAmount: membershipAmt,
-//     developmentChargesAmount: devAmt,
-//     electricalChargesAmount: elecAmt,
-//     provisionalMaintenanceAmount: provAmt,
-//     statutoryChargesTotal: statutoryTotal,
+//   // Helper function to strip formatting from amount
+//   const stripAmount = (value) => {
+//     return value.replace(/,/g, "").replace(/₹/g, "").trim();
 //   };
-// }, [
-//   project,
-//   template,
-//   parkingCount,
-//   selectedInventoryId,
-//   inventoryMap,
-//   baseAreaSqft,
-//   netBaseValue,
-// ]);
 
-
-//   const handleBrowseClick = () => {
-//     if (fileInputRef.current) {
-//       fileInputRef.current.click();
+//   // Calculate parking total when parking price or count changes
+//   useEffect(() => {
+//     if (parkingRequired !== "YES" || !parkingCount || !parkingPrice) {
+//       return;
 //     }
-//   };
 
-//   const handleFilesChange = (e) => {
-//     const files = Array.from(e.target.files || []);
-//     setAttachments(files);
-//   };
+//     const amt = Number(stripAmount(parkingPrice)) || 0;
+//     const count = Number(parkingCount) || 0;
+//     // parkingAmount is calculated in the useMemo, so no need to set it here
+//   }, [parkingPrice, parkingCount, parkingRequired]);
 
-//   // ----------- Taxes toggle -----------
-//   const [taxes, setTaxes] = useState({
-//     gst: true,
-//     stampDuty: true,
-//     registration: true,
-//     legalFees: true,
-//   });
+//   // ========== COST CALCULATIONS ==========
+//   // ✅ Match BookingForm: Base for taxes = baseValue (before discount) + additional charges + parking
+//   const agreementValue = baseValue; // Unit cost before discount (equivalent to BookingForm's agreementValue)
 
-//   const [chargeFocusIndex, setChargeFocusIndex] = useState(null);
+//   const { parkingAmount, stampAmount, gstAmount, mainCostTotal } =
+//     useMemo(() => {
+//       if (!template) {
+//         return {
+//           parkingAmount: 0,
+//           stampAmount: 0,
+//           gstAmount: 0,
+//           mainCostTotal: 0,
+//         };
+//       }
+
+//       const pricePerParking = parseFloat(parkingPrice) || 0;
+//       const parkingCountNum = Number(parkingCount || 0) || 0;
+//       const parkingAmt = pricePerParking * parkingCountNum;
+
+//       // Base for GST and Stamp Duty: unit cost (before discount) + additional charges + parking total
+//       const unitCost = Number(agreementValue || 0);
+//       const additionalTotal = Number(additionalChargesTotal || 0);
+//       const parkingTotalNumber = parkingRequired === "YES" ? parkingAmt : 0;
+//       const baseForTaxes = unitCost + additionalTotal + parkingTotalNumber;
+
+//       const gstPercent = Number(template.gst_percent) || 0;
+//       const stampPercent = Number(template.stamp_duty_percent) || 0;
+
+//       const calcGst = gstEnabled ? (baseForTaxes * gstPercent) / 100 : 0;
+//       const calcStamp = stampDutyEnabled ? (baseForTaxes * stampPercent) / 100 : 0;
+
+//       // ✅ Round to 2 decimal places
+//       const stampAmt = Math.round(calcStamp * 100) / 100;
+//       const gstAmt = Math.round(calcGst * 100) / 100;
+
+//       // Total Cost (1) = unit cost + additional charges + parking + stamp duty + gst
+//       const mainTotal =
+//         unitCost + additionalTotal + parkingTotalNumber + stampAmt + gstAmt;
+
+//       return {
+//         parkingAmount: parkingAmt,
+//         stampAmount: stampAmt,
+//         gstAmount: gstAmt,
+//         mainCostTotal: mainTotal,
+//       };
+//     }, [
+//       agreementValue,
+//       additionalChargesTotal,
+//       parkingPrice,
+//       parkingCount,
+//       parkingRequired,
+//       template,
+//       gstEnabled,
+//       stampDutyEnabled,
+//     ]);
 
 //   const {
-//     gstAmount,
-//     stampAmount,
-//     registrationAmountCalc,
-//     legalAmountCalc,
-//     totalTaxes,
-//     finalAmount,
+//     membershipAmount,
+//     legalComplianceAmount,
+//     developmentChargesAmount,
+//     electricalChargesAmount,
+//     provisionalMaintenanceAmount,
+//     possessionSubtotal,
+//     possessionGstAmount,
+//     possessionTotal,
 //   } = useMemo(() => {
-//     // Base for tax = (Net Base + Additional) + Statutory
-//     const baseForTaxes =
-//       (amountBeforeTaxes || 0) + (statutoryChargesTotal || 0);
+//     if (!isPossessionCharges) {
+//       return {
+//         membershipAmount: 0,
+//         legalComplianceAmount: 0,
+//         developmentChargesAmount: 0,
+//         electricalChargesAmount: 0,
+//         provisionalMaintenanceAmount: 0,
+//         possessionSubtotal: 0,
+//         possessionGstAmount: 0,
+//         possessionTotal: 0,
+//       };
+//     }
 
-//     const gstPercent =
-//       taxes.gst && template?.gst_percent
-//         ? parseFloat(template.gst_percent) || 0
+//     const selectedInv =
+//       selectedInventoryId && inventoryMap[String(selectedInventoryId)]
+//         ? inventoryMap[String(selectedInventoryId)]
+//         : null;
+
+//     const carpetAreaSqft =
+//       parseFloat(
+//         (selectedInv && selectedInv.carpet_sqft) || baseAreaSqft || 0
+//       ) || 0;
+
+//     const membershipAmt =
+//       template && template.share_application_money_membership_fees
+//         ? Number(template.share_application_money_membership_fees)
 //         : 0;
 
-//     const stampPercent =
-//       taxes.stampDuty && template?.stamp_duty_percent
-//         ? parseFloat(template.stamp_duty_percent) || 0
+//     const legalAmt =
+//       template && template.legal_fee_amount
+//         ? (legalFeeEnabled ? Number(template.legal_fee_amount) : 0)
 //         : 0;
 
-//     const gstVal = (baseForTaxes * gstPercent) / 100;
-//     const stampVal = (baseForTaxes * stampPercent) / 100;
+//     const devRate =
+//       template && template.development_charges_psf
+//         ? Number(template.development_charges_psf)
+//         : 0;
+//     const devAmt = devRate * carpetAreaSqft;
 
-//     const regVal =
-//       taxes.registration && template?.registration_amount
-//         ? parseFloat(template.registration_amount) || 0
+//     const elecAmt =
+//       template && template.electrical_watern_n_all_charges
+//         ? Number(template.electrical_watern_n_all_charges)
 //         : 0;
 
-//     const legalVal =
-//       taxes.legalFees && template?.legal_fee_amount
-//         ? parseFloat(template.legal_fee_amount) || 0
+//     const provRate =
+//       template && template.provisional_maintenance_psf
+//         ? Number(template.provisional_maintenance_psf)
 //         : 0;
+//     const provMonths = template && template.provisional_maintenance_months
+//       ? Number(template.provisional_maintenance_months)
+//       : 0;
+//     const provAmt = provRate * carpetAreaSqft * provMonths;
 
-//     const totalTax = gstVal + stampVal + regVal + legalVal;
-//     const final = baseForTaxes + totalTax;
+//     // Base for GST: Legal + Development + Electrical + Provisional Maintenance (Share Fee NOT included in GST base)
+//     const baseForGst = legalAmt + devAmt + elecAmt + provAmt;
+    
+//     // GST on possession (18%) - applied on baseForGst (hardcoded as per BookingForm)
+//     const gstAmt = Math.round(((baseForGst * 18) / 100) * 100) / 100;
+    
+//     // Total with GST (includes shareFee which is not in GST base)
+//     const total = membershipAmt + baseForGst + gstAmt;
 
 //     return {
-//       gstAmount: gstVal,
-//       stampAmount: stampVal,
-//       registrationAmountCalc: regVal,
-//       legalAmountCalc: legalVal,
-//       totalTaxes: totalTax,
-//       finalAmount: final,
+//       membershipAmount: membershipAmt,
+//       legalComplianceAmount: legalAmt,
+//       developmentChargesAmount: devAmt,
+//       electricalChargesAmount: elecAmt,
+//       provisionalMaintenanceAmount: provAmt,
+//       possessionSubtotal: baseForGst,
+//       possessionGstAmount: gstAmt,
+//       possessionTotal: total,
 //     };
-//   }, [amountBeforeTaxes, statutoryChargesTotal, taxes, template]);
+//   }, [
+//     isPossessionCharges,
+//     template,
+//     selectedInventoryId,
+//     inventoryMap,
+//     baseAreaSqft,
+//     possessionGstPercent,
+//     legalFeeEnabled,
+//   ]);
+
+//   const registrationAmount = useMemo(() => {
+//     if (!template) return 0;
+//     const regAmount = Number(template.registration_amount) || 0;
+//     return registrationEnabled ? regAmount : 0;
+//   }, [template, registrationEnabled]);
+
+//   // ✅ Match BookingForm: finalAmount = mainCostTotal (Total Cost 1)
+//   const finalAmount = useMemo(() => {
+//     return mainCostTotal;
+//   }, [mainCostTotal]);
 
 //   // ----------- Text sections -----------
-// const [termsAndConditions, setTermsAndConditions] = useState("");
+//   const [termsAndConditions, setTermsAndConditions] = useState("");
 
-// // Lines ko split + trim + empty remove + starting numbers strip
-// const termsList = useMemo(() => {
-//   if (!termsAndConditions) return [];
-//   return termsAndConditions
-//     .split(/\r?\n/)
-//     .map((line) => line.trim())
-//     .filter(Boolean)
-//     .map((line) => {
-//       // "1. Payment Schedule" -> "Payment Schedule"
-//       const m = line.match(/^\d+\.?\s*(.*)$/);
-//       return m && m[1] ? m[1] : line;
-//     });
-// }, [termsAndConditions]);
+//   const termsList = useMemo(() => {
+//     if (!termsAndConditions) return [];
+//     return termsAndConditions
+//       .split(/\r?\n/)
+//       .map((line) => line.trim())
+//       .filter(Boolean)
+//       .map((line) => {
+//         const m = line.match(/^\d+\.?\s*(.*)$/);
+//         return m && m[1] ? m[1] : line;
+//       });
+//   }, [termsAndConditions]);
 
 //   const handleDiscountValueChange = (e) => {
 //     const input = e.target.value;
@@ -384,7 +417,6 @@
 //     setDiscountValue(raw);
 //   };
 
-//   // Load username from localStorage for "Prepared by"
 //   useEffect(() => {
 //     try {
 //       const raw = localStorage.getItem("user");
@@ -399,7 +431,7 @@
 //   }, []);
 
 //   // ==============================
-//   // 1) Load init + sales lead full-info + booking data
+//   // Load init + sales lead + booking data
 //   // ==============================
 //   useEffect(() => {
 //     const load = async () => {
@@ -407,19 +439,42 @@
 //         setLoading(true);
 //         setInitError("");
 
-//         // ---- Cost sheet init ----
 //         const initRes = await api.get(`/costsheet/lead/${leadId}/init/`);
 //         const data = initRes.data;
 
-//         // ---- Sales Lead full-info (for interested_unit_links, etc.) ----
-//         const salesRes = await api.get(
-//           `/sales/sales-leads/${leadId}/full-info/`
-//         );
-//         const salesFull = salesRes.data;
+//         if (!data || !data.project || !data.project.id) {
+//           throw new Error(
+//             "Init API did not return a valid project for this lead."
+//           );
+//         }
+
+//         let salesFull = null;
+//         try {
+//           const salesRes = await api.get(
+//             `/sales/sales-leads/${leadId}/full-info/`
+//           );
+//           salesFull = salesRes.data;
+//         } catch (err) {
+//           console.warn(
+//             "Sales full-info failed, falling back to init lead data:",
+//             err?.response?.status,
+//             err?.response?.data || err
+//           );
+//         }
 
 //         setLead(data.lead);
 //         setProject(data.project);
-//         setTemplate(data.template);
+//         // Make template editable (similar to costTemplate in BookingForm)
+//         if (data.template) {
+//           setTemplate({
+//             ...data.template,
+//             gst_percent: data.template.gst_percent || 0,
+//             stamp_duty_percent: data.template.stamp_duty_percent || 0,
+//             provisional_maintenance_months: data.template.provisional_maintenance_months || 0,
+//           });
+//         } else {
+//           setTemplate(data.template);
+//         }
 //         setPaymentPlans(data.payment_plans || []);
 //         setOffers(data.offers || []);
 
@@ -428,7 +483,23 @@
 //         setValidTill(data.valid_till);
 //         setValidTillLimit(data.valid_till);
 
-//         // Prefer full-info where available
+//         if (data.template) {
+//           setPlanRequired(data.template.is_plan_required !== false);
+//           setIsPossessionCharges(
+//             data.template.is_possessional_charges === true
+//           );
+//           setPossessionGstPercent(
+//             parseFloat(data.template.possessional_gst_percent) || 0
+//           );
+//           setTermsAndConditions(data.template.terms_and_conditions || "");
+//         }
+
+//         if (data.project && data.project.price_per_parking) {
+//           setParkingPrice(
+//             String(Math.round(Number(data.project.price_per_parking)))
+//           );
+//         }
+
 //         const leadFullName = salesFull?.full_name || data.lead.full_name || "";
 //         const leadMobile =
 //           salesFull?.mobile_number || data.lead.mobile_number || "";
@@ -441,29 +512,44 @@
 
 //         setProjectName(data.project.name || "");
 
-//         // project level default base rate (will be overridden by unit-specific if any)
-// const projectRate =
-//   data.project.price_per_sqft != null
-//     ? String(Math.round(Number(data.project.price_per_sqft)))
-//     : "";
+//         const projectRate =
+//           data.project.price_per_sqft != null
+//             ? String(Math.round(Number(data.project.price_per_sqft)))
+//             : "";
 
-// setBaseRatePsf(projectRate);
+//         setBaseRatePsf(projectRate);
 
-//         if (data.template) {
-//           setTermsAndConditions(data.template.terms_and_conditions || "");
+//         // Booking Setup
+//         let bookingData = null;
+//         try {
+//           const bookingRes = await api.get("/client/booking-setup/", {
+//             params: {
+//               project_id: data.project.id,
+//             },
+//           });
+//           bookingData = bookingRes.data || {};
+//         } catch (err) {
+//           console.error(
+//             "Booking setup failed:",
+//             err?.response?.status,
+//             err?.response?.data || err
+//           );
+//           throw err;
 //         }
 
-//         // ---- Booking Setup (tower -> floor -> units/inventory) ----
-//         const bookingRes = await api.get("/client/booking-setup/", {
-//           params: {
-//             project_id: data.project.id,
-//           },
-//         });
-
-//         const bookingData = bookingRes.data || {};
 //         const towersFromApi = bookingData.towers || [];
 
-//         // Interested unit from sales-full
+//         const isBalconyCarpetPricingFromBooking = !!(
+//           bookingData.project && bookingData.project.is_pricing_balcony_carpert
+//         );
+
+//         if (isBalconyCarpetPricingFromBooking) {
+//           setProject((prev) => ({
+//             ...(prev || data.project || {}),
+//             is_pricing_balcony_carpert: true,
+//           }));
+//         }
+
 //         let primaryInterestedUnitId = null;
 //         if (
 //           salesFull &&
@@ -478,14 +564,6 @@
 
 //         let defaultInventoryId = null;
 
-//         /**
-//          * Transform booking-setup structure:
-//          * towers[id,name,floors[id,number,units[unit + inventory]]]
-//          *  -> towers[tower_id,tower_name,floors[floor_id,floor_number,inventories[]]]
-//          * Keep ALL units that have inventory.
-//          * Mark which ones are AVAILABLE vs BOOKED.
-//          * Also: pick default inventory from salesFull.interested_unit_links
-//          */
 //         const towersList = towersFromApi
 //           .map((tower) => {
 //             const floors = (tower.floors || [])
@@ -502,7 +580,6 @@
 
 //                     const isAvailable = inv.availability_status === "AVAILABLE";
 
-//                     // If this unit matches the interested unit, remember its inventory_id
 //                     if (
 //                       primaryInterestedUnitId &&
 //                       u.id === primaryInterestedUnitId &&
@@ -512,7 +589,6 @@
 //                     }
 
 //                     return {
-//                       // primary key we POST as inventory_id
 //                       inventory_id: inv.id,
 //                       unit_id: u.id,
 
@@ -520,16 +596,18 @@
 //                       configuration:
 //                         inv.configuration_name || inv.unit_type_name || "",
 
+//                       // ✅ FIXED: Store all area types
 //                       rera_area_sqft: inv.rera_area_sqft,
 //                       saleable_sqft: inv.saleable_sqft,
 //                       carpet_sqft: inv.carpet_sqft,
+//                       builtup_sqft: inv.builtup_sqft,
+//                       balcony_area_sqft: inv.balcony_area_sqft,
 
 //                       agreement_value: inv.agreement_value || u.agreement_value,
 //                       rate_psf: inv.rate_psf,
 //                       base_price_psf: inv.base_price_psf,
 //                       total_cost: inv.total_cost,
 
-//                       // new flags
 //                       isBooked,
 //                       isAvailable,
 //                       unit_status: u.status,
@@ -555,7 +633,6 @@
 
 //         setTowers(towersList);
 
-//         // Flatten inventory lookup map (keyed by inventory_id)
 //         const invMap = {};
 //         towersList.forEach((t) => {
 //           (t.floors || []).forEach((f) => {
@@ -572,7 +649,7 @@
 //         });
 //         setInventoryMap(invMap);
 
-//         // If we found a default inventory from interested_unit_links, auto-select it
+//         // Auto-select if found
 //         if (defaultInventoryId) {
 //           const inv = invMap[String(defaultInventoryId)];
 //           if (inv) {
@@ -583,32 +660,51 @@
 //             setFloorNumber(inv.floor_number || "");
 //             setUnitNo(inv.unit_no || "");
 
-//             // Area basis: RERA preferred, else saleable, else carpet
-//             const autoArea =
-//               inv.rera_area_sqft || inv.saleable_sqft || inv.carpet_sqft || "";
-//             setAreaBasis(inv.rera_area_sqft ? "RERA" : "SALEABLE");
-//             setBaseAreaSqft(autoArea || "");
+//             // ✅ FIXED: Default to RERA + BALCONY if balcony pricing enabled
+//             if (isBalconyCarpetPricingFromBooking) {
+//               const reraNum = Number(inv.rera_area_sqft || 0);
+//               const balconyNum = Number(inv.balcony_area_sqft || 0);
+//               const total = reraNum + balconyNum;
+//               setBaseAreaSqft(total ? String(total) : "");
+//               setAreaBasis("RERA+BALCONY");
+//             } else {
+//               const autoArea =
+//                 inv.rera_area_sqft ||
+//                 inv.saleable_sqft ||
+//                 inv.carpet_sqft ||
+//                 "";
+//               setBaseAreaSqft(autoArea || "");
+//               setAreaBasis(inv.rera_area_sqft ? "RERA" : "SALEABLE");
+//             }
 
-//             // Prefill Base Rate / sq. ft. from inventory (editable)
-// const autoRatePsfRaw =
-//   inv.base_price_psf || inv.rate_psf || data.project.price_per_sqft || "";
+//             const autoRatePsfRaw =
+//               inv.base_price_psf ||
+//               inv.rate_psf ||
+//               data.project.price_per_sqft ||
+//               "";
 
-// if (autoRatePsfRaw !== "") {
-//   const clean = String(Math.round(Number(autoRatePsfRaw)));
-//   setBaseRatePsf(clean);
-// }
-
+//             if (autoRatePsfRaw !== "") {
+//               const clean = String(Math.round(Number(autoRatePsfRaw)));
+//               setBaseRatePsf(clean);
+//             }
 //           }
 //         }
 
-//         // optional: payment plans from booking-setup
 //         if (bookingData.payment_plans) {
 //           setPaymentPlans(bookingData.payment_plans);
 //         }
 //       } catch (err) {
-//         console.error(err);
-//         setInitError("Failed to load cost sheet init data.");
-//         toast.error("Failed to load cost sheet init data.");
+//         console.error("❌ Cost sheet init failed:", err?.response || err);
+//         let message = "Failed to load cost sheet init data.";
+//         const resp = err?.response;
+//         if (resp?.data) {
+//           if (resp.data.detail) message = resp.data.detail;
+//           else if (typeof resp.data === "string") message = resp.data;
+//         } else if (err?.message) {
+//           message = err.message;
+//         }
+//         setInitError(message);
+//         toast.error(message);
 //       } finally {
 //         setLoading(false);
 //       }
@@ -620,7 +716,7 @@
 //   }, [leadId]);
 
 //   // ==============================
-//   // 2) Inventory select handlers
+//   // Inventory handlers
 //   // ==============================
 //   const handleTowerChange = (e) => {
 //     const value = e.target.value;
@@ -655,19 +751,75 @@
 //     setFloorNumber(inv.floor_number || "");
 //     setUnitNo(inv.unit_no || "");
 
-//     // area basis: RERA preferred, else saleable, else carpet
-//     let area = inv.rera_area_sqft || inv.saleable_sqft || inv.carpet_sqft || "";
-//     setAreaBasis(inv.rera_area_sqft ? "RERA" : "SALEABLE");
-//     setBaseAreaSqft(area || "");
+//     const isBalconyCarpetPricingLocal =
+//       project?.is_pricing_balcony_carpert === true;
 
-//     // When user changes unit manually, also update base rate from that unit (still editable)
-// const autoRatePsfRaw =
-//   inv.base_price_psf || inv.rate_psf || project?.price_per_sqft || "";
-// if (autoRatePsfRaw !== "") {
-//   const clean = String(Math.round(Number(autoRatePsfRaw)));
-//   setBaseRatePsf(clean);
-// }
+//     // ✅ FIXED: Set default area basis
+//     if (isBalconyCarpetPricingLocal) {
+//       setAreaBasis("RERA+BALCONY");
+//       const rera = Number(inv.rera_area_sqft || 0);
+//       const balcony = Number(inv.balcony_area_sqft || 0);
+//       setBaseAreaSqft(String(rera + balcony));
+//     } else {
+//       if (inv.rera_area_sqft) {
+//         setAreaBasis("RERA");
+//         setBaseAreaSqft(inv.rera_area_sqft);
+//       } else if (inv.saleable_sqft) {
+//         setAreaBasis("SALEABLE");
+//         setBaseAreaSqft(inv.saleable_sqft);
+//       } else {
+//         setAreaBasis("CARPET");
+//         setBaseAreaSqft(inv.carpet_sqft || "");
+//       }
+//     }
 
+//     const autoRatePsfRaw =
+//       inv.base_price_psf || inv.rate_psf || project?.price_per_sqft || "";
+//     if (autoRatePsfRaw !== "") {
+//       const clean = String(Math.round(Number(autoRatePsfRaw)));
+//       setBaseRatePsf(clean);
+//     }
+//   };
+
+//   // ✅ FIXED: Handle area basis change
+//   const handleAreaBasisChange = (e) => {
+//     const newBasis = e.target.value;
+//     setAreaBasis(newBasis);
+
+//     if (!selectedInventory) return;
+
+//     const inv = selectedInventory;
+//     const rera = Number(inv.rera_area_sqft || 0);
+//     const carpet = Number(inv.carpet_sqft || 0);
+//     const saleable = Number(inv.saleable_sqft || 0);
+//     const builtup = Number(inv.builtup_sqft || 0);
+//     const balcony = Number(inv.balcony_area_sqft || 0);
+
+//     let newArea = 0;
+//     switch (newBasis) {
+//       case "RERA":
+//         newArea = rera;
+//         break;
+//       case "CARPET":
+//         newArea = carpet;
+//         break;
+//       case "SALEABLE":
+//         newArea = saleable;
+//         break;
+//       case "BUILTUP":
+//         newArea = builtup;
+//         break;
+//       case "RERA+BALCONY":
+//         newArea = rera + balcony;
+//         break;
+//       case "CARPET+BALCONY":
+//         newArea = carpet + balcony;
+//         break;
+//       default:
+//         newArea = rera;
+//     }
+
+//     setBaseAreaSqft(newArea ? String(newArea) : "");
 //   };
 
 //   const selectedTower = towers.find(
@@ -679,8 +831,44 @@
 //   );
 //   const inventories = selectedFloor ? selectedFloor.inventories || [] : [];
 
+//   const selectedInventory =
+//     selectedInventoryId && inventoryMap[String(selectedInventoryId)]
+//       ? inventoryMap[String(selectedInventoryId)]
+//       : null;
+
+//   const isBalconyCarpetPricing = project?.is_pricing_balcony_carpert === true;
+
+//   // ✅ FIXED: Calculate area based on selection
+//   const calculatedArea = useMemo(() => {
+//     if (!selectedInventory) return 0;
+
+//     const inv = selectedInventory;
+//     const rera = Number(inv.rera_area_sqft || 0);
+//     const carpet = Number(inv.carpet_sqft || 0);
+//     const saleable = Number(inv.saleable_sqft || 0);
+//     const builtup = Number(inv.builtup_sqft || 0);
+//     const balcony = Number(inv.balcony_area_sqft || 0);
+
+//     switch (areaBasis) {
+//       case "RERA":
+//         return rera;
+//       case "CARPET":
+//         return carpet;
+//       case "SALEABLE":
+//         return saleable;
+//       case "BUILTUP":
+//         return builtup;
+//       case "RERA+BALCONY":
+//         return rera + balcony;
+//       case "CARPET+BALCONY":
+//         return carpet + balcony;
+//       default:
+//         return rera;
+//     }
+//   }, [selectedInventory, areaBasis]);
+
 //   // ==============================
-//   // 3) Payment plan handlers
+//   // Payment plan handlers
 //   // ==============================
 //   const handlePlanSelect = (e) => {
 //     const value = e.target.value;
@@ -732,12 +920,20 @@
 //     const num = Number(raw);
 //     if (Number.isNaN(num)) return;
 
-//     handleChargesChange(index, "amount", raw); // store raw number
+//     handleChargesChange(index, "amount", raw);
 //   };
 
-//   // ==============================
-//   // 4) Charges / Taxes handlers
-//   // ==============================
+//   const handleBrowseClick = () => {
+//     if (fileInputRef.current) {
+//       fileInputRef.current.click();
+//     }
+//   };
+
+//   const handleFilesChange = (e) => {
+//     const files = Array.from(e.target.files || []);
+//     setAttachments(files);
+//   };
+
 //   const handleChargesChange = (index, field, value) => {
 //     const updated = [...charges];
 //     updated[index][field] = value;
@@ -751,13 +947,8 @@
 //     ]);
 //   };
 
-//   const handleTaxChange = (name) => {
-//     setTaxes((prev) => ({ ...prev, [name]: !prev[name] }));
-//   };
+//   const [chargeFocusIndex, setChargeFocusIndex] = useState(null);
 
-//   // ==============================
-//   // 5) Date handlers (validation)
-//   // ==============================
 //   const handleQuotationDateChange = (e) => {
 //     const value = e.target.value;
 
@@ -801,340 +992,198 @@
 //   };
 
 //   // ==============================
-//   // 6) Save (POST)
+//   // Save
 //   // ==============================
-//   // const handleSave = async () => {
-//   //   setApiErrors([]);
-//   //   if (!lead || !project) {
-//   //     toast.error("Lead / project not loaded.");
-//   //     return;
-//   //   }
-//   //   if (!selectedInventoryId) {
-//   //     toast.error("Please select an inventory/unit.");
-//   //     return;
-//   //   }
-
-//   //   const selectedInv = inventoryMap[String(selectedInventoryId)];
-//   //   if (selectedInv && selectedInv.isBooked) {
-//   //     toast.error("This unit is already booked. Please choose another unit.");
-//   //     return;
-//   //   }
-
-//   //   // Quoted date cannot be after valid_till
-//   //   if (quotationDate && validTill && quotationDate > validTill) {
-//   //     toast.error("Quote date cannot be after Valid Until date.");
-//   //     return;
-//   //   }
-
-//   //   // Whatever plan type: if rows present, total must be 100
-//   //   if (planRows.length && Math.round(totalPercentage * 1000) !== 100000) {
-//   //     toast.error("Total payment plan percentage must be exactly 100%.");
-//   //     return;
-//   //   }
-
-//   //   // ==========================
-//   //   // Build custom_payment_plan ALWAYS
-//   //   // ==========================
-//   //   const customPaymentPlan =
-//   //     planRows.length > 0
-//   //       ? planRows.map((row) => ({
-//   //           name: row.name,
-//   //           percentage: row.percentage,
-//   //           // Installment amount based on FINAL AMOUNT (after taxes)
-//   //           amount:
-//   //             finalAmount && row.percentage
-//   //               ? (
-//   //                   (finalAmount * parseFloat(row.percentage || 0)) /
-//   //                   100
-//   //                 ).toFixed(2)
-//   //               : null,
-//   //           due_date: row.due_date || null,
-//   //         }))
-//   //       : null;
-
-//   //   try {
-//   //     setSaving(true);
-
-//   //     const payload = {
-//   //       // FK inputs – MUST be *_id to match serializer
-//   //       lead_id: lead.id,
-//   //       project_id: project.id,
-//   //       inventory_id: Number(selectedInventoryId),
-//   //       project_template_id: template ? template.project_template_id : null,
-
-//   //       // quotation_no: quotationNo.trim(),
-//   //       date: quotationDate,
-//   //       valid_till: validTill,
-//   //       status,
-
-//   //       customer_name: customerName,
-//   //       customer_contact_person: customerContactPerson,
-//   //       customer_phone: customerPhone,
-//   //       customer_email: customerEmail,
-
-//   //       project_name: projectName,
-//   //       tower_name: towerName,
-//   //       floor_number: floorNumber,
-//   //       unit_no: unitNo,
-
-//   //       base_area_sqft: baseAreaSqft || null,
-//   //       base_rate_psf: baseRatePsf || null,
-//   //       base_value: baseValue || null, // Agreement/Base value from Area × Rate
-
-//   //       discount_percent: safeDiscountPercent,
-//   //       discount_amount: safeDiscountAmount,
-
-//   //       net_base_value: netBaseValue || null,
-
-//   //       payment_plan_type: paymentPlanType,
-//   //       payment_plan:
-//   //         paymentPlanType === "MASTER" ? selectedPlanId || null : null,
-//   //       custom_payment_plan:
-//   //         paymentPlanType === "CUSTOM"
-//   //           ? planRows.map((row) => ({
-//   //               name: row.name,
-//   //               percentage: row.percentage,
-//   //               // Installment amount now based on FINAL AMOUNT (after taxes)
-//   //               amount:
-//   //                 finalAmount && row.percentage
-//   //                   ? (
-//   //                       (finalAmount * parseFloat(row.percentage || 0)) /
-//   //                       100
-//   //                     ).toFixed(2)
-//   //                   : null,
-//   //               due_date: row.due_date || null,
-//   //             }))
-//   //           : null,
-
-//   //       gst_percent: taxes.gst && template ? template.gst_percent : null,
-//   //       gst_amount: taxes.gst ? gstAmount || null : null,
-//   //       stamp_duty_percent:
-//   //         taxes.stampDuty && template ? template.stamp_duty_percent : null,
-//   //       stamp_duty_amount: taxes.stampDuty ? stampAmount || null : null,
-//   //       registration_amount: taxes.registration
-//   //         ? registrationAmountCalc || null
-//   //         : null,
-//   //       legal_fee_amount: taxes.legalFees ? legalAmountCalc || null : null,
-
-//   //       additional_charges_total: additionalChargesTotal || null,
-//   //       offers_total: null,
-//   //       net_payable_amount: finalAmount || null,
-
-//   //       terms_and_conditions: termsAndConditions,
-//   //       // notes: internalNotes,
-//   //     };
-
-//   //     const res = await api.post("/costsheet/cost-sheets/all/", payload);
-
-//   //     toast.success("Cost Sheet created successfully.");
-//   //     const created = res?.data;
-//   //     const newId = created?.id;
-//   //     if (newId) {
-//   //       navigate(`/costsheet/${newId}`);
-//   //     }
-//   //   } catch (err) {
-//   //     console.error(err);
-
-//   //     const backendErrors = [];
-
-//   //     if (err.response && err.response.data) {
-//   //       const data = err.response.data;
-
-//   //       if (typeof data === "string") {
-//   //         backendErrors.push(data);
-//   //       } else if (typeof data === "object") {
-//   //         if (Array.isArray(data.__all__)) {
-//   //           backendErrors.push(...data.__all__);
-//   //         }
-//   //         if (Array.isArray(data.non_field_errors)) {
-//   //           backendErrors.push(...data.non_field_errors);
-//   //         }
-
-//   //         Object.keys(data).forEach((key) => {
-//   //           if (key === "__all__" || key === "non_field_errors") return;
-
-//   //           const value = data[key];
-//   //           if (Array.isArray(value)) {
-//   //             value.forEach((msg) => {
-//   //               backendErrors.push(`${key}: ${msg}`);
-//   //             });
-//   //           } else if (typeof value === "string") {
-//   //             backendErrors.push(`${key}: ${value}`);
-//   //           }
-//   //         });
-//   //       }
-//   //     }
-
-//   //     if (backendErrors.length) {
-//   //       setApiErrors(backendErrors);
-//   //       toast.error(backendErrors[0]);
-//   //     } else {
-//   //       toast.error("Failed to create cost sheet.");
-//   //     }
-//   //   } finally {
-//   //     setSaving(false);
-//   //   }
-//   // };
-
 //   const handleSave = async () => {
-//   setApiErrors([]);
-//   if (!lead || !project) {
-//     toast.error("Lead / project not loaded.");
-//     return;
-//   }
-//   if (!selectedInventoryId) {
-//     toast.error("Please select an inventory/unit.");
-//     return;
-//   }
-
-//   const selectedInv = inventoryMap[String(selectedInventoryId)];
-//   if (selectedInv && selectedInv.isBooked) {
-//     toast.error("This unit is already booked. Please choose another unit.");
-//     return;
-//   }
-
-//   // Quoted date cannot be after valid_till
-//   if (quotationDate && validTill && quotationDate > validTill) {
-//     toast.error("Quote date cannot be after Valid Until date.");
-//     return;
-//   }
-
-//   // Whatever plan type: if rows present, total must be 100
-//   if (planRows.length && Math.round(totalPercentage * 1000) !== 100000) {
-//     toast.error("Total payment plan percentage must be exactly 100%.");
-//     return;
-//   }
-
-//   // ==========================
-//   // Build custom_payment_plan ALWAYS
-//   // ==========================
-//   const customPaymentPlan =
-//     planRows.length > 0
-//       ? planRows.map((row) => ({
-//           name: row.name,
-//           percentage: row.percentage,
-//           // Installment amount based on FINAL AMOUNT (after taxes)
-//           amount:
-//             finalAmount && row.percentage
-//               ? (
-//                   (finalAmount * parseFloat(row.percentage || 0)) /
-//                   100
-//                 ).toFixed(2)
-//               : null,
-//           due_date: row.due_date || null,
-//         }))
-//       : null;
-
-//   try {
-//     setSaving(true);
-
-//     const payload = {
-//       // FK inputs – MUST be *_id to match serializer
-//       lead_id: lead.id,
-//       project_id: project.id,
-//       inventory_id: Number(selectedInventoryId),
-//       project_template_id: template ? template.project_template_id : null,
-
-//       // quotation_no: quotationNo.trim(),
-//       date: quotationDate,
-//       valid_till: validTill,
-//       status,
-
-//       customer_name: customerName,
-//       customer_contact_person: customerContactPerson,
-//       customer_phone: customerPhone,
-//       customer_email: customerEmail,
-
-//       project_name: projectName,
-//       tower_name: towerName,
-//       floor_number: floorNumber,
-//       unit_no: unitNo,
-
-//       base_area_sqft: baseAreaSqft || null,
-//       base_rate_psf: baseRatePsf || null,
-//       base_value: baseValue || null, // Agreement/Base value from Area × Rate
-
-//       discount_percent: safeDiscountPercent,
-//       discount_amount: safeDiscountAmount,
-
-//       net_base_value: netBaseValue || null,
-
-//       // ------- Payment Plan -------
-//       payment_plan_type: paymentPlanType,          // MASTER / CUSTOM jo UI se aaya
-//       payment_plan: selectedPlanId || null,        // ✅ master plan ki ID ALWAYS (agar koi select hai)
-//       custom_payment_plan: customPaymentPlan,      // ✅ hamesha custom array (MASTER + CUSTOM dono me)
-
-//       // ------- Taxes / Charges -------
-//       gst_percent: taxes.gst && template ? template.gst_percent : null,
-//       gst_amount: taxes.gst ? gstAmount || null : null,
-//       stamp_duty_percent:
-//         taxes.stampDuty && template ? template.stamp_duty_percent : null,
-//       stamp_duty_amount: taxes.stampDuty ? stampAmount || null : null,
-//       registration_amount: taxes.registration
-//         ? registrationAmountCalc || null
-//         : null,
-//       legal_fee_amount: taxes.legalFees ? legalAmountCalc || null : null,
-
-//       additional_charges_total: additionalChargesTotal || null,
-//       offers_total: null,
-//       net_payable_amount: finalAmount || null,
-
-//       terms_and_conditions: termsAndConditions,
-//       // notes: internalNotes,
-//     };
-
-//     const res = await api.post("/costsheet/cost-sheets/all/", payload);
-
-//     toast.success("Cost Sheet created successfully.");
-//     const created = res?.data;
-//     const newId = created?.id;
-//     if (newId) {
-//       navigate(`/costsheet/${newId}`);
+//     setApiErrors([]);
+//     if (!lead || !project) {
+//       toast.error("Lead / project not loaded.");
+//       return;
 //     }
-//   } catch (err) {
-//     console.error(err);
+//     if (!selectedInventoryId) {
+//       toast.error("Please select an inventory/unit.");
+//       return;
+//     }
 
-//     const backendErrors = [];
+//     const selectedInv = inventoryMap[String(selectedInventoryId)];
+//     if (selectedInv && selectedInv.isBooked) {
+//       toast.error("This unit is already booked. Please choose another unit.");
+//       return;
+//     }
 
-//     if (err.response && err.response.data) {
-//       const data = err.response.data;
+//     if (quotationDate && validTill && quotationDate > validTill) {
+//       toast.error("Quote date cannot be after Valid Until date.");
+//       return;
+//     }
 
-//       if (typeof data === "string") {
-//         backendErrors.push(data);
-//       } else if (typeof data === "object") {
-//         if (Array.isArray(data.__all__)) {
-//           backendErrors.push(...data.__all__);
-//         }
-//         if (Array.isArray(data.non_field_errors)) {
-//           backendErrors.push(...data.non_field_errors);
-//         }
+//     if (
+//       planRequired &&
+//       planRows.length &&
+//       Math.round(totalPercentage * 1000) !== 100000
+//     ) {
+//       toast.error("Total payment plan percentage must be exactly 100%.");
+//       return;
+//     }
 
-//         Object.keys(data).forEach((key) => {
-//           if (key === "__all__" || key === "non_field_errors") return;
+//     const roundedFinalAmount =
+//       finalAmount !== null && finalAmount !== undefined
+//         ? Number(finalAmount.toFixed(2))
+//         : null;
 
-//           const value = data[key];
-//           if (Array.isArray(value)) {
-//             value.forEach((msg) => {
-//               backendErrors.push(`${key}: ${msg}`);
-//             });
-//           } else if (typeof value === "string") {
-//             backendErrors.push(`${key}: ${value}`);
-//           }
-//         });
+//     const customPaymentPlan =
+//       planRows.length > 0
+//         ? planRows.map((row) => {
+//             const pct = parseFloat(row.percentage || 0) || 0;
+//             return {
+//               name: row.name,
+//               percentage: row.percentage,
+//               amount:
+//                 roundedFinalAmount && pct
+//                   ? ((roundedFinalAmount * pct) / 100).toFixed(2)
+//                   : null,
+//               due_date: row.due_date || null,
+//             };
+//           })
+//         : null;
+
+//     try {
+//       setSaving(true);
+
+//       const payload = {
+//         lead_id: lead.id,
+//         project_id: project.id,
+//         inventory_id: Number(selectedInventoryId),
+//         project_template_id: template ? template.project_template_id : null,
+
+//         date: quotationDate,
+//         valid_till: validTill,
+//         status,
+//         prepared_by: preparedBy || null,
+
+//         customer_name: customerName,
+//         customer_contact_person: customerContactPerson,
+//         customer_phone: customerPhone,
+//         customer_email: customerEmail,
+
+//         project_name: projectName,
+//         tower_name: towerName,
+//         floor_number: floorNumber,
+//         unit_no: unitNo,
+
+//         customer_snapshot: null,
+//         unit_snapshot: null,
+
+//         base_area_sqft: baseAreaSqft || null,
+//         base_rate_psf: baseRatePsf || null,
+//         base_value: baseValue || null,
+
+//         discount_percent: safeDiscountPercent,
+//         discount_amount: safeDiscountAmount,
+
+//         net_base_value: netBaseValue || null,
+
+//         payment_plan_type: planRequired ? paymentPlanType : null,
+//         payment_plan: planRequired && selectedPlanId ? selectedPlanId : null,
+//         custom_payment_plan: planRequired ? customPaymentPlan : null,
+
+//         gst_percent: template ? template.gst_percent : null,
+//         gst_amount: gstAmount ? Math.round(gstAmount * 100) / 100 : null,
+//         stamp_duty_percent: template ? template.stamp_duty_percent : null,
+//         stamp_duty_amount: stampAmount
+//           ? Math.round(stampAmount * 100) / 100
+//           : null,
+//         registration_amount: registrationAmount || null,
+//         legal_fee_amount: template?.legal_fee_amount || null,
+
+//         parking_count: parkingRequired === "YES" ? Number(parkingCount) || 0 : 0,
+//         per_parking_price: parkingRequired === "YES" ? parkingPrice || null : null,
+//         parking_amount: parkingAmount
+//           ? Math.round(parkingAmount * 100) / 100
+//           : null,
+
+//         share_application_money_membership_amount: isPossessionCharges
+//           ? membershipAmount || null
+//           : null,
+//         legal_compliance_charges_amount: isPossessionCharges
+//           ? legalComplianceAmount || null
+//           : null,
+//         development_charges_amount: isPossessionCharges
+//           ? developmentChargesAmount || null
+//           : null,
+//         electrical_water_piped_gas_charges_amount: isPossessionCharges
+//           ? electricalChargesAmount || null
+//           : null,
+//         provisional_maintenance_amount: isPossessionCharges
+//           ? provisionalMaintenanceAmount || null
+//           : null,
+//         possessional_gst_amount: isPossessionCharges
+//           ? possessionGstAmount
+//             ? Math.round(possessionGstAmount * 100) / 100
+//             : null
+//           : null,
+
+//         additional_charges_total: additionalChargesTotal || null,
+//         offers_total: null,
+//         net_payable_amount: roundedFinalAmount,
+
+//         terms_and_conditions: termsAndConditions,
+//         notes: "",
+
+//         additional_charges: [],
+//         applied_offers: [],
+//       };
+
+//       const res = await api.post("/costsheet/cost-sheets/all/", payload);
+
+//       toast.success("Cost Sheet created successfully.");
+//       const created = res?.data;
+//       const newId = created?.id;
+//       if (newId) {
+//         navigate(`/costsheet/${newId}`);
 //       }
-//     }
+//     } catch (err) {
+//       console.error(err);
 
-//     if (backendErrors.length) {
-//       setApiErrors(backendErrors);
-//       toast.error(backendErrors[0]);
-//     } else {
-//       toast.error("Failed to create cost sheet.");
-//     }
-//   } finally {
-//     setSaving(false);
-//   }
-// };
+//       const backendErrors = [];
 
+//       if (err.response && err.response.data) {
+//         const data = err.response.data;
+
+//         if (typeof data === "string") {
+//           backendErrors.push(data);
+//         } else if (typeof data === "object") {
+//           if (Array.isArray(data.__all__)) {
+//             backendErrors.push(...data.__all__);
+//           }
+//           if (Array.isArray(data.non_field_errors)) {
+//             backendErrors.push(...data.non_field_errors);
+//           }
+
+//           Object.keys(data).forEach((key) => {
+//             if (key === "__all__" || key === "non_field_errors") return;
+
+//             const value = data[key];
+//             if (Array.isArray(value)) {
+//               value.forEach((msg) => {
+//                 backendErrors.push(`${key}: ${msg}`);
+//               });
+//             } else if (typeof value === "string") {
+//               backendErrors.push(`${key}: ${value}`);
+//             }
+//           });
+//         }
+//       }
+
+//       if (backendErrors.length) {
+//         setApiErrors(backendErrors);
+//         toast.error(backendErrors[0]);
+//       } else {
+//         toast.error("Failed to create cost sheet.");
+//       }
+//     } finally {
+//       setSaving(false);
+//     }
+//   };
 
 //   // ==============================
 //   // RENDER
@@ -1187,16 +1236,6 @@
 //                 <option value="ACCEPTED">Accepted</option>
 //                 <option value="REJECTED">Rejected</option>
 //               </select>
-//             </div>
-//             <div className="cs-field cs-field--full">
-//               <label className="cs-label">Prepared By</label>
-//               <input
-//                 type="text"
-//                 className="cs-input"
-//                 value={preparedBy}
-//                 readOnly
-//                 placeholder="Will be auto set from logged-in user"
-//               />
 //             </div>
 //           </div>
 //         </SectionCard>
@@ -1312,7 +1351,7 @@
 //           </div>
 //         </SectionCard>
 
-//         {/* BASE PRICING */}
+//         {/* ✅ FIXED: BASE PRICING with dropdown for all area types */}
 //         <SectionCard title="Base Pricing">
 //           <div className="cs-grid-3">
 //             <div className="cs-field">
@@ -1320,16 +1359,61 @@
 //               <select
 //                 className="cs-select"
 //                 value={areaBasis}
-//                 onChange={(e) => setAreaBasis(e.target.value)}
+//                 onChange={handleAreaBasisChange}
 //               >
 //                 <option value="RERA">RERA Area</option>
 //                 <option value="CARPET">Carpet Area</option>
 //                 <option value="SALEABLE">Saleable Area</option>
+//                 <option value="BUILTUP">Built-up Area</option>
+//                 <option value="RERA+BALCONY">RERA + Balcony</option>
+//                 <option value="CARPET+BALCONY">Carpet + Balcony</option>
 //               </select>
 //             </div>
 
+//             {/* Show individual areas if unit is selected */}
+//             {selectedInventory && (
+//               <>
+//                 {selectedInventory.rera_area_sqft && (
+//                   <div className="cs-field">
+//                     <label className="cs-label">RERA Area (sq. ft.)</label>
+//                     <input
+//                       type="text"
+//                       className="cs-input"
+//                       value={selectedInventory.rera_area_sqft}
+//                       readOnly
+//                     />
+//                   </div>
+//                 )}
+
+//                 {selectedInventory.carpet_sqft && (
+//                   <div className="cs-field">
+//                     <label className="cs-label">Carpet Area (sq. ft.)</label>
+//                     <input
+//                       type="text"
+//                       className="cs-input"
+//                       value={selectedInventory.carpet_sqft}
+//                       readOnly
+//                     />
+//                   </div>
+//                 )}
+
+
+//                 {selectedInventory.balcony_area_sqft && (
+//                   <div className="cs-field">
+//                     <label className="cs-label">Balcony Area (sq. ft.)</label>
+//                     <input
+//                       type="text"
+//                       className="cs-input"
+//                       value={selectedInventory.balcony_area_sqft}
+//                       readOnly
+//                     />
+//                   </div>
+//                 )}
+//               </>
+//             )}
+
 //             <div className="cs-field">
-//               <label className="cs-label">Area (sq. ft.)</label>
+//               <label className="cs-label">Total Area (sq. ft.)</label>
 //               <input
 //                 type="number"
 //                 className="cs-input"
@@ -1340,25 +1424,14 @@
 
 //             <div className="cs-field">
 //               <label className="cs-label">
-//                 Base Rate/sq. ft.{" "}
-//                 {effectiveBaseRate > 0 ? (
-//                   <span className="cs-hint">
-//                     (Current: {formatINR(effectiveBaseRate)} / sq. ft.)
-//                   </span>
-//                 ) : (
-//                   project?.price_per_sqft && (
-//                     <span className="cs-hint">
-//                       (Project: {formatINR(project.price_per_sqft)})
-//                     </span>
-//                   )
-//                 )}
+//                 Base Rate/sq. ft.
 //               </label>
 
 //               <input
 //                 type="text"
 //                 className="cs-input"
 //                 value={
-//                   baseRatePsf === "" ? "" : formatINRNoDecimals(baseRatePsf) // ✅ ab .00 nahi aayega
+//                   baseRatePsf === "" ? "" : formatINRNoDecimals(baseRatePsf)
 //                 }
 //                 onChange={(e) => {
 //                   const input = e.target.value;
@@ -1372,7 +1445,6 @@
 //                   const num = Number(raw);
 //                   if (Number.isNaN(num)) return;
 
-//                   // state mein raw number (without commas / decimals) store karo
 //                   setBaseRatePsf(String(Math.round(num)));
 //                 }}
 //               />
@@ -1460,6 +1532,201 @@
 //           </div>
 //         </SectionCard>
 
+//         {/* TAX & CHARGES CONFIGURATION */}
+//         {template && (
+//           <SectionCard title="Tax & Charges Configuration">
+//             <div className="cs-grid-3">
+//               <div className="cs-field">
+//                 <label className="cs-label">GST Percent (%)</label>
+//                 <select
+//                   className="cs-select"
+//                   value={template.gst_percent || 0}
+//                   onChange={(e) => {
+//                     const currentValue = Number(template.gst_percent || 0);
+//                     const newValue = Number(e.target.value);
+//                     setTemplate((prev) => ({
+//                       ...prev,
+//                       gst_percent: newValue,
+//                     }));
+//                   }}
+//                 >
+//                   {(() => {
+//                     const currentValue = Number(template.gst_percent || 0);
+//                     const min = Math.max(0, currentValue - 3);
+//                     const max = currentValue + 4;
+//                     const options = [];
+//                     for (let i = min; i <= max; i++) {
+//                       options.push(
+//                         <option key={i} value={i}>
+//                           {i}%
+//                         </option>
+//                       );
+//                     }
+//                     return options;
+//                   })()}
+//                 </select>
+//               </div>
+
+//               <div className="cs-field">
+//                 <label className="cs-label">Stamp Duty Percent (%)</label>
+//                 <select
+//                   className="cs-select"
+//                   value={template.stamp_duty_percent || 0}
+//                   onChange={(e) => {
+//                     const newValue = Number(e.target.value);
+//                     setTemplate((prev) => ({
+//                       ...prev,
+//                       stamp_duty_percent: newValue,
+//                     }));
+//                   }}
+//                 >
+//                   {(() => {
+//                     const currentValue = Number(template.stamp_duty_percent || 0);
+//                     const min = Math.max(0, currentValue - 3);
+//                     const max = currentValue + 4;
+//                     const options = [];
+//                     for (let i = min; i <= max; i++) {
+//                       options.push(
+//                         <option key={i} value={i}>
+//                           {i}%
+//                         </option>
+//                       );
+//                     }
+//                     return options;
+//                   })()}
+//                 </select>
+//               </div>
+
+//               <div className="cs-field">
+//                 <label className="cs-label">Provisional Maintenance Months</label>
+//                 <select
+//                   className="cs-select"
+//                   value={template.provisional_maintenance_months || 0}
+//                   onChange={(e) => {
+//                     const newValue = Number(e.target.value);
+//                     setTemplate((prev) => ({
+//                       ...prev,
+//                       provisional_maintenance_months: newValue,
+//                     }));
+//                   }}
+//                 >
+//                   {(() => {
+//                     const currentValue = Number(template.provisional_maintenance_months || 0);
+//                     const min = Math.max(0, currentValue - 3);
+//                     const max = currentValue + 4;
+//                     const options = [];
+//                     for (let i = min; i <= max; i++) {
+//                       options.push(
+//                         <option key={i} value={i}>
+//                           {i} {i === 1 ? "month" : "months"}
+//                         </option>
+//                       );
+//                     }
+//                     return options;
+//                   })()}
+//                 </select>
+//               </div>
+//             </div>
+//           </SectionCard>
+//         )}
+
+//         {/* PARKING SECTION */}
+//         <SectionCard title="Parking">
+//           <div className="cs-grid-3">
+//             <div className="cs-field">
+//               <label className="cs-label">Parking</label>
+//               <select
+//                 className="cs-select"
+//                 value={parkingRequired}
+//                 onChange={(e) => {
+//                   const val = e.target.value;
+//                   setParkingRequired(val);
+
+//                   if (val === "NO") {
+//                     setParkingCount("");
+//                     setParkingPrice("");
+//                   }
+//                 }}
+//               >
+//                 <option value="NO">No</option>
+//                 <option value="YES">Yes</option>
+//               </select>
+//             </div>
+
+//             {/* No of Parking */}
+//             {parkingRequired === "YES" && (
+//               <div className="cs-field">
+//                 <label className="cs-label">No. of Parking</label>
+//                 <select
+//                   className="cs-select"
+//                   value={parkingCount}
+//                   onChange={(e) => {
+//                     setParkingCount(e.target.value);
+//                   }}
+//                 >
+//                   <option value="">Select</option>
+//                   {Array.from({ length: 10 }).map((_, i) => (
+//                     <option key={i + 1} value={i + 1}>
+//                       {i + 1}
+//                     </option>
+//                   ))}
+//                 </select>
+//               </div>
+//             )}
+
+//             {/* Parking Amount (Per Parking) */}
+//             {parkingRequired === "YES" && parkingCount && (
+//               <div className="cs-field">
+//                 <label className="cs-label">Parking Amount (Per Parking)</label>
+//                 <input
+//                   type="text"
+//                   className="cs-input"
+//                   value={
+//                     parkingPriceFocused
+//                       ? parkingPrice
+//                       : parkingPrice === ""
+//                       ? ""
+//                       : formatINRNoDecimals(parkingPrice)
+//                   }
+//                   onFocus={() => setParkingPriceFocused(true)}
+//                   onBlur={() => setParkingPriceFocused(false)}
+//                   onChange={(e) => {
+//                     const input = e.target.value;
+//                     const raw = stripAmount(input);
+//                     if (raw === "") {
+//                       setParkingPrice("");
+//                       return;
+//                     }
+//                     const num = Number(raw);
+//                     if (!Number.isNaN(num)) {
+//                       setParkingPrice(String(Math.round(num)));
+//                     }
+//                   }}
+//                   placeholder="Enter parking price"
+//                 />
+//                 {project?.price_per_parking && (
+//                   <p className="cs-hint">
+//                     Default: ₹{formatINRNoDecimals(project.price_per_parking)}
+//                   </p>
+//                 )}
+//               </div>
+//             )}
+
+//             {/* Total Parking Amount */}
+//             {parkingRequired === "YES" && parkingCount && parkingAmount > 0 && (
+//               <div className="cs-field">
+//                 <label className="cs-label">Total Parking Amount (₹)</label>
+//                 <input
+//                   type="text"
+//                   className="cs-input cs-input--currency"
+//                   value={formatINR(parkingAmount)}
+//                   readOnly
+//                 />
+//               </div>
+//             )}
+//           </div>
+//         </SectionCard>
+
 //         {/* ADDITIONAL CHARGES */}
 //         <SectionCard title="Additional Charges">
 //           <div className="cs-table">
@@ -1531,416 +1798,382 @@
 //           >
 //             + Add New Charge
 //           </button>
-
-//           <div className="cs-summary-card">
-//             <div className="cs-summary-row">
-//               <span>Net Base Value</span>
-//               <span className="cs-summary-amount">
-//                 {formatINR(netBaseValue || 0)}
-//               </span>
-//             </div>
-//             <div className="cs-summary-row">
-//               <span>Additional Charges Total</span>
-//               <span className="cs-summary-amount">
-//                 {formatINR(additionalChargesTotal || 0)}
-//               </span>
-//             </div>
-//             <div className="cs-summary-row">
-//               <span>Statutory Charges</span>
-//               <span className="cs-summary-amount">
-//                 {formatINR(statutoryChargesTotal || 0)}
-//               </span>
-//             </div>
-//             <div className="cs-summary-row">
-//               <span>Amount Before Taxes &amp; Statutory</span>
-//               <span className="cs-summary-amount">
-//                 {formatINR(
-//                   (amountBeforeTaxes || 0) + (statutoryChargesTotal || 0)
-//                 )}
-//               </span>
-//             </div>
-//             <div className="cs-summary-row cs-summary-row-final">
-//               <span>Final Amount (Incl. Taxes)</span>
-//               <span className="cs-summary-amount">
-//                 {formatINR(finalAmount || 0)}
-//               </span>
-//             </div>
-//           </div>
 //         </SectionCard>
 
-//         {/* TAXES & STATUTORY */}
-//         <SectionCard title="Taxes & Statutory">
-//           {/* Parking yes/no + dropdown (drives parkingCount) */}
-//           <div className="cs-parking-top">
-//             <span className="cs-label cs-parking-label">
-//               Car Parking Required?
-//             </span>
-//             <div className="cs-parking-options">
-//               <label className="cs-radio">
-//                 <input
-//                   type="radio"
-//                   value="no"
-//                   checked={!hasParking}
-//                   onChange={() => {
-//                     setHasParking(false);
-//                     setParkingCount("0");
-//                   }}
-//                 />
-//                 <span>No</span>
-//               </label>
-//               <label className="cs-radio">
-//                 <input
-//                   type="radio"
-//                   value="yes"
-//                   checked={hasParking}
-//                   onChange={() => {
-//                     setHasParking(true);
-//                     if (!parkingCount || parkingCount === "0") {
-//                       setParkingCount("1");
-//                     }
-//                   }}
-//                 />
-//                 <span>Yes</span>
-//               </label>
-
-//               {hasParking && (
-//                 <select
-//                   className="cs-select cs-parking-select"
-//                   value={parkingCount}
-//                   onChange={(e) => setParkingCount(e.target.value)}
-//                 >
-//                   <option value="">No. of Parking</option>
-//                   {Array.from({ length: 10 }).map((_, idx) => (
-//                     <option key={idx + 1} value={idx + 1}>
-//                       {idx + 1}
-//                     </option>
-//                   ))}
-//                 </select>
-//               )}
+//         {/* COST BREAKDOWN */}
+//         <SectionCard title="Cost Breakdown">
+//           {!template ? (
+//             <div className="cs-subcard">
+//               <p style={{ color: "#6b7280" }}>
+//                 Cost breakdown will be available after selecting a unit and lead.
+//               </p>
 //             </div>
-//           </div>
+//           ) : (
+//             <>
+//               {/* ================== UNIT COST CALCULATION ================== */}
+//               <div className="cost-breakdown-section cost-breakdown-unit">
+//                 <div className="cost-breakdown-header">
+//                   Unit Cost Calculation
+//                 </div>
 
-//           <div className="cs-taxes-row">
-//             <div className="cs-taxes-left">
-//               <div className="cs-taxes-list">
-//                 <label className="cs-checkbox">
-//                   <input
-//                     type="checkbox"
-//                     checked={taxes.gst}
-//                     onChange={() => handleTaxChange("gst")}
-//                   />
+//                 <div className="cost-breakdown-row">
+//                   <span>Unit Cost</span>
+//                   <span>{formatINR(agreementValue || 0)}</span>
+//                 </div>
+
+//                 {additionalChargesTotal > 0 && (
+//                   <div className="cost-breakdown-row">
+//                     <span>Additional Charges</span>
+//                     <span>{formatINR(additionalChargesTotal)}</span>
+//                   </div>
+//                 )}
+
+//                 {/* Parking - Shown in Unit Cost section */}
+//                 {parkingRequired === "YES" && parkingAmount > 0 && (
+//                   <div className="cost-breakdown-row">
+//                     <span>
+//                       Parking ({parkingCount} × ₹
+//                       {formatINR(parseFloat(parkingPrice) || 0)})
+//                     </span>
+//                     <span>{formatINR(parkingAmount)}</span>
+//                   </div>
+//                 )}
+
+//                 {stampDutyEnabled && stampAmount > 0 && (
+//                   <div className="cost-breakdown-row">
+//                     <span>
+//                       Stamp Duty ({template.stamp_duty_percent || 0}%)
+//                     </span>
+//                     <span>{formatINR(stampAmount)}</span>
+//                   </div>
+//                 )}
+
+//                 {gstEnabled && gstAmount > 0 && (
+//                   <div className="cost-breakdown-row">
+//                     <span>GST ({template.gst_percent || 0}%)</span>
+//                     <span>{formatINR(gstAmount)}</span>
+//                   </div>
+//                 )}
+
+//                 <div className="cost-breakdown-row cost-breakdown-total">
+//                   <span>Total Cost (1)</span>
 //                   <span>
-//                     GST ({template?.gst_percent || "–"}% on Amount Before Taxes
-//                     &amp; Statutory)
+//                     {formatINR(
+//                       Number(agreementValue || 0) +
+//                         Number(additionalChargesTotal || 0) +
+//                         (parkingRequired === "YES" ? Number(parkingAmount || 0) : 0) +
+//                         Number(stampAmount || 0) +
+//                         Number(gstAmount || 0)
+//                     )}
 //                   </span>
-//                 </label>
-//                 <label className="cs-checkbox">
-//                   <input
-//                     type="checkbox"
-//                     checked={taxes.stampDuty}
-//                     onChange={() => handleTaxChange("stampDuty")}
-//                   />
-//                   <span>
-//                     Stamp Duty ({template?.stamp_duty_percent || "–"}% on Amount
-//                     Before Taxes &amp; Statutory)
-//                   </span>
-//                 </label>
-//                 <label className="cs-checkbox">
-//                   <input
-//                     type="checkbox"
-//                     checked={taxes.registration}
-//                     onChange={() => handleTaxChange("registration")}
-//                   />
-//                   <span>
-//                     Registration Fees ({template?.registration_amount || "–"})
-//                   </span>
-//                 </label>
-//                 <label className="cs-checkbox">
-//                   <input
-//                     type="checkbox"
-//                     checked={taxes.legalFees}
-//                     onChange={() => handleTaxChange("legalFees")}
-//                   />
-//                   <span>Legal Fees ({template?.legal_fee_amount || "–"})</span>
-//                 </label>
+//                 </div>
 //               </div>
 
-//               {/* Statutory / Govt. type charges */}
-//               <div className="cs-statutory-box">
-//                 {/* <div className="cs-field cs-field-inline">
-//                   <label className="cs-label">No. of Parking</label>
-//                   <span className="cs-parking-count-display">
-//                     {hasParking ? parkingCount || 0 : 0}
-//                   </span>
-//                 </div> */}
+//               {/* ================== POSSESSION RELATED CHARGES ================== */}
+//               {isPossessionCharges && possessionTotal > 0 && (
+//                 <div className="cost-breakdown-section cost-breakdown-possession">
+//                   <div className="cost-breakdown-header">
+//                     Possession Related Charges
+//                   </div>
 
-//                 <ul className="cs-bullet-list">
-//                   {/* Car Parking */}
-//                   <li className="cs-bullet-item">
-//                     <div className="cs-bullet-line">
-//                       <span className="cs-bullet-label">
-//                         Car Parking Charges
+//                   {membershipAmount > 0 && (
+//                     <div className="cost-breakdown-row">
+//                       <span>
+//                         Share Application Money & Membership Fees
 //                       </span>
-//                       <span className="cs-bullet-amount">
-//                         {formatINR(parkingAmount || 0)}
-//                       </span>
+//                       <span>{formatINR(membershipAmount)}</span>
 //                     </div>
-//                     {project?.price_per_parking && (
-//                       <div className="cs-bullet-hint">
-//                         ({formatINR(project.price_per_parking)} ×{" "}
-//                         {hasParking ? parkingCount || 0 : 0} parking)
+//                   )}
+
+//                   {legalFeeEnabled &&
+//                     template.legal_fee_amount > 0 && (
+//                       <div className="cost-breakdown-row">
+//                         <span>Legal & Compliance Charges</span>
+//                         <span>
+//                           {formatINR(template.legal_fee_amount)}
+//                         </span>
 //                       </div>
 //                     )}
-//                   </li>
 
-//                   {/* Membership */}
-//                   <li className="cs-bullet-item">
-//                     <div className="cs-bullet-line">
-//                       <span className="cs-bullet-label">
-//                         Share Application / Membership Fees
-//                       </span>
-//                       <span className="cs-bullet-amount">
-//                         {formatINR(membershipAmount || 0)}
-//                       </span>
-//                     </div>
-//                     {template?.share_application_money_membership_fees && (
-//                       <div className="cs-bullet-hint">
-//                         (
+//                   {developmentChargesAmount > 0 && (
+//                     <div className="cost-breakdown-row">
+//                       <span>
+//                         Development Charges @ Rs.{" "}
+//                         {formatINR(template?.development_charges_psf || 0)} PSF ×{" "}
 //                         {formatINR(
-//                           template.share_application_money_membership_fees || 0
+//                           (selectedInventory && selectedInventory.carpet_sqft) || baseAreaSqft || 0
 //                         )}{" "}
-//                         fixed)
-//                       </div>
-//                     )}
-//                   </li>
-
-//                   {/* Development */}
-//                   <li className="cs-bullet-item">
-//                     <div className="cs-bullet-line">
-//                       <span className="cs-bullet-label">
-//                         Development Charges
+//                         sq. ft.
 //                       </span>
-//                       <span className="cs-bullet-amount">
-//                         {formatINR(developmentChargesAmount || 0)}
+//                       <span>
+//                         {formatINR(developmentChargesAmount)}
 //                       </span>
 //                     </div>
-//                     {template?.development_charges_psf && (
-//                       <div className="cs-bullet-hint">
-//                         ({template.development_charges_psf} × Carpet Area)
-//                       </div>
-//                     )}
-//                   </li>
+//                   )}
 
-//                   {/* Electrical / Water / Other */}
-//                   <li className="cs-bullet-item">
-//                     <div className="cs-bullet-line">
-//                       <span className="cs-bullet-label">
-//                         Electrical / Water / Other
+//                   {electricalChargesAmount > 0 && (
+//                     <div className="cost-breakdown-row">
+//                       <span>
+//                         Electrical, Water & Piped Gas Connection Charges
 //                       </span>
-//                       <span className="cs-bullet-amount">
-//                         {formatINR(electricalChargesAmount || 0)}
+//                       <span>
+//                         {formatINR(electricalChargesAmount)}
 //                       </span>
 //                     </div>
-//                     {template?.electrical_watern_n_all_charges && (
-//                       <div className="cs-bullet-hint">
-//                         (
-//                         {formatINR(
-//                           template.electrical_watern_n_all_charges || 0
-//                         )}{" "}
-//                         fixed)
-//                       </div>
-//                     )}
-//                   </li>
+//                   )}
 
-//                   {/* Provisional Maintenance */}
-//                   <li className="cs-bullet-item">
-//                     <div className="cs-bullet-line">
-//                       <span className="cs-bullet-label">
-//                         Provisional Maintenance
+//                   {Number(provisionalMaintenanceAmount || 0) > 0 && (
+//                     <div className="cost-breakdown-row">
+//                       <span>
+//                         Provisional Maintenance for{" "}
+//                         {template?.provisional_maintenance_months || 0} months @ Rs.{" "}
+//                         {formatINR(template?.provisional_maintenance_psf || 0)}
 //                       </span>
-//                       <span className="cs-bullet-amount">
+//                       <span>
 //                         {formatINR(provisionalMaintenanceAmount || 0)}
 //                       </span>
 //                     </div>
-//                     {template?.provisional_maintenance_psf && (
-//                       <div className="cs-bullet-hint">
-//                         ({template.provisional_maintenance_psf} × Carpet Area)
-//                       </div>
-//                     )}
-//                   </li>
-//                 </ul>
-//               </div>
-//             </div>
+//                   )}
 
-//             <div className="cs-taxes-total">
-//               <div className="cs-summary-row">
-//                 <span>Statutory Charges</span>
-//                 <span className="cs-taxes-amount">
-//                   {formatINR(statutoryChargesTotal || 0)}
+//                   {possessionGstAmount > 0 && (
+//                     <div className="cost-breakdown-row">
+//                       <span>GST on Possession Charges (18%)</span>
+//                       <span>
+//                         {formatINR(possessionGstAmount)}
+//                       </span>
+//                     </div>
+//                   )}
+
+//                   <div className="cost-breakdown-row cost-breakdown-subtotal">
+//                     <span>Total Possession Related Charges (2)</span>
+//                     <span>
+//                       {formatINR(possessionTotal)}
+//                     </span>
+//                   </div>
+//                 </div>
+//               )}
+
+//               {/* ================== REGISTRATION ================== */}
+//               {registrationEnabled &&
+//                 template.registration_amount > 0 && (
+//                   <div className="cost-breakdown-section">
+//                     <div className="cost-breakdown-row">
+//                       <span>Registration Amount</span>
+//                       <span>
+//                         {formatINR(template.registration_amount)}
+//                       </span>
+//                     </div>
+//                   </div>
+//                 )}
+
+//               {/* ================== SUMMARY ================== */}
+//               <div className="cost-breakdown-section cost-breakdown-summary">
+//                 <div className="cost-breakdown-row">
+//                   <span>Total Cost</span>
+//                   <span>{formatINR(finalAmount)}</span>
+//                 </div>
+
+//                 {isPossessionCharges &&
+//                   possessionTotal > 0 && (
+//                     <div className="cost-breakdown-row">
+//                       <span>Total Possession Related Charges</span>
+//                       <span>
+//                         {formatINR(possessionTotal)}
+//                       </span>
+//                     </div>
+//                   )}
+//               </div>
+
+//               {/* ================== GRAND TOTAL ================== */}
+//               <div className="cost-breakdown-grand-total">
+//                 <span>GRAND TOTAL</span>
+//                 <span>
+//                   {formatINR(
+//                     Number(finalAmount || 0) +
+//                       (isPossessionCharges ? possessionTotal : 0) +
+//                       (registrationEnabled
+//                         ? Number(template.registration_amount || 0)
+//                         : 0)
+//                   )}
 //                 </span>
 //               </div>
-//               <span className="cs-taxes-label">Total Taxes</span>
-//               <span className="cs-taxes-amount">
-//                 {formatINR(totalTaxes || 0)}
-//               </span>
-//               <div className="cs-final-amount">
-//                 Final Amount (Incl. Taxes &amp; Statutory):{" "}
-//                 {formatINR(finalAmount || 0)}
-//               </div>
-//             </div>
-//           </div>
+
+//               {/* Terms & Conditions */}
+//               {termsList.length > 0 && (
+//                 <div
+//                   style={{
+//                     marginTop: "24px",
+//                     padding: "16px",
+//                     background: "#f9fafb",
+//                     border: "1px solid #e5e7eb",
+//                     borderRadius: "8px",
+//                   }}
+//                 >
+//                   <div
+//                     style={{
+//                       fontSize: "14px",
+//                       fontWeight: "600",
+//                       color: "#374151",
+//                       marginBottom: "12px",
+//                     }}
+//                   >
+//                     Terms & Conditions
+//                   </div>
+//                   <ol
+//                     style={{
+//                       margin: 0,
+//                       paddingLeft: "20px",
+//                       fontSize: "13px",
+//                       color: "#4b5563",
+//                       lineHeight: "1.6",
+//                     }}
+//                   >
+//                     {termsList.map((t, idx) => (
+//                       <li key={idx} style={{ marginBottom: "8px" }}>
+//                         {t}
+//                       </li>
+//                     ))}
+//                   </ol>
+//                 </div>
+//               )}
+//             </>
+//           )}
 //         </SectionCard>
 
 //         {/* PAYMENT PLAN */}
-//         <SectionCard title="Payment Plan">
-//           {/* Master vs Custom toggle */}
-//           <div className="cs-radio-group" style={{ marginBottom: 16 }}>
-//             <label className="cs-radio">
-//               <input
-//                 type="radio"
-//                 value="MASTER"
-//                 checked={paymentPlanType === "MASTER"}
-//                 onChange={() => setPaymentPlanType("MASTER")}
-//               />
-//               <span>Use Project Payment Plan</span>
-//             </label>
-//             <label className="cs-radio">
-//               <input
-//                 type="radio"
-//                 value="CUSTOM"
-//                 checked={paymentPlanType === "CUSTOM"}
-//                 onChange={() => setPaymentPlanType("CUSTOM")}
-//               />
-//               <span>Make Your Own Plan</span>
-//             </label>
-//           </div>
+//         {planRequired && (
+//           <SectionCard title="Payment Plan">
+//             <div className="cs-radio-group" style={{ marginBottom: 16 }}>
+//               <label className="cs-radio">
+//                 <input
+//                   type="radio"
+//                   value="MASTER"
+//                   checked={paymentPlanType === "MASTER"}
+//                   onChange={() => setPaymentPlanType("MASTER")}
+//                 />
+//                 <span>Use Project Payment Plan</span>
+//               </label>
+//               <label className="cs-radio">
+//                 <input
+//                   type="radio"
+//                   value="CUSTOM"
+//                   checked={paymentPlanType === "CUSTOM"}
+//                   onChange={() => setPaymentPlanType("CUSTOM")}
+//                 />
+//                 <span>Make Your Own Plan</span>
+//               </label>
+//             </div>
 
-//           {/* Plan dropdown only for MASTER mode */}
-//           {paymentPlanType === "MASTER" && (
-//             <div
-//               className="cs-field cs-field--full"
-//               style={{ marginBottom: 16 }}
-//             >
-//               <label className="cs-label">Select Payment Plan</label>
-//               <select
-//                 className="cs-select"
-//                 value={selectedPlanId}
-//                 onChange={handlePlanSelect}
+//             {paymentPlanType === "MASTER" && (
+//               <div
+//                 className="cs-field cs-field--full"
+//                 style={{ marginBottom: 16 }}
 //               >
-//                 <option value="">-- Select Plan --</option>
-//                 {paymentPlans.map((plan) => (
-//                   <option key={plan.id} value={plan.id}>
-//                     {plan.name} ({plan.code}) – {plan.total_percentage}%
-//                   </option>
-//                 ))}
-//               </select>
-//             </div>
-//           )}
-
-//           <div className="cs-table">
-//             <div className="cs-table-row cs-table-row--5 cs-table-header">
-//               <div>Installment Name</div>
-//               <div>Percentage</div>
-//               <div>Amount</div>
-//               <div>Due Date</div>
-//               <div></div>
-//             </div>
-
-//             {planRows.map((row, index) => {
-//               const pct = parseFloat(row.percentage) || 0;
-//               const amount = finalAmount ? (finalAmount * pct) / 100 : 0;
-
-//               return (
-//                 <div className="cs-table-row cs-table-row--5" key={index}>
-//                   <div>
-//                     <input
-//                       type="text"
-//                       className="cs-input"
-//                       value={row.name}
-//                       onChange={(e) =>
-//                         handlePlanRowChange(index, "name", e.target.value)
-//                       }
-//                     />
-//                   </div>
-//                   <div>
-//                     <input
-//                       type="number"
-//                       className="cs-input"
-//                       value={row.percentage}
-//                       onChange={(e) =>
-//                         handlePlanRowChange(index, "percentage", e.target.value)
-//                       }
-//                     />
-//                   </div>
-//                   <div>
-//                     <input
-//                       type="text"
-//                       className="cs-input cs-input--currency"
-//                       value={amount ? formatINR(amount) : ""}
-//                       readOnly
-//                     />
-//                   </div>
-//                   <div>
-//                     <input
-//                       type="date"
-//                       className="cs-input"
-//                       value={row.due_date}
-//                       min={apiToday || undefined}
-//                       onFocus={() => handleDueDateFocus(index)}
-//                       onChange={(e) =>
-//                         handlePlanRowChange(index, "due_date", e.target.value)
-//                       }
-//                     />
-//                   </div>
-//                   <div className="cs-table-cell-actions">
-//                     <button
-//                       type="button"
-//                       className="cs-icon-button"
-//                       onClick={() => removeInstallment(index)}
-//                       aria-label="Remove installment"
-//                     >
-//                       ×
-//                     </button>
-//                   </div>
-//                 </div>
-//               );
-//             })}
-//           </div>
-
-//           {totalPercentage !== 100 && (
-//             <div className="cs-total-percentage">
-//               Total Percentage: {totalPercentage.toFixed(3)}% (should be 100%)
-//             </div>
-//           )}
-
-//           <button
-//             type="button"
-//             className="cs-button cs-button-outline"
-//             onClick={addInstallment}
-//           >
-//             + Add Installment
-//           </button>
-//         </SectionCard>
-
-//         {/* TERMS & NOTES */}
-
-//         <SectionCard title="Terms & Notes">
-//           <div className="cs-field cs-field--full">
-//             <div className="cs-tnc-preview">
-//               <div className="cs-tnc-preview-title">Terms &amp; Conditions</div>
-
-//               {termsList.length ? (
-//                 <ol className="cs-tnc-list">
-//                   {termsList.map((item, idx) => (
-//                     <li key={idx}>{item}</li>
+//                 <label className="cs-label">Select Payment Plan</label>
+//                 <select
+//                   className="cs-select"
+//                   value={selectedPlanId}
+//                   onChange={handlePlanSelect}
+//                 >
+//                   <option value="">-- Select Plan --</option>
+//                   {paymentPlans.map((plan) => (
+//                     <option key={plan.id} value={plan.id}>
+//                       {plan.name} ({plan.code}) – {plan.total_percentage}%
+//                     </option>
 //                   ))}
-//                 </ol>
-//               ) : (
-//                 <p className="cs-tnc-empty">No terms configured.</p>
-//               )}
+//                 </select>
+//               </div>
+//             )}
+
+//             <div className="cs-table">
+//               <div className="cs-table-row cs-table-row--5 cs-table-header">
+//                 <div>Installment Name</div>
+//                 <div>Percentage</div>
+//                 <div>Amount</div>
+//                 <div>Due Date</div>
+//                 <div></div>
+//               </div>
+
+//               {planRows.map((row, index) => {
+//                 const pct = parseFloat(row.percentage) || 0;
+//                 const amount = finalAmount ? (finalAmount * pct) / 100 : 0;
+
+//                 return (
+//                   <div className="cs-table-row cs-table-row--5" key={index}>
+//                     <div>
+//                       <input
+//                         type="text"
+//                         className="cs-input"
+//                         value={row.name}
+//                         onChange={(e) =>
+//                           handlePlanRowChange(index, "name", e.target.value)
+//                         }
+//                       />
+//                     </div>
+//                     <div>
+//                       <input
+//                         type="number"
+//                         className="cs-input"
+//                         value={row.percentage}
+//                         onChange={(e) =>
+//                           handlePlanRowChange(
+//                             index,
+//                             "percentage",
+//                             e.target.value
+//                           )
+//                         }
+//                       />
+//                     </div>
+//                     <div>
+//                       <input
+//                         type="text"
+//                         className="cs-input cs-input--currency"
+//                         value={amount ? formatINR(amount) : ""}
+//                         readOnly
+//                       />
+//                     </div>
+//                     <div>
+//                       <input
+//                         type="date"
+//                         className="cs-input"
+//                         value={row.due_date}
+//                         min={apiToday || undefined}
+//                         onFocus={() => handleDueDateFocus(index)}
+//                         onChange={(e) =>
+//                           handlePlanRowChange(index, "due_date", e.target.value)
+//                         }
+//                       />
+//                     </div>
+//                     <div className="cs-table-cell-actions">
+//                       <button
+//                         type="button"
+//                         className="cs-icon-button"
+//                         onClick={() => removeInstallment(index)}
+//                         aria-label="Remove installment"
+//                       >
+//                         ×
+//                       </button>
+//                     </div>
+//                   </div>
+//                 );
+//               })}
 //             </div>
-//           </div>
-//         </SectionCard>
+
+//             {totalPercentage !== 100 && (
+//               <div className="cs-total-percentage">
+//                 Total Percentage: {totalPercentage.toFixed(3)}% (should be 100%)
+//               </div>
+//             )}
+
+//             <button
+//               type="button"
+//               className="cs-button cs-button-outline"
+//               onClick={addInstallment}
+//             >
+//               + Add Installment
+//             </button>
+//           </SectionCard>
+//         )}
 
 //         {/* ATTACHMENTS */}
 //         <SectionCard title="Attachments">
@@ -1993,6 +2226,9 @@
 //     </div>
 //   );
 // };
+
+// export default CostSheetCreate;
+
 
 import React, { useEffect, useMemo, useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
@@ -2192,6 +2428,10 @@ const CostSheetCreate = () => {
   const [registrationEnabled, setRegistrationEnabled] = useState(true);
   const [legalFeeEnabled, setLegalFeeEnabled] = useState(true);
 
+  // Editable possession charges fields
+  const [developmentChargesPsf, setDevelopmentChargesPsf] = useState("500"); // Default 500
+  const [provisionalMaintenanceMonths, setProvisionalMaintenanceMonths] = useState(6);
+
   const additionalChargesTotal = useMemo(
     () => charges.reduce((sum, c) => sum + (parseFloat(c.amount || 0) || 0), 0),
     [charges]
@@ -2316,10 +2556,8 @@ const CostSheetCreate = () => {
         ? (legalFeeEnabled ? Number(template.legal_fee_amount) : 0)
         : 0;
 
-    const devRate =
-      template && template.development_charges_psf
-        ? Number(template.development_charges_psf)
-        : 0;
+    // Development Charges @ PSF × total area (use editable value, minimum 1, default 500)
+    const devRate = Math.max(1, Number(developmentChargesPsf || (template?.development_charges_psf || 500)));
     const devAmt = devRate * carpetAreaSqft;
 
     const elecAmt =
@@ -2331,9 +2569,8 @@ const CostSheetCreate = () => {
       template && template.provisional_maintenance_psf
         ? Number(template.provisional_maintenance_psf)
         : 0;
-    const provMonths = template && template.provisional_maintenance_months
-      ? Number(template.provisional_maintenance_months)
-      : 0;
+    // Provisional Maintenance @ PSF × total area × months (use editable value)
+    const provMonths = Number(provisionalMaintenanceMonths || (template?.provisional_maintenance_months || 6));
     const provAmt = provRate * carpetAreaSqft * provMonths;
 
     // Base for GST: Legal + Development + Electrical + Provisional Maintenance (Share Fee NOT included in GST base)
@@ -2363,6 +2600,8 @@ const CostSheetCreate = () => {
     baseAreaSqft,
     possessionGstPercent,
     legalFeeEnabled,
+    developmentChargesPsf,
+    provisionalMaintenanceMonths,
   ]);
 
   const registrationAmount = useMemo(() => {
@@ -2467,6 +2706,18 @@ const CostSheetCreate = () => {
             stamp_duty_percent: data.template.stamp_duty_percent || 0,
             provisional_maintenance_months: data.template.provisional_maintenance_months || 0,
           });
+
+          // Initialize editable fields from template
+          if (data.template.development_charges_psf) {
+            setDevelopmentChargesPsf(String(data.template.development_charges_psf));
+          } else {
+            setDevelopmentChargesPsf("500"); // Default 500 if not provided
+          }
+          if (data.template.provisional_maintenance_months) {
+            setProvisionalMaintenanceMonths(Number(data.template.provisional_maintenance_months) || 6);
+          } else {
+            setProvisionalMaintenanceMonths(6); // default
+          }
         } else {
           setTemplate(data.template);
         }
@@ -3380,7 +3631,7 @@ const CostSheetCreate = () => {
                   </div>
                 )}
 
-                {selectedInventory.carpet_sqft && (
+                {/* {selectedInventory.carpet_sqft && (
                   <div className="cs-field">
                     <label className="cs-label">Carpet Area (sq. ft.)</label>
                     <input
@@ -3390,7 +3641,7 @@ const CostSheetCreate = () => {
                       readOnly
                     />
                   </div>
-                )}
+                )} */}
 
 
                 {selectedInventory.balcony_area_sqft && (
@@ -3529,7 +3780,7 @@ const CostSheetCreate = () => {
 
         {/* TAX & CHARGES CONFIGURATION */}
         {template && (
-          <SectionCard title="Tax & Charges Configuration">
+          <SectionCard title="Tax & Charges">
             <div className="cs-grid-3">
               <div className="cs-field">
                 <label className="cs-label">GST Percent (%)</label>
@@ -3593,32 +3844,53 @@ const CostSheetCreate = () => {
               </div>
 
               <div className="cs-field">
+                <label className="cs-label">Development Charges PSF (₹)</label>
+                <input
+                  type="number"
+                  className="cs-input"
+                  value={developmentChargesPsf}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    // Allow empty temporarily while typing, but validate on blur
+                    if (val === "" || Number(val) >= 1) {
+                      setDevelopmentChargesPsf(val);
+                    }
+                  }}
+                  onBlur={(e) => {
+                    const val = Number(e.target.value);
+                    // Ensure minimum is 1, default to 500 if invalid
+                    if (!val || val < 1) {
+                      setDevelopmentChargesPsf("500");
+                    } else {
+                      setDevelopmentChargesPsf(String(val));
+                    }
+                  }}
+                  min="1"
+                  step="1"
+                  placeholder="500"
+                />
+              </div>
+
+              <div className="cs-field">
                 <label className="cs-label">Provisional Maintenance Months</label>
                 <select
                   className="cs-select"
-                  value={template.provisional_maintenance_months || 0}
+                  value={provisionalMaintenanceMonths || 6}
                   onChange={(e) => {
                     const newValue = Number(e.target.value);
+                    setProvisionalMaintenanceMonths(newValue);
+                    // Also update template for consistency
                     setTemplate((prev) => ({
                       ...prev,
                       provisional_maintenance_months: newValue,
                     }));
                   }}
                 >
-                  {(() => {
-                    const currentValue = Number(template.provisional_maintenance_months || 0);
-                    const min = Math.max(0, currentValue - 3);
-                    const max = currentValue + 4;
-                    const options = [];
-                    for (let i = min; i <= max; i++) {
-                      options.push(
-                        <option key={i} value={i}>
-                          {i} {i === 1 ? "month" : "months"}
-                        </option>
-                      );
-                    }
-                    return options;
-                  })()}
+                  {Array.from({ length: 24 }, (_, i) => i + 1).map((month) => (
+                    <option key={month} value={month}>
+                      {month} {month === 1 ? "month" : "months"}
+                    </option>
+                  ))}
                 </select>
               </div>
             </div>
@@ -3894,7 +4166,37 @@ const CostSheetCreate = () => {
                     <div className="cost-breakdown-row">
                       <span>
                         Development Charges @ Rs.{" "}
-                        {formatINR(template?.development_charges_psf || 0)} PSF ×{" "}
+                        <input
+                          type="number"
+                          value={developmentChargesPsf || template?.development_charges_psf || 500}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            // Allow empty temporarily while typing, but validate on blur
+                            if (val === "" || Number(val) >= 1) {
+                              setDevelopmentChargesPsf(val);
+                            }
+                          }}
+                          onBlur={(e) => {
+                            const val = Number(e.target.value);
+                            // Ensure minimum is 1, default to 500 if invalid
+                            if (!val || val < 1) {
+                              setDevelopmentChargesPsf("500");
+                            } else {
+                              setDevelopmentChargesPsf(String(val));
+                            }
+                          }}
+                          min="1"
+                          step="1"
+                          style={{
+                            width: "80px",
+                            padding: "4px 8px",
+                            border: "1px solid #d1d5db",
+                            borderRadius: "4px",
+                            fontSize: "14px",
+                            margin: "0 4px",
+                          }}
+                        />{" "}
+                        PSF ×{" "}
                         {formatINR(
                           (selectedInventory && selectedInventory.carpet_sqft) || baseAreaSqft || 0
                         )}{" "}
@@ -3921,7 +4223,28 @@ const CostSheetCreate = () => {
                     <div className="cost-breakdown-row">
                       <span>
                         Provisional Maintenance for{" "}
-                        {template?.provisional_maintenance_months || 0} months @ Rs.{" "}
+                        <input
+                          type="number"
+                          value={provisionalMaintenanceMonths || template?.provisional_maintenance_months || 6}
+                          onChange={(e) => {
+                            const val = Number(e.target.value) || 6;
+                            setProvisionalMaintenanceMonths(val);
+                            // Also update template for consistency
+                            setTemplate((prev) => ({
+                              ...prev,
+                              provisional_maintenance_months: val,
+                            }));
+                          }}
+                          style={{
+                            width: "60px",
+                            padding: "4px 8px",
+                            border: "1px solid #d1d5db",
+                            borderRadius: "4px",
+                            fontSize: "14px",
+                            margin: "0 4px",
+                          }}
+                        />{" "}
+                        months @ Rs.{" "}
                         {formatINR(template?.provisional_maintenance_psf || 0)}
                       </span>
                       <span>
@@ -3980,7 +4303,7 @@ const CostSheetCreate = () => {
               </div>
 
               {/* ================== GRAND TOTAL ================== */}
-              <div className="cost-breakdown-grand-total">
+              <div className="cost-breakdown-row cost-breakdown-subtotal">
                 <span>GRAND TOTAL</span>
                 <span>
                   {formatINR(
@@ -3994,7 +4317,7 @@ const CostSheetCreate = () => {
               </div>
 
               {/* Terms & Conditions */}
-              {termsList.length > 0 && (
+              {/* {termsList.length > 0 && (
                 <div
                   style={{
                     marginTop: "24px",
@@ -4030,7 +4353,7 @@ const CostSheetCreate = () => {
                     ))}
                   </ol>
                 </div>
-              )}
+              )} */}
             </>
           )}
         </SectionCard>
@@ -4223,3 +4546,4 @@ const CostSheetCreate = () => {
 };
 
 export default CostSheetCreate;
+
