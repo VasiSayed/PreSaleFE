@@ -1668,7 +1668,10 @@ export default function OnsiteRegistration() {
         .then((dataArray) => {
           // Response is an array: [{"Message":"...","Status":"Success","PostOffice":[...]}]
           const response = dataArray?.[0];
-          if (response?.Status === "Success" && response?.PostOffice?.length > 0) {
+          if (
+            response?.Status === "Success" &&
+            response?.PostOffice?.length > 0
+          ) {
             const postOffice = response.PostOffice[0]; // Use first post office
             setForm((prev) => ({
               ...prev,
@@ -2292,7 +2295,7 @@ export default function OnsiteRegistration() {
           <h1 className="onsite-title">Customer Registration Form</h1>
         </div>
 
-        <form className="onsite-body" onSubmit={handleSubmit}>
+        <form className="onsite-body" onSubmit={handleSubmit} noValidate>
           {/* Project (Full Width - Outside Grid) */}
           <div className="onsite-field">
             <label className="onsite-label">
@@ -2345,49 +2348,65 @@ export default function OnsiteRegistration() {
               />
             </div>
 
-            {/* Mobile + Lookup */}
             <div className="onsite-field">
               <label className="onsite-label">
                 Mobile Number <span className="onsite-required">*</span>
               </label>
+
               <input
                 className="onsite-input"
-                type="tel"
+                type="text"
+                inputMode="numeric"
+                maxLength={10}
                 placeholder="Enter Mobile Number"
                 value={form.mobile_number}
-                onChange={(e) => handleChange("mobile_number", e.target.value)}
+                onChange={(e) =>
+                  handleChange(
+                    "mobile_number",
+                    e.target.value.replace(/\D/g, "").slice(0, 10)
+                  )
+                }
+                autoComplete="off"
               />
 
-              {(checkingPhone || lookupResult) && (
-                <div className="onsite-lookup-banner">
-                  {checkingPhone ? (
-                    <span>Checking existing records…</span>
-                  ) : lookupResult?.present ? (
-                    <>
-                      <span>
-                        Lead / opportunity already exists for this mobile.
-                        Leads: {lookupResult.lead_count || 0}, Opportunities:{" "}
-                        {lookupResult.opportunity_count || 0}.
-                      </span>
-                      <button
-                        type="button"
-                        className="onsite-lookup-more-btn"
-                        onClick={() => setShowLookupModal(true)}
-                      >
-                        View more
-                      </button>
-                    </>
-                  ) : null}
-                </div>
-              )}
+              {/* show banner ONLY when there are exactly 10 digits AND we are checking OR have a non-empty result */}
+              {form.mobile_number.replace(/\D/g, "").length === 10 &&
+                (checkingPhone ||
+                  (lookupResult && Object.keys(lookupResult).length > 0)) && (
+                  <div className="onsite-lookup-banner">
+                    {checkingPhone ? (
+                      <span>Checking existing records…</span>
+                    ) : lookupResult?.present ? (
+                      <>
+                        <span>
+                          Lead / opportunity already exists for this mobile.
+                          Leads: {lookupResult.lead_count || 0}, Opportunities:{" "}
+                          {lookupResult.opportunity_count || 0}.
+                        </span>
+                        <button
+                          type="button"
+                          className="onsite-lookup-more-btn"
+                          onClick={() => setShowLookupModal(true)}
+                        >
+                          View more
+                        </button>
+                      </>
+                    ) : null}
+                  </div>
+                )}
 
-              {/* {!checkingPhone && lookupResult && !lookupResult.present && (
-                <div className="onsite-helper">
-                  No existing lead found. New lead will be created.
-                </div>
-              )} */}
+              {/* helper/message blocks: show ONLY when phone exactly 10 digits */}
+              {/* {form.mobile_number.replace(/\D/g, "").length === 10 &&
+    !checkingPhone &&
+    lookupResult &&
+    !lookupResult.present && (
+      <div className="onsite-helper">
+        No existing lead found. New lead will be created.
+      </div>
+  )} */}
 
-              {!checkingPhone &&
+              {form.mobile_number.replace(/\D/g, "").length === 10 &&
+                !checkingPhone &&
                 lookupResult?.present &&
                 existingProjectLead && (
                   <div className="onsite-helper-warning">
@@ -2405,7 +2424,8 @@ export default function OnsiteRegistration() {
                   </div>
                 )}
 
-              {!checkingPhone &&
+              {form.mobile_number.replace(/\D/g, "").length === 10 &&
+                !checkingPhone &&
                 !hasExistingLeadInProject &&
                 lookupResult?.present &&
                 lookupResult.leads?.length > 0 && (
@@ -2483,7 +2503,9 @@ export default function OnsiteRegistration() {
               <label className="onsite-label">
                 Pin Code
                 {loadingPincode && (
-                  <span style={{ fontSize: 12, color: "#6b7280", marginLeft: 4 }}>
+                  <span
+                    style={{ fontSize: 12, color: "#6b7280", marginLeft: 4 }}
+                  >
                     (Looking up...)
                   </span>
                 )}
@@ -2494,7 +2516,10 @@ export default function OnsiteRegistration() {
                 maxLength={6}
                 value={form.residence_pincode}
                 onChange={(e) =>
-                  handleChange("residence_pincode", e.target.value.replace(/\D/g, ""))
+                  handleChange(
+                    "residence_pincode",
+                    e.target.value.replace(/\D/g, "")
+                  )
                 }
                 placeholder="Enter 6-digit pincode"
               />
@@ -2995,13 +3020,15 @@ export default function OnsiteRegistration() {
               Dear <strong>{successLeadName || "Customer"}</strong>,
             </p>
             <p style={{ fontSize: 14, color: "#4b5563", marginBottom: 16 }}>
-              Thank you so much for taking the time to fill out our registration form and for trusting us with your personal details. We truly appreciate it.
-
+              Thank you so much for taking the time to fill out our registration
+              form and for trusting us with your personal details. We truly
+              appreciate it.
             </p>
             <p style={{ fontSize: 13, color: "#6b7280", marginBottom: 24 }}>
-              
-              Please rest assured that your information is safe with us. We respect your privacy, and you will never receive unnecessary calls or messages from our side — whether or not you decide to purchase a property with us.
-
+              Please rest assured that your information is safe with us. We
+              respect your privacy, and you will never receive unnecessary calls
+              or messages from our side — whether or not you decide to purchase
+              a property with us.
             </p>
             <p style={{ fontSize: 13, color: "#6b7280", marginBottom: 24 }}>
               Warm Regards,<br></br>
@@ -3124,3 +3151,4 @@ export default function OnsiteRegistration() {
     </div>
   );
 }
+1

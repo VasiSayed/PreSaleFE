@@ -338,33 +338,43 @@
   border-bottom: 1px solid #e5e7eb;
 }
 
-/* Grand Total - Dark Blue Theme */
 .qp-cost-final {
-  margin-top: 20px;
-  padding: 20px;
-  background: linear-gradient(135deg, #102a54, #1a3d6f);
-  border-radius: 12px;
+  background: #ffffff;
+  border: 2px solid #102a54;  /* 🔹 same border color as qp-cost-subtotal */
+  padding: 18px 20px;
+  border-radius: 10px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  box-shadow: 0 10px 25px rgba(16, 42, 84, 0.25);
+  font-size: 16px;
+  font-weight: 600;
+  color: #102a54;
+  margin-top: 20px;
+  box-shadow: none;
 }
 
+
+
+
+/* Left label */
 .qp-cost-final span:first-child {
   font-size: 16px;
-  font-weight: 700;
-  color: #ffffff;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+  font-weight: 600;
+  color: #102a54;
+  text-transform: none;                /* remove UPPERCASE */
+  letter-spacing: 0;                   /* reset spacing */
 }
 
+/* Right value (amount) */
 .qp-cost-final .qp-cost-amount {
-  font-size: 22px;
+  font-size: 20px;
   font-weight: 700;
-  color: #ffffff;
+  color: #102a54;
+  min-width: 80px;
+  text-align: right;
 }
 
-/* Unit Number Header (print only) */
+/* Unit Number Header (print only) – keep as-is */
 .qp-unit-print-header {
   margin-bottom: 20px;
 }
@@ -408,13 +418,7 @@
   }
 
   .qp-cost-final {
-    padding: 16px;
-    flex-direction: column;
-    gap: 8px;
-    text-align: center;
-  }
-
-  .qp-cost-final span:first-child {
+    padding: 14px 16px;
     font-size: 14px;
   }
 
@@ -423,7 +427,22 @@
   }
 }
 
-/* ============ PRINT STYLES - MINIMAL VERSION (SINGLE PAGE) ============ */
+@media (max-width: 480px) {
+  .qp-cost-final {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    text-align: left;
+  }
+
+  .qp-cost-final .qp-cost-amount {
+    width: 100%;
+    text-align: left;
+    font-size: 16px;
+  }
+}
+
+
 @media print {
   /* ✅ Root reset */
   html,
@@ -508,10 +527,10 @@
   .qp-unit-number {
     font-size: 14px !important;
     font-weight: 700 !important;
-    color: #102a54 !important;
+    color: #ffffff !important;
     padding: 6px 10px !important;
-    background-color: #f8f9fa !important;
-    border: 1.5px solid #102a54 !important;
+    background-color: #ffffff !important;
+    border: 1.5px solid #ffffff !important;
     border-radius: 4px !important;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
@@ -629,30 +648,32 @@
 
   /* ✅ Grand Total - COMPACT but prominent */
   .qp-cost-final {
-    background: linear-gradient(135deg, #102a54, #1a3d6f) !important;
-    color: #ffffff !important;
-    padding: 10px 12px !important;
-    border-radius: 6px !important;
-    margin-top: 8px !important;
-    display: flex !important;
-    justify-content: space-between !important;
-    align-items: center !important;
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
-    page-break-inside: avoid;
+  background: #ffffff;
+  border: 1px solid #102a54;  /* 🔹 same border color as qp-cost-subtotal */
+  padding: 18px 20px;
+  border-radius: 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 16px;
+  font-weight: 600;
+  color: #102a54;
+  margin-top: 20px;
+  box-shadow: none;
   }
 
   .qp-cost-final span:first-child {
-    font-size: 13px !important;
-    font-weight: 700 !important;
-    color: #ffffff !important;
-    text-transform: uppercase !important;
+  font-size: 16px;
+  font-weight: 600;
+  color: #102a54;
+  text-transform: none;                /* remove UPPERCASE */
+  letter-spacing: 0;      
   }
 
   .qp-cost-final .qp-cost-amount {
     font-size: 16px !important;
     font-weight: 700 !important;
-    color: #ffffff !important;
+  color: #102a54;
   }
 
   /* ✅ Force single page */

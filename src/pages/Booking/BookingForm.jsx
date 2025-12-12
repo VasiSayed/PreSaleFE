@@ -6451,7 +6451,7 @@ const BookingForm = () => {
 
       if (!isAvailable) {
         setInterestedUnitError(
-          `Lead ka interested unit ${selectedUnitFromLead.unit_no} available nahi hai. Please select another unit.`
+          `Lead interested unit ${selectedUnitFromLead.unit_no} is not available. Please select another unit.`
         );
         setUnitOpen(true); // dropdown khul jaayega
       } else {
@@ -7277,6 +7277,10 @@ const BookingForm = () => {
     });
   };
 
+  const handleRemoveMasterSlab = (index) => {
+    setMasterSlabs((prev) => prev.filter((_, idx) => idx !== index));
+  };
+
   // ---- EXISTING CUSTOM LOGIC (keep as is) ----
   const handleAddCustomSlab = () => {
     setCustomSlabs((prev) => [...prev, { name: "", percentage: "", days: "" }]);
@@ -7669,8 +7673,12 @@ const BookingForm = () => {
       toast.error("Please select a Payment Plan.");
       return;
     }
+    if (paymentPlanType === "MASTER" && masterTotalPercentage !== 100) {
+      toast.error(`Master payment plan slabs must total 100%. Current total: ${Math.floor(masterTotalPercentage)}%`);
+      return;
+    }
     if (paymentPlanType === "CUSTOM" && customTotalPercentage !== 100) {
-      toast.error("Custom payment plan slabs must total 100%.");
+      toast.error(`Custom payment plan slabs must total 100%. Current total: ${Math.floor(customTotalPercentage)}%`);
       return;
     }
 
@@ -10699,7 +10707,7 @@ const BookingForm = () => {
                       <div
                         style={{
                           display: "grid",
-                          gridTemplateColumns: "2fr 1fr 1fr 1fr",
+                          gridTemplateColumns: "2fr 1fr 1fr 1fr auto",
                           gap: "12px",
                           marginBottom: "8px",
                           fontWeight: "600",
@@ -10711,6 +10719,7 @@ const BookingForm = () => {
                         <div>{toSentenceCase("Percentage")}</div>
                         <div>{toSentenceCase("Amount")}</div>
                         <div>{toSentenceCase("Due Date / Days")}</div>
+                        <div>{toSentenceCase("Action")}</div>
                       </div>
 
                       {/* Slab Rows */}
@@ -10719,7 +10728,7 @@ const BookingForm = () => {
                           key={slab.id || index}
                           style={{
                             display: "grid",
-                            gridTemplateColumns: "2fr 1fr 1fr 1fr",
+                            gridTemplateColumns: "2fr 1fr 1fr 1fr auto",
                             gap: "12px",
                             marginBottom: "12px",
                             alignItems: "center",
@@ -10811,6 +10820,27 @@ const BookingForm = () => {
               }
             /> */}
                           </div>
+
+                          {/* Delete Button */}
+                          {masterSlabs.length > 1 && (
+                            <button
+                              type="button"
+                              className="bf-btn-secondary"
+                              onClick={() => handleRemoveMasterSlab(index)}
+                              style={{
+                                padding: "6px 12px",
+                                minWidth: "40px",
+                                cursor: "pointer",
+                                border: "1px solid #dc2626",
+                                color: "#dc2626",
+                                background: "#fff",
+                              }}
+                              title="Delete this slab"
+                            >
+                              ✕
+                            </button>
+                          )}
+                          {masterSlabs.length === 1 && <div></div>}
                         </div>
                       ))}
 
@@ -10818,15 +10848,24 @@ const BookingForm = () => {
                       <div
                         style={{
                           marginTop: "12px",
-                          padding: "8px",
-                          backgroundColor: "#f0fdf4",
+                          padding: "10px 12px",
+                          backgroundColor: masterTotalPercentage === 100 ? "#f0fdf4" : "#fef2f2",
                           borderRadius: "4px",
                           fontSize: "14px",
                           fontWeight: "600",
+                          color: masterTotalPercentage === 100 ? "#166534" : "#dc2626",
+                          border: `2px solid ${masterTotalPercentage === 100 ? "#10b981" : "#ef4444"}`,
                         }}
                       >
                         {toSentenceCase("Total")}:{" "}
-                        {Math.floor(masterTotalPercentage)}%
+                        <span style={{ fontSize: "16px" }}>
+                          {Math.floor(masterTotalPercentage)}%
+                        </span>
+                        {masterTotalPercentage !== 100 && (
+                          <span style={{ marginLeft: "8px", fontSize: "12px", fontWeight: "500" }}>
+                            (Should be 100%)
+                          </span>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -10954,13 +10993,24 @@ const BookingForm = () => {
                       <div
                         style={{
                           marginTop: "12px",
-                          color: "#dc2626",
+                          padding: "10px 12px",
+                          backgroundColor: customTotalPercentage === 100 ? "#f0fdf4" : "#fef2f2",
+                          borderRadius: "4px",
                           fontSize: "14px",
+                          fontWeight: "600",
+                          color: customTotalPercentage === 100 ? "#166534" : "#dc2626",
+                          border: `2px solid ${customTotalPercentage === 100 ? "#10b981" : "#ef4444"}`,
                         }}
                       >
                         {toSentenceCase("Total Percentage")}:{" "}
-                        {Math.floor(customTotalPercentage)}% (
-                        {toSentenceCase("should be 100%")})
+                        <span style={{ fontSize: "16px" }}>
+                          {Math.floor(customTotalPercentage)}%
+                        </span>
+                        {customTotalPercentage !== 100 && (
+                          <span style={{ marginLeft: "8px", fontSize: "12px", fontWeight: "500" }}>
+                            ({toSentenceCase("should be 100%")})
+                          </span>
+                        )}
                       </div>
 
                       <button

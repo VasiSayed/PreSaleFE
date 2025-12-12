@@ -2,6 +2,34 @@
    ONSITE REGISTRATION - ELEGANT PROFESSIONAL DESIGN
    Sophisticated, Modern, Premium Feel
    ============================================ */
+/* Remove Chrome invalid yellow box */
+
+/* Hide the lookup banner if it's rendered but empty (defensive safety) */
+.onsite-lookup-banner:empty {
+  display: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: none !important;
+  box-shadow: none !important;
+  height: 0 !important;
+  visibility: hidden !important;
+}
+
+.onsite-input:invalid,
+.onsite-input:focus:invalid {
+  box-shadow: none !important;
+  background-color: white !important;
+  outline: none !important;
+}
+
+/* Remove Chrome autofill yellow background */
+.onsite-input:-webkit-autofill,
+.onsite-input:-webkit-autofill:focus,
+.onsite-input:-webkit-autofill:hover {
+  -webkit-box-shadow: 0 0 0px 1000px white inset !important;
+  background-color: white !important;
+  box-shadow: none !important;
+}
 
 /* ---------- Base Page ---------- */
 body {

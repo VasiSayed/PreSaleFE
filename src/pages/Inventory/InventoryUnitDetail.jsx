@@ -176,34 +176,48 @@ const InventoryUnitDetail = () => {
         <div className="card overview-card">
           <div className="card-title">Unit Overview</div>
           <div className="card-grid-2">
-            <div>
-              <div className="field-label">Project</div>
-              <div className="field-value">{project_name || "-"}</div>
-            </div>
-            <div>
-              <div className="field-label">Tower</div>
-              <div className="field-value">{tower_name || "-"}</div>
-            </div>
-            <div>
-              <div className="field-label">Floor</div>
-              <div className="field-value">{floor_number || "-"}</div>
-            </div>
-            <div>
-              <div className="field-label">Unit No.</div>
-              <div className="field-value">{unit_no || unitId}</div>
-            </div>
-            <div>
-              <div className="field-label">Unit Type</div>
-              <div className="field-value">{configuration_name || "-"}</div>
-            </div>
-            <div>
-              <div className="field-label">Configuration</div>
-              <div className="field-value">{configuration_name || "-"}</div>
-            </div>
-            <div>
-              <div className="field-label">Facing</div>
-              <div className="field-value">{facing_name || "-"}</div>
-            </div>
+            {project_name && (
+              <div>
+                <div className="field-label">Project</div>
+                <div className="field-value">{project_name}</div>
+              </div>
+            )}
+            {tower_name && (
+              <div>
+                <div className="field-label">Tower</div>
+                <div className="field-value">{tower_name}</div>
+              </div>
+            )}
+            {floor_number != null && floor_number !== "" && (
+              <div>
+                <div className="field-label">Floor</div>
+                <div className="field-value">{floor_number}</div>
+              </div>
+            )}
+            {(unit_no || unitId) && (
+              <div>
+                <div className="field-label">Unit No.</div>
+                <div className="field-value">{unit_no || unitId}</div>
+              </div>
+            )}
+            {unit_type_name && (
+              <div>
+                <div className="field-label">Unit Type</div>
+                <div className="field-value">{unit_type_name}</div>
+              </div>
+            )}
+            {configuration_name && (
+              <div>
+                <div className="field-label">Configuration</div>
+                <div className="field-value">{configuration_name}</div>
+              </div>
+            )}
+            {facing_name && (
+              <div>
+                <div className="field-label">Facing</div>
+                <div className="field-value">{facing_name}</div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -224,159 +238,217 @@ const InventoryUnitDetail = () => {
             </div>
           </div>
 
-          <div className="status-secondary-group">
-            <div className="status-row">
-              <span className="badge-label">Inventory</span>
-              <span className="badge badge-soft">
-                {status_label || status || "-"}
-              </span>
-            </div>
+          {(status || status_label || unit_status || unit_status_label) && (
+            <div className="status-secondary-group">
+              {(status || status_label) && (
+                <div className="status-row">
+                  <span className="badge-label">Inventory</span>
+                  <span className="badge badge-soft">
+                    {status_label || status}
+                  </span>
+                </div>
+              )}
 
-            <div className="status-row">
-              <span className="badge-label">Unit Status</span>
-              <span className="badge badge-soft">
-                {unit_status_label || unit_status || "-"}
-              </span>
+              {(unit_status || unit_status_label) && (
+                <div className="status-row">
+                  <span className="badge-label">Unit Status</span>
+                  <span className="badge badge-soft">
+                    {unit_status_label || unit_status}
+                  </span>
+                </div>
+              )}
             </div>
-          </div>
+          )}
 
-          <div className="meta-row">
-            <div>
-              <div className="field-label">Block Period (days)</div>
-              <div className="field-value">{block_period_days || "-"}</div>
+          {(block_period_days != null || registration_number) && (
+            <div className="meta-row">
+              {block_period_days != null && (
+                <div>
+                  <div className="field-label">Block Period (days)</div>
+                  <div className="field-value">{block_period_days}</div>
+                </div>
+              )}
+              {registration_number && (
+                <div>
+                  <div className="field-label">Registration No.</div>
+                  <div className="field-value">{registration_number}</div>
+                </div>
+              )}
             </div>
-            <div>
-              <div className="field-label">Registration No.</div>
-              <div className="field-value">{registration_number || "-"}</div>
-            </div>
-          </div>
+          )}
         </div>
       </div>
 
       {/* Middle: Areas + Pricing + Charges */}
       <div className="detail-middle-row">
-        <div className="card">
-          <div className="card-title">Areas (sq.ft)</div>
-          <div className="card-grid-2">
-            <div>
-              <div className="field-label">Carpet</div>
-              <div className="field-value">{formatNumber(carpet_sqft)}</div>
-            </div>
-            <div>
-              <div className="field-label">Built-up</div>
-              <div className="field-value">{formatNumber(builtup_sqft)}</div>
-            </div>
-            <div>
-              <div className="field-label">RERA Area</div>
-              <div className="field-value">{formatNumber(rera_area_sqft)}</div>
-            </div>
-            <div>
-              <div className="field-label">Saleable</div>
-              <div className="field-value">{formatNumber(saleable_sqft)}</div>
-            </div>
-            <div>
-              <div className="field-label">Other Area</div>
-              <div className="field-value">{formatNumber(other_area_sqft)}</div>
-            </div>
-            <div>
-              <div className="field-label">Loft Area</div>
-              <div className="field-value">{formatNumber(loft_area_sqft)}</div>
-            </div>
-          </div>
-        </div>
-
-        <div className="card">
-          <div className="card-title">Pricing</div>
-          <div className="card-grid-2">
-            <div>
-              <div className="field-label">Base Price / sq.ft</div>
-              <div className="field-value">
-                ₹ {formatNumber(base_price_psf)}
-              </div>
-            </div>
-            <div>
-              <div className="field-label">Rate / sq.ft</div>
-              <div className="field-value">₹ {formatNumber(rate_psf)}</div>
-            </div>
-            <div>
-              <div className="field-label">Agreement Value</div>
-              <div className="field-value">
-                ₹ {formatNumber(agreement_value)}
-              </div>
-            </div>
-            <div>
-              <div className="field-label">GST Amount</div>
-              <div className="field-value">₹ {formatNumber(gst_amount)}</div>
-            </div>
-          </div>
-        </div>
-
-        <div className="card">
-          <div className="card-title">Charges & Total</div>
-          <div className="card-grid-2">
-            <div>
-              <div className="field-label">Dev / Infra Charge</div>
-              <div className="field-value">
-                ₹ {formatNumber(development_infra_charge)}
-              </div>
-            </div>
-            <div>
-              <div className="field-label">Stamp Duty</div>
-              <div className="field-value">
-                ₹ {formatNumber(stamp_duty_amount)}
-              </div>
-            </div>
-            <div>
-              <div className="field-label">Registration Charges</div>
-              <div className="field-value">
-                ₹ {formatNumber(registration_charges)}
-              </div>
-            </div>
-            <div>
-              <div className="field-label">Legal Fee</div>
-              <div className="field-value">₹ {formatNumber(legal_fee)}</div>
-            </div>
-          </div>
-
-          <div className="total-row">
-            <div className="field-label">Total Cost</div>
-            <div className="total-value">₹ {formatNumber(total_cost)}</div>
-          </div>
-        </div>
-      </div>
-
-      {/* Description + meta + photo */}
-      <div className="detail-bottom-row">
-        <div className="card">
-          <div className="card-title">Description</div>
-          <div className="field-value description-text">
-            {description || "No description provided."}
-          </div>
-        </div>
-
-        <div className="card">
-          <div className="card-title">Meta</div>
-          <div className="card-grid-2">
-            <div>
-              <div className="field-label">Created At</div>
-              <div className="field-value">{formatDateTime(created_at)}</div>
-            </div>
-            <div>
-              <div className="field-label">Updated At</div>
-              <div className="field-value">{formatDateTime(updated_at)}</div>
-            </div>
-          </div>
-        </div>
-
-        {photo && (
+        {(carpet_sqft != null || builtup_sqft != null || rera_area_sqft != null || saleable_sqft != null || other_area_sqft != null || loft_area_sqft != null) && (
           <div className="card">
-            <div className="card-title">Photo</div>
-            <div className="photo-wrapper">
-              <img src={photo} alt="Unit" className="unit-photo" />
+            <div className="card-title">Areas (sq.ft)</div>
+            <div className="card-grid-2">
+              {carpet_sqft != null && (
+                <div>
+                  <div className="field-label">Carpet</div>
+                  <div className="field-value">{formatNumber(carpet_sqft)}</div>
+                </div>
+              )}
+              {builtup_sqft != null && (
+                <div>
+                  <div className="field-label">Built-up</div>
+                  <div className="field-value">{formatNumber(builtup_sqft)}</div>
+                </div>
+              )}
+              {rera_area_sqft != null && (
+                <div>
+                  <div className="field-label">RERA Area</div>
+                  <div className="field-value">{formatNumber(rera_area_sqft)}</div>
+                </div>
+              )}
+              {saleable_sqft != null && (
+                <div>
+                  <div className="field-label">Saleable</div>
+                  <div className="field-value">{formatNumber(saleable_sqft)}</div>
+                </div>
+              )}
+              {other_area_sqft != null && (
+                <div>
+                  <div className="field-label">Other Area</div>
+                  <div className="field-value">{formatNumber(other_area_sqft)}</div>
+                </div>
+              )}
+              {loft_area_sqft != null && (
+                <div>
+                  <div className="field-label">Loft Area</div>
+                  <div className="field-value">{formatNumber(loft_area_sqft)}</div>
+                </div>
+              )}
             </div>
           </div>
         )}
+
+        {(base_price_psf != null || rate_psf != null || agreement_value != null || gst_amount != null) && (
+          <div className="card">
+            <div className="card-title">Pricing</div>
+            <div className="card-grid-2">
+              {base_price_psf != null && (
+                <div>
+                  <div className="field-label">Base Price / sq.ft</div>
+                  <div className="field-value">
+                    ₹ {formatNumber(base_price_psf)}
+                  </div>
+                </div>
+              )}
+              {rate_psf != null && (
+                <div>
+                  <div className="field-label">Rate / sq.ft</div>
+                  <div className="field-value">₹ {formatNumber(rate_psf)}</div>
+                </div>
+              )}
+              {agreement_value != null && (
+                <div>
+                  <div className="field-label">Agreement Value</div>
+                  <div className="field-value">
+                    ₹ {formatNumber(agreement_value)}
+                  </div>
+                </div>
+              )}
+              {gst_amount != null && (
+                <div>
+                  <div className="field-label">GST Amount</div>
+                  <div className="field-value">₹ {formatNumber(gst_amount)}</div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {(development_infra_charge != null || stamp_duty_amount != null || registration_charges != null || legal_fee != null || total_cost != null) && (
+          <div className="card">
+            <div className="card-title">Charges & Total</div>
+            <div className="card-grid-2">
+              {development_infra_charge != null && (
+                <div>
+                  <div className="field-label">Dev / Infra Charge</div>
+                  <div className="field-value">
+                    ₹ {formatNumber(development_infra_charge)}
+                  </div>
+                </div>
+              )}
+              {stamp_duty_amount != null && (
+                <div>
+                  <div className="field-label">Stamp Duty</div>
+                  <div className="field-value">
+                    ₹ {formatNumber(stamp_duty_amount)}
+                  </div>
+                </div>
+              )}
+              {registration_charges != null && (
+                <div>
+                  <div className="field-label">Registration Charges</div>
+                  <div className="field-value">
+                    ₹ {formatNumber(registration_charges)}
+                  </div>
+                </div>
+              )}
+              {legal_fee != null && (
+                <div>
+                  <div className="field-label">Legal Fee</div>
+                  <div className="field-value">₹ {formatNumber(legal_fee)}</div>
+                </div>
+              )}
+            </div>
+
+            {total_cost != null && (
+              <div className="total-row">
+                <div className="field-label">Total Cost</div>
+                <div className="total-value">₹ {formatNumber(total_cost)}</div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
+
+      {/* Description + meta + photo */}
+      {(description || created_at || updated_at || photo) && (
+        <div className="detail-bottom-row">
+          {description && (
+            <div className="card">
+              <div className="card-title">Description</div>
+              <div className="field-value description-text">
+                {description}
+              </div>
+            </div>
+          )}
+
+          {(created_at || updated_at) && (
+            <div className="card">
+              <div className="card-title">Meta</div>
+              <div className="card-grid-2">
+                {created_at && (
+                  <div>
+                    <div className="field-label">Created At</div>
+                    <div className="field-value">{formatDateTime(created_at)}</div>
+                  </div>
+                )}
+                {updated_at && (
+                  <div>
+                    <div className="field-label">Updated At</div>
+                    <div className="field-value">{formatDateTime(updated_at)}</div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {photo && (
+            <div className="card">
+              <div className="card-title">Photo</div>
+              <div className="photo-wrapper">
+                <img src={photo} alt="Unit" className="unit-photo" />
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Documents */}
       {/* Documents */}
