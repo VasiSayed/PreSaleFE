@@ -235,6 +235,7 @@ import SiteVisitDetail from "./pages/SiteVisit/SiteVisitDetail";
 import SiteVisitEdit from "./pages/SiteVisit/SiteVisitEdit";
 import InventoryList from "./pages/Inventory/InventoryList";
 import InventoryCreate from "./pages/Inventory/InventoryCreate";
+import InventoryEdit from "./pages/Inventory/InventoryEdit";
 import InventoryPlanning from "./pages/Inventory/InventoryPlanning";
 import InventoryUnitDetail from "./pages/Inventory/InventoryUnitDetail";
 import ChannelPartnerPage from "./pages/ChannelPartner/ChannelPartnerPage";
@@ -328,6 +329,10 @@ export default function App() {
               <Route
                 path="/sales/inventory/new"
                 element={<InventoryCreate />}
+              />
+              <Route
+                path="/sales/inventory/:id/edit"
+                element={<InventoryEdit />}
               />
               <Route
                 path="/inventory-planning"

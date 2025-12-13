@@ -2,7 +2,7 @@
 
 // Comma separated Indian number format (lakhs / crores)
 // 1234567.89 -> "12,34,567.89"
-export const formatINR = (value, decimals = 2) => {
+export const formatINR = (value, decimals = 0) => {
   if (value === null || value === undefined || value === "") return "";
 
   const numeric =

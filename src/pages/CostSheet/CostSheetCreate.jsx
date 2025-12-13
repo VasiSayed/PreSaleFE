@@ -2457,9 +2457,28 @@ const CostSheetCreate = () => {
     // parkingAmount is calculated in the useMemo, so no need to set it here
   }, [parkingPrice, parkingCount, parkingRequired]);
 
+  // Recalculate percentage-based charges when netBaseValue changes (after discount)
+  useEffect(() => {
+    setCharges((prevCharges) => {
+      return prevCharges.map((charge) => {
+        if (charge.type === "Percentage" && charge.value) {
+          const chargeValue = parseFloat(charge.value || 0) || 0;
+          if (chargeValue > 0 && netBaseValue > 0) {
+            const calculatedAmount = (netBaseValue * chargeValue) / 100;
+            return {
+              ...charge,
+              amount: String(Math.round(calculatedAmount)),
+            };
+          }
+        }
+        return charge;
+      });
+    });
+  }, [netBaseValue]);
+
   // ========== COST CALCULATIONS ==========
-  // ✅ Match BookingForm: Base for taxes = baseValue (before discount) + additional charges + parking
-  const agreementValue = baseValue; // Unit cost before discount (equivalent to BookingForm's agreementValue)
+  // Agreement Value = baseValue (before discount)
+  const agreementValue = baseValue; // Unit cost before discount
 
   const { parkingAmount, stampAmount, gstAmount, mainCostTotal } =
     useMemo(() => {
@@ -2476,11 +2495,11 @@ const CostSheetCreate = () => {
       const parkingCountNum = Number(parkingCount || 0) || 0;
       const parkingAmt = pricePerParking * parkingCountNum;
 
-      // Base for GST and Stamp Duty: unit cost (before discount) + additional charges + parking total
-      const unitCost = Number(agreementValue || 0);
+      // Base for GST and Stamp Duty: net base value (after discount) + additional charges + parking total
+      const unitCostAfterDiscount = Number(netBaseValue || 0); // Use netBaseValue (after discount)
       const additionalTotal = Number(additionalChargesTotal || 0);
       const parkingTotalNumber = parkingRequired === "YES" ? parkingAmt : 0;
-      const baseForTaxes = unitCost + additionalTotal + parkingTotalNumber;
+      const baseForTaxes = unitCostAfterDiscount + additionalTotal + parkingTotalNumber;
 
       const gstPercent = Number(template.gst_percent) || 0;
       const stampPercent = Number(template.stamp_duty_percent) || 0;
@@ -2492,9 +2511,9 @@ const CostSheetCreate = () => {
       const stampAmt = Math.round(calcStamp * 100) / 100;
       const gstAmt = Math.round(calcGst * 100) / 100;
 
-      // Total Cost (1) = unit cost + additional charges + parking + stamp duty + gst
+      // Total Cost (1) = net base value (after discount) + additional charges + parking + stamp duty + gst
       const mainTotal =
-        unitCost + additionalTotal + parkingTotalNumber + stampAmt + gstAmt;
+        unitCostAfterDiscount + additionalTotal + parkingTotalNumber + stampAmt + gstAmt;
 
       return {
         parkingAmount: parkingAmt,
@@ -2503,7 +2522,7 @@ const CostSheetCreate = () => {
         mainCostTotal: mainTotal,
       };
     }, [
-      agreementValue,
+      netBaseValue, // Changed from agreementValue to netBaseValue
       additionalChargesTotal,
       parkingPrice,
       parkingCount,
@@ -2634,11 +2653,18 @@ const CostSheetCreate = () => {
     const input = e.target.value;
 
     if (discountType === "Percentage") {
-      setDiscountValue(input);
+      // Allow decimal values for percentage (e.g., 10.5%)
+      // Remove any non-numeric characters except decimal point
+      const cleaned = input.replace(/[^0-9.]/g, "");
+      // Prevent multiple decimal points
+      const parts = cleaned.split(".");
+      if (parts.length > 2) return; // Invalid format
+      setDiscountValue(cleaned);
       return;
     }
 
-    const raw = input.replace(/,/g, "");
+    // For Fixed amount, remove formatting
+    const raw = input.replace(/,/g, "").replace(/₹/g, "").trim();
 
     if (raw === "") {
       setDiscountValue("");
@@ -3156,17 +3182,22 @@ const CostSheetCreate = () => {
   };
 
   const handleChargeAmountChange = (index, input) => {
-    const raw = input.replace(/,/g, "");
+    const raw = input.replace(/,/g, "").replace(/₹/g, "").trim();
 
     if (raw === "") {
-      handleChargesChange(index, "amount", "");
+      const updated = [...charges];
+      updated[index].amount = "";
+      setCharges(updated);
       return;
     }
 
     const num = Number(raw);
     if (Number.isNaN(num)) return;
 
-    handleChargesChange(index, "amount", raw);
+    // Allow manual override of amount
+    const updated = [...charges];
+    updated[index].amount = raw;
+    setCharges(updated);
   };
 
   const handleBrowseClick = () => {
@@ -3183,6 +3214,24 @@ const CostSheetCreate = () => {
   const handleChargesChange = (index, field, value) => {
     const updated = [...charges];
     updated[index][field] = value;
+    
+    // Auto-calculate amount when type or value changes
+    if (field === "type" || field === "value") {
+      const charge = updated[index];
+      const chargeValue = parseFloat(charge.value || 0) || 0;
+      
+      if (charge.type === "Fixed") {
+        // For Fixed type, amount equals the value
+        updated[index].amount = chargeValue > 0 ? String(chargeValue) : "";
+      } else if (charge.type === "Percentage") {
+        // For Percentage type, calculate based on netBaseValue (after discount)
+        const calculatedAmount = netBaseValue > 0 && chargeValue > 0 
+          ? (netBaseValue * chargeValue) / 100 
+          : 0;
+        updated[index].amount = calculatedAmount > 0 ? String(Math.round(calculatedAmount)) : "";
+      }
+    }
+    
     setCharges(updated);
   };
 
@@ -4084,13 +4133,26 @@ const CostSheetCreate = () => {
                 </div>
 
                 <div className="cost-breakdown-row">
-                  <span>Unit Cost</span>
+                  <span>Agreement Value (Base Value)</span>
                   <span>{formatINR(agreementValue || 0)}</span>
+                </div>
+
+                {/* Show Discount if applied */}
+                {discountAmount > 0 && (
+                  <div className="cost-breakdown-row" style={{ color: "#dc2626" }}>
+                    <span>Discount Amount (-)</span>
+                    <span>-{formatINR(discountAmount)}</span>
+                  </div>
+                )}
+
+                <div className="cost-breakdown-row">
+                  <span>Net Base Value (After Discount)</span>
+                  <span>{formatINR(netBaseValue || 0)}</span>
                 </div>
 
                 {additionalChargesTotal > 0 && (
                   <div className="cost-breakdown-row">
-                    <span>Additional Charges</span>
+                    <span>Additional Charges (+)</span>
                     <span>{formatINR(additionalChargesTotal)}</span>
                   </div>
                 )}
@@ -4125,13 +4187,7 @@ const CostSheetCreate = () => {
                 <div className="cost-breakdown-row cost-breakdown-total">
                   <span>Total Cost (1)</span>
                   <span>
-                    {formatINR(
-                      Number(agreementValue || 0) +
-                        Number(additionalChargesTotal || 0) +
-                        (parkingRequired === "YES" ? Number(parkingAmount || 0) : 0) +
-                        Number(stampAmount || 0) +
-                        Number(gstAmount || 0)
-                    )}
+                    {formatINR(mainCostTotal)}
                   </span>
                 </div>
               </div>

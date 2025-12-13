@@ -3,6 +3,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import axiosInstance from "../../api/axiosInstance";
 import { useAuth } from "../../context/AuthContext";
 import "./Dashboard.css";
+import { formatINR } from "../../utils/number";
 
 const SCOPE_URL = "/client/my-scope/";
 
@@ -410,18 +411,18 @@ export default function Dashboard() {
                 <div className="lead-overview-top">
                   <div className="lead-overview-metric">
                     <div className="metric-label">Total leads</div>
-                    <div className="metric-value">{totalLeads}</div>
+                    <div className="metric-value">{formatINR(totalLeads)}</div>
                   </div>
                   <div className="lead-overview-metric">
                     <div className="metric-label">New leads</div>
-                    <div className="metric-value">{newLeadsToday}</div>
+                    <div className="metric-value">{formatINR(newLeadsToday)}</div>
                     <div className="metric-subtext">
                       {isSalesMetrics ? "added today" : "in selected period"}
                     </div>
                   </div>
                   <div className="lead-overview-metric">
                     <div className="metric-label">Lead quality score</div>
-                    <div className="metric-value">{leadQualityScore}</div>
+                    <div className="metric-value">{formatINR(leadQualityScore)}</div>
                     <div className="quality-bar">
                       <div
                         className="quality-bar-fill"
@@ -450,7 +451,7 @@ export default function Dashboard() {
                             }}
                           />
                         </div>
-                        <span className="lead-source-count">{count}</span>
+                        <span className="lead-source-count">{formatINR(count)}</span>
                       </div>
                     ))}
                   </div>
@@ -467,7 +468,7 @@ export default function Dashboard() {
                   <div className="tasks-donut">
                     <div className="tasks-donut-inner">
                       <div className="tasks-donut-label">Total</div>
-                      <div className="tasks-donut-value">{totalTasks}</div>
+                      <div className="tasks-donut-value">{formatINR(totalTasks)}</div>
                     </div>
                   </div>
                   <ul className="tasks-legend">
@@ -475,28 +476,28 @@ export default function Dashboard() {
                       <span className="legend-dot completed" />
                       <span>Completed</span>
                       <span className="legend-count">
-                        {tasksCounts.completed}
+                        {formatINR(tasksCounts.completed)}
                       </span>
                     </li>
                     <li>
                       <span className="legend-dot upcoming" />
                       <span>Upcoming</span>
                       <span className="legend-count">
-                        {tasksCounts.upcoming}
+                        {formatINR(tasksCounts.upcoming)}
                       </span>
                     </li>
                     <li>
                       <span className="legend-dot due-today" />
                       <span>Due Today</span>
                       <span className="legend-count">
-                        {tasksCounts.dueToday}
+                        {formatINR(tasksCounts.dueToday)}
                       </span>
                     </li>
                     <li>
                       <span className="legend-dot overdue" />
                       <span>Overdue</span>
                       <span className="legend-count">
-                        {tasksCounts.overdue}
+                        {formatINR(tasksCounts.overdue)}
                       </span>
                     </li>
                   </ul>
@@ -514,12 +515,12 @@ export default function Dashboard() {
                 <div className="pipeline-stages">
                   <div className="pipeline-stage first-stage">
                     <div className="pipeline-stage-name">New Leads</div>
-                    <div className="pipeline-stage-count">{newLeadsToday}</div>
+                    <div className="pipeline-stage-count">{formatINR(newLeadsToday)}</div>
                   </div>
                   {pipelineStages.map(([name, count]) => (
                     <div key={name} className="pipeline-stage">
                       <div className="pipeline-stage-name">{name}</div>
-                      <div className="pipeline-stage-count">{count}</div>
+                      <div className="pipeline-stage-count">{formatINR(count)}</div>
                     </div>
                   ))}
                   {pipelineStages.length === 0 && (
@@ -540,34 +541,35 @@ export default function Dashboard() {
                     <div className="summary-label">Bookings</div>
                     <div className="summary-value">
                       {/* SALES: my_bookings_count, ADMIN: count */}
-                      {metrics?.bookings?.my_bookings_count ??
+                      {formatINR(metrics?.bookings?.my_bookings_count ??
                         metrics?.bookings?.count ??
-                        0}
+                        0)}
                     </div>
                   </div>
                   <div className="summary-item">
                     <div className="summary-label">Agreement value</div>
                     <div className="summary-value">
-                      {/* SALES: my_bookings_value, ADMIN: total_agreement_value */}
-                      ₹
-                      {metrics?.bookings?.my_bookings_value ??
-                        metrics?.bookings?.total_agreement_value ??
-                        0}
-                    </div>
+                    {formatINR(
+                      metrics?.bookings?.my_bookings_value ??
+                      metrics?.bookings?.total_agreement_value ??
+                      0
+                    )}
+                  </div>
+
                   </div>
 
                   <div className="summary-item">
                     <div className="summary-label">Cost sheets</div>
                     <div className="summary-value">
-                      {Object.values(
+                      {formatINR(Object.values(
                         metrics?.cost_sheets?.count_by_status || {}
-                      ).reduce((a, b) => a + b, 0)}
+                      ).reduce((a, b) => a + b, 0))}
                     </div>
                   </div>
                   <div className="summary-item">
                     <div className="summary-label">KYC pending</div>
                     <div className="summary-value">
-                      {metrics?.kyc?.requests_by_status?.PENDING ?? 0}
+                      {formatINR(metrics?.kyc?.requests_by_status?.PENDING ?? 0)}
                     </div>
                   </div>
                 </div>

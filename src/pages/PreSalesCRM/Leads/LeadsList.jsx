@@ -654,7 +654,7 @@ export default function LeadsList() {
                   onChange={handleImportFileChange}
                 />
                 <p className="small-hint">
-                  Required columns: <b>first_name, email, mobile_number</b>.{" "}
+                  Required columns: <b>first_name, mobile_number</b>.{" "}
                   {/* <br />
                   Optional: last_name, company, budget, annual_income, walking (
                   <code>true</code>/<code>false</code>), tel_res, tel_office,

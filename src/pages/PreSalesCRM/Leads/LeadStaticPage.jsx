@@ -557,7 +557,7 @@ const LeadStaticPage = () => {
       if (st) return toTitleCase(st.label || st.code || `#${st.id}`);
     }
 
-    return "No status";
+    return "Pending";
   };
 
   const handleCommentChange = (field, value) => {
@@ -993,10 +993,10 @@ const LeadStaticPage = () => {
     }
 
     // ✅ Things to do / remarks is now mandatory
-    if (!activityForm.info || !activityForm.info.trim()) {
-      toast.error("Please fill Things to do / remarks.");
-      return;
-    }
+    // if (!activityForm.info || !activityForm.info.trim()) {
+    //   toast.error("Please fill Things to do / remarks.");
+    //   return;
+    // }
 
     setSavingActivity(true);
     try {
@@ -1956,13 +1956,13 @@ const LeadStaticPage = () => {
             <button className="tab" type="button" onClick={handleBookFlatClick}>
               Booking
             </button>
-            <button
+            {/* <button
               className={`tab ${activeTab === "email" ? "active" : ""}`}
               type="button"
               onClick={() => setActiveTab("email")}
             >
               Email
-            </button>
+            </button> */}
             <button className="tab tab-locked" type="button">
               SMS <span className="lock-icon">🔒</span>
             </button>
@@ -2042,7 +2042,7 @@ const LeadStaticPage = () => {
                   </div>
 
                   <div className="field-full">
-                    <label>Title</label>
+                    <label>Things to do</label>  
                     <input
                       className="input-plain"
                       value={activityForm.title}
@@ -2052,7 +2052,9 @@ const LeadStaticPage = () => {
                     />
                   </div>
 
-                  <div className="field-full">
+                   
+
+                  {/* <div className="field-full">
                     <label>Things to do</label>
                     <textarea
                       className="input-plain tall"
@@ -2061,7 +2063,7 @@ const LeadStaticPage = () => {
                         handleActivityChange("info", e.target.value)
                       }
                     />
-                  </div>
+                  </div> */}
 
                   <div className="field-full">
                     <label>Date</label>

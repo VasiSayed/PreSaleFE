@@ -318,31 +318,31 @@ export default function SalesNavigation() {
           route: "/channel-partner-setup",
           section: "pre-sales",
         },
-        {
-          id: "sales-executive",
-          label: "Sales Executive Setup",
-          route: "/sales/executives",
-          section: "pre-sales",
-        },
+        // {
+        //   id: "sales-executive",
+        //   label: "Sales Executive Setup",
+        //   route: "/sales/executives",
+        //   section: "pre-sales",
+        // },
         {
           id: "cost-quotation",
           label: "Cost Sheet Quotation Setup",
           route: "/costsheet/templates",
           section: "pre-sales",
         },
-        {
-          id: "document-setup",
-          label: "Document Setup",
-          route: "/sales/documents",
-          section: "pre-sales",
-        },
+        // {
+        //   id: "document-setup",
+        //   label: "Document Setup",
+        //   route: "/sales/documents",
+        //   section: "pre-sales",
+        // },
 
-        {
-          id: "document-setup",
-          label: "Document Setup",
-          route: "/sales/documents",
-          section: "pre-sales",
-        },
+        // {
+        //   id: "document-setup",
+        //   label: "Document Setup",
+        //   route: "/sales/documents",
+        //   section: "pre-sales",
+        // },
         {
           id: "booking-Approval",
           label: "Booking Approval",
@@ -351,7 +351,7 @@ export default function SalesNavigation() {
         },
         {
           id: "user-register",
-          label: "New User",
+          label: "Sales Executive Setup",
           route: "/new/user",
           section: "pre-sales",
         },

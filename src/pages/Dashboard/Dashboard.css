@@ -348,23 +348,31 @@
   padding: 0.8rem 0.9rem;
   border: 1px solid #eef2ff;
 }
-
 .metric-label {
   font-size: 0.8rem;
   color: #6b7280;
   margin-bottom: 0.25rem;
+
+  text-align: center;        /* center label */
 }
 
 .metric-value {
   font-size: 1.4rem;
   font-weight: 600;
   color: #111827;
+
+  text-align: center;        /* center text */
+  display: flex;             /* perfect centering */
+  justify-content: center;
+  align-items: center;
 }
+
 
 .metric-subtext {
   font-size: 0.75rem;
   color: #9ca3af;
   margin-top: 0.25rem;
+  text-align: center;
 }
 
 /* quality bar */
@@ -563,12 +571,14 @@
   font-size: 0.8rem;
   color: #6b7280;
   margin-bottom: 0.25rem;
+  text-align: center;
 }
 
 .pipeline-stage-count {
   font-size: 1.1rem;
   font-weight: 600;
   color: #111827;
+  text-align: center;
 }
 
 /* ===========================
@@ -598,11 +608,15 @@
   color: #6b7280;
   margin-bottom: 0.2rem;
 }
-
 .summary-value {
   font-size: 1.1rem;
   font-weight: 600;
   color: #111827;
+
+  text-align: center;        /* center text */
+  display: flex;             /* flex for perfect centering */
+  justify-content: center;   /* horizontal center */
+  align-items: center;       /* vertical center */
 }
 
 /* ===========================
