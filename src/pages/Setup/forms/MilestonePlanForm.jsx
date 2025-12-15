@@ -456,16 +456,16 @@ export default function MilestonePlanForm({
                 disabled={milestoneForm.calcmode === "AMOUNT"}
                 step="0.01"
               />
-              <input
+              {/* <input
                 className="field-input"
                 type="number"
-                placeholder="Amount"
+                placeholder="Amountededededed"
                 value={slab.amount}
                 onChange={(e) =>
                   updateMilestoneSlab(idx, "amount", e.target.value)
                 }
                 step="0.01"
-              />
+              /> */}
               <input
                 className="field-input"
                 placeholder="Remarks"

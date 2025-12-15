@@ -257,13 +257,13 @@ export default function SiteVisitList() {
               <i className="fa fa-filter" /> Filters
             </button>
 
-            <button
+            {/* <button
               className="filter-btn"
               onClick={() => navigate("/sales/lead/site-visit/create")}
             >
               <i className="fa fa-plus" />
               Add Site Visit
-            </button>
+            </button> */}
           </div>
         </div>
 
