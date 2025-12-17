@@ -76,9 +76,24 @@ const ProjectSetupDetail = () => {
       setUnits(unitsRes.data.results || unitsRes.data);
       setMilestonePlans(msPlansRes.data.results || msPlansRes.data);
       setMilestoneSlabs(msSlabsRes.data.results || msSlabsRes.data);
-      setPaymentPlans(payPlansRes.data.results || payPlansRes.data);
-      setPaymentSlabs(paySlabsRes.data.results || paySlabsRes.data);
       setProjectBanks(projectBanksRes.data.results || projectBanksRes.data);
+
+      const paymentPlansData = payPlansRes.data.results || payPlansRes.data || [];
+      const paymentSlabsData = paySlabsRes.data.results || paySlabsRes.data || [];
+
+      // normalize payment plans (attach slabs properly)
+      const normalizedPaymentPlans = paymentPlansData.map((plan) => ({
+        ...plan,
+        slabs:
+          Array.isArray(plan.slabs) && plan.slabs.length
+            ? plan.slabs
+            : paymentSlabsData.filter(
+                (s) => String(s.plan) === String(plan.id)
+              ),
+      }));
+
+      setPaymentPlans(normalizedPaymentPlans);
+      setPaymentSlabs(paymentSlabsData);
     } catch (err) {
       console.error(err);
       setError("Failed to load project setup data.");
@@ -234,35 +249,95 @@ const saveMilestonePlan = async (plan) => {
   };
 
 
-  // ========= Payment Plans =========
+  // ========= Payment Plans & Slabs =========
 
-  const handlePaymentPlanChange = (id, field, value) => {
-    setPaymentPlans((prev) =>
-      prev.map((p) => (p.id === id ? { ...p, [field]: value } : p))
-    );
-  };
-
-const savePaymentPlan = async (plan) => {
-  try {
-    const payload = {
-      code: plan.code,
-      name: plan.name,
-      project: plan.project,
+    const handlePaymentPlanChange = (id, field, value) => {
+      setPaymentPlans((prev) =>
+        prev.map((p) => (p.id === id ? { ...p, [field]: value } : p))
+      );
     };
-    const res = await axiosInstance.patch(
-      `/client/payment-plans/${plan.id}/`,
-      payload
-    );
-    setPaymentPlans((prev) =>
-      prev.map((p) => (p.id === plan.id ? res.data : p))
-    );
-    toast.success(`Payment plan "${plan.code}" updated`);
-  } catch (err) {
-    console.error(err);
-    setError(`Failed to save payment plan ${plan.id}.`);
-    toast.error("Failed to save payment plan");
-  }
-};
+
+    const savePaymentPlan = async (plan) => {
+      try {
+        const payload = {
+          code: plan.code,
+          name: plan.name,
+          project: plan.project,
+        };
+        const res = await axiosInstance.patch(
+          `/client/payment-plans/${plan.id}/`,
+          payload
+        );
+        setPaymentPlans((prev) =>
+          prev.map((p) => (p.id === plan.id ? res.data : p))
+        );
+        toast.success(`Payment plan "${plan.code}" updated`);
+      } catch (err) {
+        console.error(err);
+        setError(`Failed to save payment plan ${plan.id}.`);
+        toast.error("Failed to save payment plan");
+      }
+    };
+
+    // CORRECTED: This function now updates the nested slabs within the paymentPlans state
+    const handlePaymentSlabChange = (slabId, field, value) => {
+      // 1. Update global paymentSlabs state
+      setPaymentSlabs((prevSlabs) =>
+        prevSlabs.map((s) => (s.id === slabId ? { ...s, [field]: value } : s))
+      );
+
+      // 2. Update nested slabs in paymentPlans state (for immediate UI refresh)
+      setPaymentPlans((prevPlans) =>
+        prevPlans.map((plan) => ({
+          ...plan,
+          slabs: plan.slabs.map((slab) =>
+            slab.id === slabId ? { ...slab, [field]: value } : slab
+          ),
+        }))
+      );
+    };
+
+    const savePaymentSlab = async (slab) => {
+          try {
+            const payload = {
+              plan: slab.plan,
+              order_index: slab.order_index,
+              name: slab.name,
+              // CORRECTED: Ensure percentage is correctly parsed as a number
+              percentage: slab.percentage ? Number(slab.percentage) : null,
+            };
+
+            const res = await axiosInstance.patch(
+              `/client/payment-slabs/${slab.id}/`,
+              payload
+            );
+
+            // Update the global paymentSlabs state with the response data
+            setPaymentSlabs((prev) =>
+              prev.map((s) => (s.id === slab.id ? res.data : s))
+            );
+
+            // Update the nested slabs in paymentPlans state for immediate UI refresh
+            setPaymentPlans((prev) =>
+              prev.map((p) =>
+                // The slab's 'plan' property holds the parent plan ID
+                String(p.id) === String(slab.plan)
+                  ? {
+                      ...p,
+                      slabs: p.slabs.map((s) =>
+                        s.id === slab.id ? res.data : s
+                      ),
+                    }
+                  : p
+              )
+            );
+
+            toast.success("Payment slab updated");
+          } catch (err) {
+            console.error(err);
+            toast.error("Failed to save payment slab");
+          }
+        };
 
 
   // ========= Project Banks =========
@@ -639,50 +714,116 @@ const saveProjectBank = async (bank) => {
       </section>
 
       {/* PAYMENT PLANS SECTION */}
-      <section className="psd-section">
-        <h2>Payment Plans</h2>
-        <table className="psd-table">
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>Code</th>
-              <th>Name</th>
-              <th>Save</th>
-            </tr>
-          </thead>
-          <tbody>
-            {paymentPlans.map((p) => (
-              <tr key={p.id}>
-                <td>{p.id}</td>
-                <td>
-                  <input
-                    value={p.code || ""}
-                    onChange={(e) =>
-                      handlePaymentPlanChange(p.id, "code", e.target.value)
-                    }
-                  />
-                </td>
-                <td>
-                  <input
-                    value={p.name || ""}
-                    onChange={(e) =>
-                      handlePaymentPlanChange(p.id, "name", e.target.value)
-                    }
-                  />
-                </td>
-                <td>
-                  <button onClick={() => savePaymentPlan(p)}>Save</button>
-                </td>
-              </tr>
-            ))}
-            {paymentPlans.length === 0 && (
+<section className="psd-section">
+  <h2>Payment Plans</h2>
+
+  {paymentPlans.length === 0 && <div>No payment plans found</div>}
+
+  {paymentPlans.map((plan) => (
+    <div key={plan.id} style={{ marginBottom: 32 }}>
+      {/* -------- Payment Plan -------- */}
+      <table className="psd-table" style={{ marginBottom: 12 }}>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Code</th>
+            <th>Name</th>
+            <th>Total %</th>
+            <th>Save</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>{plan.id}</td>
+            <td>
+              <input
+                value={plan.code || ""}
+                onChange={(e) =>
+                  handlePaymentPlanChange(plan.id, "code", e.target.value)
+                }
+              />
+            </td>
+            <td>
+              <input
+                value={plan.name || ""}
+                onChange={(e) =>
+                  handlePaymentPlanChange(plan.id, "name", e.target.value)
+                }
+              />
+            </td>
+            <td>{plan.total_percentage ?? "-"}</td>
+            <td>
+              <button onClick={() => savePaymentPlan(plan)}>Save</button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      {/* -------- Payment Slabs -------- */}
+      <div style={{ marginLeft: 24 }}>
+        <h3 style={{ fontSize: 15, marginBottom: 8 }}>
+          Payment Slabs
+        </h3>
+
+        {plan.slabs && plan.slabs.length ? (
+          <table className="psd-table">
+            <thead>
               <tr>
-                <td colSpan="4">No payment plans found.</td>
+                <th>ID</th>
+                <th>Order</th>
+                <th>Name</th>
+                <th>Percentage</th>
+                <th>Save</th>
               </tr>
-            )}
-          </tbody>
-        </table>
-      </section>
+            </thead>
+            <tbody>
+              {plan.slabs.map((slab) => (
+                <tr key={slab.id}>
+                  <td>{slab.id}</td>
+                  <td>{slab.order_index}</td>
+                  <td>
+                    <input
+                      value={slab.name || ""}
+                      onChange={(e) =>
+                        handlePaymentSlabChange(
+                          slab.id,
+                          "name",
+                          e.target.value
+                        )
+                      }
+                    />
+                  </td>
+                  <td>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={slab.percentage || ""}
+                      onChange={(e) =>
+                        handlePaymentSlabChange(
+                          slab.id,
+                          "percentage",
+                          e.target.value
+                        )
+                      }
+                    />
+                  </td>
+                  <td>
+                    <button onClick={() => savePaymentSlab(slab)}>
+                      Save
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        ) : (
+          <div style={{ color: "#777" }}>No slabs</div>
+        )}
+      </div>
+    </div>
+  ))}
+</section>
+
 
       {/* PROJECT BANKS SECTION */}
       <section className="psd-section">

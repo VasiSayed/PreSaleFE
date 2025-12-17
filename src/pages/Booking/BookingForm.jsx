@@ -8489,9 +8489,21 @@ const BookingForm = () => {
                     </div>
                   )}
 
-                  <div className="bf-top-title">
+                  {/* <div className="bf-top-title">
                     {toSentenceCase(companyName || currentProjectLabel || "")}
-                  </div>
+                  </div> */}
+
+
+                  <div className="bf-top-title">
+                  {(companyName || currentProjectLabel || "")
+                    .toLowerCase()
+                    .split(" ")
+                    .filter(Boolean)
+                    .map(word => word[0].toUpperCase() + word.slice(1))
+                    .join(" ")}
+                </div>
+
+                  
                 </div>
               )}
 

@@ -1,8 +1,8 @@
 import axios from "axios";
 
-export const BASE_URL = "https://presales.myciti.life/api/";
+//export const BASE_URL = "https://presales.myciti.life/api/";
 
-// export const BASE_URL = "http://127.0.0.1:8000/api/";
+export const BASE_URL = "http://127.0.0.1:8000/api/";
 
 // ---- Create axios instance ----
 const api = axios.create({

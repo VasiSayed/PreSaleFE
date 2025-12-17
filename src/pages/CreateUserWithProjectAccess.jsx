@@ -1,5 +1,4 @@
 // src/pages/CreateUserWithProjectAccess.jsx
-
 import React, { useEffect, useMemo, useState } from "react";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -7,12 +6,8 @@ import axiosInstance from "../api/axiosInstance";
 
 const BRAND_KEY = "BRAND_THEME";
 const PROJECTS_KEY = "AUTHORIZE_PROJECTS";
-
-// ✅ IMPORTANT: remove "api" here.
-// If axiosInstance.baseURL is ".../api/", then this will hit ".../api/accounts/register-with-project/"
 const REGISTER_URL = "accounts/register-with-project/";
 
-// Try common LS keys + redux-persist root
 const USER_KEYS = [
   "user",
   "USER",
@@ -49,17 +44,14 @@ function looksLikeHtml(s) {
   );
 }
 
-// ✅ Do NOT show HTML in toast. Convert DRF errors to clean text.
 function getNiceErrorMessage(err) {
   const status = err?.response?.status;
   const data = err?.response?.data;
 
-  // Network / CORS / no response
   if (!err?.response) {
     return "Network error. Please check internet / server.";
   }
 
-  // Status based friendly messages
   if (status === 401)
     return "Session expired / Unauthorized. Please login again.";
   if (status === 403) return "You do not have permission to create users.";
@@ -67,7 +59,6 @@ function getNiceErrorMessage(err) {
     return "API not found (404). Please check endpoint/REGISTER_URL.";
   if (status >= 500) return "Server error. Please try again.";
 
-  // 400/other: DRF validation errors
   if (typeof data === "string") {
     if (looksLikeHtml(data))
       return "Request failed. Please check API URL or server logs.";
@@ -86,23 +77,17 @@ function getNiceErrorMessage(err) {
       return data.detail;
     }
 
-    // pick first field error only (clean)
     const entries = Object.entries(data);
     for (const [field, value] of entries) {
       if (Array.isArray(value) && value.length) return `${field}: ${value[0]}`;
       if (typeof value === "string") return `${field}: ${value}`;
     }
-
     return "Invalid request.";
   }
 
   return "Request failed.";
 }
 
-// Supports shapes:
-// 1) {id, role, is_staff, username...}
-// 2) {user:{id...}} or {data:{id...}}
-// 3) redux-persist: localStorage["persist:root"] -> JSON with values as strings
 function getCurrentUserFromLS() {
   for (const k of USER_KEYS) {
     const raw = localStorage.getItem(k);
@@ -115,7 +100,6 @@ function getCurrentUserFromLS() {
         const sliceRaw = parsed?.[c];
         const slice =
           typeof sliceRaw === "string" ? safeParseJSON(sliceRaw) : sliceRaw;
-
         const u = slice?.id
           ? slice
           : slice?.user?.id
@@ -123,7 +107,6 @@ function getCurrentUserFromLS() {
           : slice?.data?.id
           ? slice.data
           : null;
-
         if (u?.id) return u;
       }
       continue;
@@ -136,7 +119,6 @@ function getCurrentUserFromLS() {
       : parsed?.data?.id
       ? parsed.data
       : null;
-
     if (candidate?.id) return candidate;
   }
   return null;
@@ -184,23 +166,17 @@ export default function CreateUserWithProjectAccess() {
   const [brand, setBrand] = useState(null);
   const [authorizedProjects, setAuthorizedProjects] = useState([]);
   const [currentUser, setCurrentUser] = useState(null);
-
   const [form, setForm] = useState({
     username: "",
     password: "",
     first_name: "",
     last_name: "",
     email: "",
-
-    // default role SALES
-    role: "SALES",
-
+    role: "SALES", // default
     can_view: true,
     can_edit: false,
-
     project_ids: [],
   });
-
   const [submitting, setSubmitting] = useState(false);
   const [created, setCreated] = useState(null);
 
@@ -223,7 +199,6 @@ export default function CreateUserWithProjectAccess() {
 
   useEffect(() => {
     setBrand(safeParseJSON(localStorage.getItem(BRAND_KEY)));
-
     const p = safeParseJSON(localStorage.getItem(PROJECTS_KEY));
     const list = Array.isArray(p) ? p : [];
     const map = new Map();
@@ -232,11 +207,10 @@ export default function CreateUserWithProjectAccess() {
       if (id) map.set(id, { id, name: x?.name || `Project #${id}` });
     });
     setAuthorizedProjects(Array.from(map.values()));
-
     setCurrentUser(getCurrentUserFromLS());
   }, []);
 
-  const isAdminUser = currentUser?.role === "ADMIN" && !currentUser?.is_staff;
+  const isAdminUser = currentUser?.role === "ADMIN"&& !currentUser?.is_staff;
 
   function updateField(name, value) {
     setForm((p) => ({ ...p, [name]: value }));
@@ -262,14 +236,9 @@ export default function CreateUserWithProjectAccess() {
     setForm((p) => ({ ...p, project_ids: [] }));
   }
 
-  // ✅ admin_id hidden from UI, sent automatically
   function getAutoAdminId() {
-    // if logged-in user is ADMIN -> their own id is the owning admin
     if (isAdminUser && currentUser?.id) return currentUser.id;
-
-    // if logged-in is non-admin but has admin_id in LS -> use it
     if (currentUser?.admin_id) return currentUser.admin_id;
-
     return null;
   }
 
@@ -291,16 +260,16 @@ export default function CreateUserWithProjectAccess() {
       first_name: form.first_name?.trim() || "",
       last_name: form.last_name?.trim() || "",
       email: form.email.trim(),
-
       project_ids: form.project_ids,
       can_view: !!form.can_view,
       can_edit: !!form.can_edit,
     };
 
-    // role default SALES: skip sending if SALES
-    if (form.role && form.role !== "SALES") payload.role = form.role;
+    // Only send role if not default (SALES)
+    if (form.role && form.role !== "SALES") {
+      payload.role = form.role;
+    }
 
-    // ✅ auto admin_id (hidden)
     const adminId = getAutoAdminId();
     if (adminId) payload.admin_id = adminId;
 
@@ -308,16 +277,11 @@ export default function CreateUserWithProjectAccess() {
       setSubmitting(true);
       const res = await axiosInstance.post(REGISTER_URL, payload);
       setCreated(res.data);
-      toast.success("User created ✅");
-      setForm((p) => ({ ...p, password: "" }));
+      toast.success("User created successfully ✅");
+      setForm((p) => ({ ...p, username: "", password: "", email: "", first_name: "", last_name: "" }));
     } catch (err) {
-      // ✅ show clean message only (no HTML)
       toast.error(getNiceErrorMessage(err));
-      console.error(
-        "Create user failed:",
-        err?.response?.status,
-        err?.response?.data || err
-      );
+      console.error("Create user failed:", err?.response?.status, err?.response?.data || err);
     } finally {
       setSubmitting(false);
     }
@@ -333,22 +297,13 @@ export default function CreateUserWithProjectAccess() {
   };
 
   const cardStyle = {
-    maxWidth:"100%",
+    maxWidth: "100%",
     margin: "0 auto",
     background: "#fff",
     borderRadius: 16,
     border: `1px solid rgba(0,0,0,0.08)`,
     boxShadow: "0 12px 30px rgba(0,0,0,0.08)",
     overflow: "hidden",
-  };
-
-  const headerStyle = {
-    display: "flex",
-    gap: 14,
-    alignItems: "center",
-    padding: "18px 20px",
-    borderBottom: `1px solid rgba(0,0,0,0.08)`,
-    background: theme.secondary_color,
   };
 
   const buttonStyle = {
@@ -390,181 +345,73 @@ export default function CreateUserWithProjectAccess() {
   return (
     <div style={containerStyle}>
       <ToastContainer position="top-right" />
-
       <div style={cardStyle}>
-        {/* <div style={headerStyle}>
-          {theme.logo ? (
-            <img
-              src={theme.logo}
-              alt="logo"
-              style={{
-                width: 44,
-                height: 44,
-                borderRadius: 10,
-                objectFit: "cover",
-              }}
-            />
-          ) : (
-            <div
-              style={{
-                width: 44,
-                height: 44,
-                borderRadius: 10,
-                background: theme.accent_color,
-              }}
-            />
-          )}
-
-          <div style={{ flex: 1 }}>
-            <div
-              style={{
-                fontSize: 18,
-                fontWeight: 900,
-                color: theme.primary_color,
-              }}
-            >
-              {theme.company_name || "Create User"}
-            </div>
-            <div style={{ fontSize: 12, opacity: 0.8 }}>
-              User create + project access (from AUTHORIZE_PROJECTS)
-            </div>
-            {currentUser?.username && (
-              <div style={{ fontSize: 12, opacity: 0.75, marginTop: 4 }}>
-                Logged in: <b>{currentUser.username}</b> (role:{" "}
-                {currentUser.role || "-"})
-              </div>
-            )}
-          </div>
-
-          <div
-            style={{
-              padding: "6px 10px",
-              borderRadius: 999,
-              background: "rgba(37,99,235,0.10)",
-              border: `1px solid ${theme.accent_color}`,
-              color: theme.accent_color,
-              fontWeight: 900,
-              fontSize: 12,
-              whiteSpace: "nowrap",
-            }}
-          >
-            Default role: SALES
-          </div>
-        </div> */}
-
         <div style={{ padding: 20 }}>
           <form onSubmit={onSubmit}>
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "1fr 1fr",
-                gap: 14,
-              }}
-            >
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
               <div>
                 <div style={labelStyle}>Username *</div>
-                <input
-                  style={inputStyle}
-                  value={form.username}
-                  onChange={(e) => updateField("username", e.target.value)}
-                />
+                <input style={inputStyle} value={form.username} onChange={(e) => updateField("username", e.target.value)} />
               </div>
-
               <div>
                 <div style={labelStyle}>Password *</div>
-                <input
-                  style={inputStyle}
-                  type="password"
-                  value={form.password}
-                  onChange={(e) => updateField("password", e.target.value)}
-                />
+                <input style={inputStyle} type="password" value={form.password} onChange={(e) => updateField("password", e.target.value)} />
               </div>
-
               <div>
-                <div style={labelStyle}>First name</div>
-                <input
-                  style={inputStyle}
-                  value={form.first_name}
-                  onChange={(e) => updateField("first_name", e.target.value)}
-                />
+                <div style={labelStyle}>First Name</div>
+                <input style={inputStyle} value={form.first_name} onChange={(e) => updateField("first_name", e.target.value)} />
               </div>
-
               <div>
-                <div style={labelStyle}>Last name</div>
-                <input
-                  style={inputStyle}
-                  value={form.last_name}
-                  onChange={(e) => updateField("last_name", e.target.value)}
-                />
+                <div style={labelStyle}>Last Name</div>
+                <input style={inputStyle} value={form.last_name} onChange={(e) => updateField("last_name", e.target.value)} />
               </div>
-
               <div>
                 <div style={labelStyle}>Email *</div>
-                <input
-                  style={inputStyle}
-                  type="email"
-                  value={form.email}
-                  onChange={(e) => updateField("email", e.target.value)}
-                />
+                <input style={inputStyle} type="email" value={form.email} onChange={(e) => updateField("email", e.target.value)} />
               </div>
-
-              {/* Admin UI removed بالكامل ✅ */}
               <div />
             </div>
 
-            <div
-              style={{
-                marginTop: 16,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                gap: 12,
-              }}
-            >
-              <div
-                style={{
-                  fontSize: 14,
-                  fontWeight: 900,
-                  color: theme.primary_color,
-                }}
+            {/* Role Selector - Now includes MANAGER & FULL_CONTROL */}
+            <div style={{ marginTop: 16 }}>
+              <div style={labelStyle}>Role</div>
+              <select
+                style={{ ...inputStyle, cursor: "pointer" }}
+                value={form.role}
+                onChange={(e) => updateField("role", e.target.value)}
               >
+                <option value="SALES">Sales Person (Default)</option>
+                <option value="MANAGER">Manager</option>
+                <option value="FULL_CONTROL">Full Control (Like Admin)</option>
+                <option value="RECEPTION">Reception</option>
+                <option value="CHANNEL_PARTNER">Channel Partner</option>
+                <option value="CALLING_TEAM">Calling Team</option>
+                <option value="KYC_TEAM">KYC Team</option>
+              </select>
+              <div style={{ fontSize: 11, opacity: 0.7, marginTop: 4 }}>
+                Full Control has same permissions as Admin (view/edit all team data)
+              </div>
+            </div>
+
+            <div style={{ marginTop: 16, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+              <div style={{ fontSize: 14, fontWeight: 900, color: theme.primary_color }}>
                 Project Access *{" "}
                 <span style={{ fontSize: 12, opacity: 0.7 }}>
                   ({form.project_ids?.length || 0} selected)
                 </span>
               </div>
-
               <div style={{ display: "flex", gap: 10 }}>
-                <button
-                  type="button"
-                  style={smallBtnStyle}
-                  onClick={selectAllProjects}
-                  disabled={submitting || authorizedProjects.length === 0}
-                >
+                <button type="button" style={smallBtnStyle} onClick={selectAllProjects} disabled={submitting || authorizedProjects.length === 0}>
                   Select All
                 </button>
-                <button
-                  type="button"
-                  style={smallBtnStyle}
-                  onClick={clearAllProjects}
-                  disabled={submitting || (form.project_ids?.length || 0) === 0}
-                >
+                <button type="button" style={smallBtnStyle} onClick={clearAllProjects} disabled={submitting || (form.project_ids?.length || 0) === 0}>
                   Clear
                 </button>
               </div>
             </div>
 
             {authorizedProjects.length === 0 ? (
-              <div
-                style={{
-                  marginTop: 10,
-                  padding: 12,
-                  borderRadius: 12,
-                  border: "1px solid rgba(0,0,0,0.12)",
-                  background: "rgba(0,0,0,0.04)",
-                  fontWeight: 700,
-                }}
-              >
+              <div style={{ marginTop: 10, padding: 12, borderRadius: 12, border: "1px solid rgba(0,0,0,0.12)", background: "rgba(0,0,0,0.04)", fontWeight: 700 }}>
                 No projects found in <b>localStorage.{PROJECTS_KEY}</b>
               </div>
             ) : (
@@ -586,75 +433,27 @@ export default function CreateUserWithProjectAccess() {
                     >
                       <div>
                         <div style={{ fontWeight: 900 }}>{p.name}</div>
-                        <div style={{ fontSize: 12, opacity: 0.75 }}>
-                          Project ID: {p.id}
-                        </div>
+                        <div style={{ fontSize: 12, opacity: 0.75 }}>Project ID: {p.id}</div>
                       </div>
-
-                      <Switch
-                        checked={checked}
-                        onChange={(on) => toggleProject(p.id, on)}
-                        disabled={submitting}
-                        theme={theme}
-                      />
+                      <Switch checked={checked} onChange={(on) => toggleProject(p.id, on)} disabled={submitting} theme={theme} />
                     </div>
                   );
                 })}
               </div>
             )}
 
-            <div
-              style={{
-                display: "flex",
-                gap: 16,
-                marginTop: 14,
-                alignItems: "center",
-              }}
-            >
+            <div style={{ display: "flex", gap: 16, marginTop: 14, alignItems: "center" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                <div style={{ fontWeight: 800 }}>can_view</div>
-                <Switch
-                  checked={form.can_view}
-                  onChange={(v) => updateField("can_view", v)}
-                  disabled={submitting}
-                  theme={theme}
-                />
+                <div style={{ fontWeight: 800 }}>Can View</div>
+                <Switch checked={form.can_view} onChange={(v) => updateField("can_view", v)} disabled={submitting} theme={theme} />
               </div>
-
               <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                <div style={{ fontWeight: 800 }}>can_edit</div>
-                <Switch
-                  checked={form.can_edit}
-                  onChange={(v) => updateField("can_edit", v)}
-                  disabled={submitting}
-                  theme={theme}
-                />
+                <div style={{ fontWeight: 800 }}>Can Edit</div>
+                <Switch checked={form.can_edit} onChange={(v) => updateField("can_edit", v)} disabled={submitting} theme={theme} />
               </div>
             </div>
 
-            {/* Optional role selector */}
-            <div style={{ marginTop: 14 }}>
-              <div style={labelStyle}>Role (optional)</div>
-              <select
-                style={{ ...inputStyle, cursor: "pointer" }}
-                value={form.role}
-                onChange={(e) => updateField("role", e.target.value)}
-              >
-                <option value="SALES">SALES (default)</option>
-                <option value="RECEPTION">RECEPTION</option>
-                <option value="CHANNEL_PARTNER">CHANNEL_PARTNER</option>
-                <option value="CALLING_TEAM">CALLING_TEAM</option>
-                <option value="KYC_TEAM">KYC_TEAM</option>
-              </select>
-            </div>
-
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "flex-end",
-                marginTop: 18,
-              }}
-            >
+            <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 18 }}>
               <button type="submit" style={buttonStyle} disabled={submitting}>
                 {submitting ? "Creating..." : "Create User"}
               </button>
@@ -663,14 +462,8 @@ export default function CreateUserWithProjectAccess() {
 
           {created && (
             <div style={{ marginTop: 18 }}>
-              <div
-                style={{
-                  fontWeight: 900,
-                  color: theme.primary_color,
-                  marginBottom: 8,
-                }}
-              >
-                Response
+              <div style={{ fontWeight: 900, color: theme.primary_color, marginBottom: 8 }}>
+                User Created Successfully
               </div>
               <pre
                 style={{

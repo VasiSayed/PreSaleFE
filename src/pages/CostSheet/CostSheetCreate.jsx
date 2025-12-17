@@ -2305,7 +2305,7 @@ const CostSheetCreate = () => {
   const [customerContactPerson, setCustomerContactPerson] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
   const [customerEmail, setCustomerEmail] = useState("");
-
+  const [isAreaManuallyEdited, setIsAreaManuallyEdited] = useState(false);
   const [projectName, setProjectName] = useState("");
   const [selectedTowerId, setSelectedTowerId] = useState("");
   const [selectedFloorId, setSelectedFloorId] = useState("");
@@ -3011,6 +3011,7 @@ const CostSheetCreate = () => {
   };
 
   const handleInventoryChange = (e) => {
+    setIsAreaManuallyEdited(false);
     const value = e.target.value;
     setSelectedInventoryId(value);
 
@@ -3138,6 +3139,14 @@ const CostSheetCreate = () => {
         return rera;
     }
   }, [selectedInventory, areaBasis]);
+
+  useEffect(() => {
+  // auto-update ONLY if user did not type manually
+  if (!isAreaManuallyEdited && calculatedArea > 0) {
+    setBaseAreaSqft(String(Number(calculatedArea).toFixed(2)));
+  }
+}, [calculatedArea, isAreaManuallyEdited]);
+
 
   // ==============================
   // Payment plan handlers
@@ -3710,11 +3719,26 @@ const CostSheetCreate = () => {
             <div className="cs-field">
               <label className="cs-label">Total Area (sq. ft.)</label>
               <input
-                type="number"
-                className="cs-input"
-                value={baseAreaSqft}
-                onChange={(e) => setBaseAreaSqft(e.target.value)}
-              />
+  type="text"
+  className="cs-input"
+  inputMode="decimal"
+  value={baseAreaSqft}
+  onChange={(e) => {
+    const val = e.target.value;
+
+    // allow digits + single decimal
+    if (/^\d*\.?\d*$/.test(val)) {
+      setIsAreaManuallyEdited(true);   // 🔒 lock auto updates
+      setBaseAreaSqft(val);
+    }
+  }}
+  onBlur={() => {
+    if (baseAreaSqft !== "") {
+      setBaseAreaSqft(Number(baseAreaSqft).toFixed(2));
+    }
+  }}
+/>
+
             </div>
 
             <div className="cs-field">
