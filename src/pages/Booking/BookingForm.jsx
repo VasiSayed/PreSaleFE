@@ -9603,7 +9603,7 @@ const BookingForm = () => {
                 <div className="bf-row">
                   <div className="bf-col">
                     <label className="bf-label">
-                      {toSentenceCase("Rera Area (Sq. Ft.)")}
+                      {toSentenceCase("Carpet Area (Sq. Ft.)")}
                     </label>
                     <input
                       className="bf-input"

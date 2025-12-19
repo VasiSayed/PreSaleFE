@@ -59,10 +59,21 @@
   gap: 16px;
   margin-bottom: 16px;
 }
+/* Corrected CSS Section for SaleAddLead.css */
 
 .form-field {
   display: flex;
   flex-direction: column;
+}
+
+.form-label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 6px;
+  color: #374151;
+  /* Forces Title Case (First Letter of Every Word Capital) */
+  text-transform: capitalize !important; 
+  font-size: 13px;
 }
 
 .form-field-full {
@@ -82,6 +93,10 @@
   flex-shrink: 0;
 }
 
+/* Optional: Styling for placeholder text to match Title Case */
+.form-input::placeholder {
+  text-transform: capitalize;
+}
 .form-label {
   font-size: 14px;
   font-weight: 500;

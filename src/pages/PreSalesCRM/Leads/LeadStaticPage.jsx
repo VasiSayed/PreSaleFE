@@ -151,6 +151,7 @@ const LeadStaticPage = () => {
     company: "",
     budget: "",
     annual_income: "",
+    purpose:"",
   });
   const [leadInfoEdit, setLeadInfoEdit] = useState(false);
   const [savingLeadInfo, setSavingLeadInfo] = useState(false);
@@ -401,6 +402,7 @@ const LeadStaticPage = () => {
       company: lead.company || "",
       budget: lead.budget ?? "",
       annual_income: lead.annual_income ?? "",
+      purpose: lead.purpose || "",
     });
   }, [lead]);
 
@@ -1329,6 +1331,7 @@ const LeadStaticPage = () => {
           leadInfoForm.annual_income === ""
             ? null
             : Number(leadInfoForm.annual_income),
+             purpose: leadInfoForm.purpose || null,
       };
 
       const res = await api.patch(`/sales/sales-leads/${lead.id}/`, payload);
@@ -1870,7 +1873,7 @@ const LeadStaticPage = () => {
               )}
             </div>
             <div className="field-compact">
-              <label>Budget:</label>
+              {/* <label>Budget:</label>
               {leadInfoEdit ? (
                 <input
                   value={leadInfoForm.budget}
@@ -1887,7 +1890,37 @@ const LeadStaticPage = () => {
                   }
                   readOnly
                 />
+              )} */}
+
+              <label>Budget:</label>
+              {leadInfoEdit ? (
+                <select
+                  value={leadInfoForm.budget}
+                  onChange={(e) =>
+                    handleLeadInfoChange("budget", e.target.value)
+                  }
+                >
+                  <option value="">Select budget</option>
+                  <option value="19000000">Below 2 Cr</option>
+                  <option value="23000000">2 to 2.5 Cr</option>
+                  <option value="30000000">2.5 to 3 Cr</option>
+                  <option value="49000000">3 to 4 Cr</option>
+                  <option value="50000000">4 to 5 Cr</option>
+                  <option value="56000000">5Cr and above</option>
+
+                  
+                </select>
+              ) : (
+                <input
+                  value={
+                    lead.budget != null && lead.budget !== ""
+                      ? formatINR(lead.budget)
+                      : ""
+                  }
+                  readOnly
+                />
               )}
+
             </div>
 
             <div className="field-compact">
@@ -1915,10 +1948,36 @@ const LeadStaticPage = () => {
               <label>Project:</label>
               <input value={toTitleCase(lead.project_name || `#${lead.project}`)} readOnly />
             </div>
-            <div className="field-compact">
+            {/* <div className="field-compact">
               <label>Purpose:</label>
               <input value={toTitleCase(lead.purpose_name || "")} readOnly />
-            </div>
+            </div> */}
+
+            <div className="field-compact">
+                      <label>Purpose:</label>
+
+                      {leadInfoEdit ? (
+                        <select
+                          value={leadInfoForm.purpose || ""}
+                          onChange={(e) =>
+                            handleLeadInfoChange("purpose", e.target.value)
+                          }
+                        >
+                          <option value="">Select purpose</option>
+                          <option value="2">Investment</option>
+                          <option value="5">Second Home</option>
+                          <option value="6">Self Use</option>
+                        </select>
+                      ) : (
+                        <input
+                          value={toTitleCase(lead.purpose_name || "")}
+                          readOnly
+                        />
+                      )}
+                    </div>
+
+
+
           </div>
         </div>
 
@@ -3313,12 +3372,12 @@ const LeadStaticPage = () => {
         <div className="modal-backdrop">
           <div className="modal">
             <div className="modal-title">
-              Move to "{stageModal.stage.name}"?
+              Move to "{stageModal.stage.name}"
             </div>
             <div className="modal-body">
               <div>
                 Are you sure you want to move this lead to{" "}
-                <strong>{stageModal.stage.name}</strong>?
+                <strong>{stageModal.stage.name}</strong>
               </div>
 
               <div className="field-full" style={{ marginTop: 12 }}>

@@ -763,6 +763,7 @@ const downloadSampleExcel = () => {
                 <th>Source Name</th>
                 <th>Project</th>
                 <th>Status</th>
+                <th>Remark</th>
                 <th>Created At</th>
               </tr>
             </thead>
@@ -815,7 +816,7 @@ const downloadSampleExcel = () => {
                         {o.source_name ? toTitleCase(o.source_name) : "-"}
                       </td>
                       <td>{projectName}</td>
-                      <td>
+                      {/* <td>
                         {o.status_config_label ? (
                           <span
                             className="status-badge"
@@ -841,7 +842,34 @@ const downloadSampleExcel = () => {
                         )}
                       </td>
 
+                      <td>{formatDT(o.created_at)}</td> */}
+
+                      <td>
+                        {o.status_config_label ? (
+                          <span className="status-badge">
+                            {toSentenceCase(o.status_config_label)}
+                          </span>
+                        ) : (
+                          <span className="status-badge">Fresh</span>
+                        )}
+                      </td>
+
+                      {/* ✅ ADD THIS BLOCK */}
+                      <td style={{ maxWidth: 260 }}>
+                        {o.raw_payload?.remark ? (
+                          <span title={o.raw_payload.remark}>
+                            {o.raw_payload.remark.length > 60
+                              ? o.raw_payload.remark.slice(0, 60) + "..."
+                              : o.raw_payload.remark}
+                          </span>
+                        ) : (
+                          "-"
+                        )}
+                      </td>
+
+
                       <td>{formatDT(o.created_at)}</td>
+
                     </tr>
                   );
                 })
