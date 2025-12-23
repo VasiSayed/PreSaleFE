@@ -251,7 +251,7 @@ const FIELDS = [
   {
     section: "lead",
     name: "assign_to_id",
-    label: "Assign To (User / Round Robin)",
+    label: "Assign To (User)",
     type: "select",
     required: false,
     span: 1,

@@ -353,7 +353,7 @@ export default function BookingApprovals() {
     activeTab === "BOOKING"
       ? bookingSection === "BELOW_LIMIT_PRICE"
         ? "Below Limit Price Bookings"
-        : "Pending Booking Approvals"
+        : "Pending Booking Approval"
       : "Pending Payment Approvals";
 
   return (

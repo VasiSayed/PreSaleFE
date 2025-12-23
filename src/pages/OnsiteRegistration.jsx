@@ -1597,6 +1597,12 @@ export default function OnsiteRegistration() {
   const [showLookupModal, setShowLookupModal] = useState(false);
   const [brandLogo, setBrandLogo] = useState("");
   const [companyName, setCompanyName] = useState("");
+  // ---------- Owner / Assign To ----------
+  //const [assignableUsers, setAssignableUsers] = useState([]);
+
+
+  const [ownerId, setOwnerId] = useState("");
+  const [masters, setMasters] = useState(null);
 
   // Pincode lookup
   const [loadingPincode, setLoadingPincode] = useState(false);
@@ -1627,6 +1633,10 @@ export default function OnsiteRegistration() {
   const [quickCpOtpCode, setQuickCpOtpCode] = useState("");
   const [quickCpEmailVerified, setQuickCpEmailVerified] = useState(false);
   const [partnerTiers, setPartnerTiers] = useState([]);
+
+  const assignableUsers = useMemo(() => {
+  return masters?.assign_users || [];
+  }, [masters]);
 
   // ---------- Phone lookup (10 digits + project) ----------
   useEffect(() => {
@@ -1688,6 +1698,27 @@ export default function OnsiteRegistration() {
     }
   }, [form.residence_pincode]);
 
+
+//   // ---------- Load assignable users for project ----------
+// useEffect(() => {
+//   if (!form.project_id) {
+//     setAssignableUsers([]);
+//     return;
+//   }
+
+//   api
+//     .get("/accounts/assignable-users/", {
+//       params: { project_id: form.project_id },
+//     })
+//     .then((res) => {
+//       setAssignableUsers(res.data?.results ?? res.data ?? []);
+//     })
+//     .catch((err) => {
+//       console.error("Failed to load assignable users", err);
+//     });
+// }, [form.project_id]);
+
+
   // ---------- Load scope with projects (MY_SCOPE) ----------
   useEffect(() => {
     setScopeLoading(true);
@@ -1733,6 +1764,7 @@ export default function OnsiteRegistration() {
       .get(LEAD_MASTERS_API, { params: { project_id: form.project_id } })
       .then((res) => {
         const data = res.data || {};
+        setMasters(data);
         setUnitConfigs(data.unit_configurations || data.unit_configs || []);
         setSourcesTree(data.sources || []);
         setPurposes(data.purposes || []);
@@ -1854,6 +1886,7 @@ export default function OnsiteRegistration() {
         next.purpose_id = "";
         next.channel_partner_id = "";
         setCpMode(CP_MODE.REGISTERED);
+        setOwnerId("");
       }
 
       if (name === "source_id") {
@@ -1897,6 +1930,8 @@ export default function OnsiteRegistration() {
       last_name: form.last_name.trim(),
       mobile_number: form.mobile_number.trim(),
       email: form.email.trim() || "",
+      // owner_id: ownerId ? Number(ownerId) : null,
+      assign_to: ownerId ? Number(ownerId) : null,
 
       nationality: form.nationality || null,
       age_group: form.age_group || null,
@@ -2481,6 +2516,26 @@ export default function OnsiteRegistration() {
                 ))}
               </select>
             </div>
+            {/* Owner / Assign To */}
+              <div className="onsite-field">
+                <label className="onsite-label">Owner / Assign To</label>
+                <select
+                  className="onsite-input"
+                  value={ownerId}
+                  onChange={(e) => setOwnerId(e.target.value)}
+                  disabled={!form.project_id}
+                >
+                  <option value="">Select Owner</option>
+                 {assignableUsers.map((u) => (
+                  <option key={u.id} value={u.id}>
+                    {u.name || u.full_name || u.username || u.email}
+                    {u.role ? ` (${u.role})` : ""}
+                  </option>
+                ))}
+
+                </select>
+              </div>
+
           </div>
 
           {/* Residential Address */}

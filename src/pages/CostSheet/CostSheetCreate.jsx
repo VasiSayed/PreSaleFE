@@ -2305,7 +2305,7 @@ const CostSheetCreate = () => {
   const [customerContactPerson, setCustomerContactPerson] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
   const [customerEmail, setCustomerEmail] = useState("");
-  const [isAreaManuallyEdited, setIsAreaManuallyEdited] = useState(false);
+
   const [projectName, setProjectName] = useState("");
   const [selectedTowerId, setSelectedTowerId] = useState("");
   const [selectedFloorId, setSelectedFloorId] = useState("");
@@ -2560,10 +2560,13 @@ const CostSheetCreate = () => {
         ? inventoryMap[String(selectedInventoryId)]
         : null;
 
-    const carpetAreaSqft =
-      parseFloat(
-        (selectedInv && selectedInv.carpet_sqft) || baseAreaSqft || 0
-      ) || 0;
+    // const carpetAreaSqft =
+    //   parseFloat(
+    //     (selectedInv && selectedInv.carpet_sqft) || baseAreaSqft || 0
+    //   ) || 0;
+    // ✅ TOTAL AREA (used for Development & Maintenance)
+    const totalAreaSqft = parseFloat(baseAreaSqft || 0) || 0;
+
 
     const membershipAmt =
       template && template.share_application_money_membership_fees
@@ -2577,7 +2580,8 @@ const CostSheetCreate = () => {
 
     // Development Charges @ PSF × total area (use editable value, minimum 1, default 500)
     const devRate = Math.max(1, Number(developmentChargesPsf || (template?.development_charges_psf || 500)));
-    const devAmt = devRate * carpetAreaSqft;
+    const devAmt = devRate * totalAreaSqft;
+
 
     const elecAmt =
       template && template.electrical_watern_n_all_charges
@@ -2590,7 +2594,9 @@ const CostSheetCreate = () => {
         : 0;
     // Provisional Maintenance @ PSF × total area × months (use editable value)
     const provMonths = Number(provisionalMaintenanceMonths || (template?.provisional_maintenance_months || 6));
-    const provAmt = provRate * carpetAreaSqft * provMonths;
+    // const provAmt = provRate * carpetAreaSqft * provMonths;
+    const provAmt = provRate * totalAreaSqft * provMonths;
+
 
     // Base for GST: Legal + Development + Electrical + Provisional Maintenance (Share Fee NOT included in GST base)
     const baseForGst = legalAmt + devAmt + elecAmt + provAmt;
@@ -3011,7 +3017,6 @@ const CostSheetCreate = () => {
   };
 
   const handleInventoryChange = (e) => {
-    setIsAreaManuallyEdited(false);
     const value = e.target.value;
     setSelectedInventoryId(value);
 
@@ -3139,14 +3144,6 @@ const CostSheetCreate = () => {
         return rera;
     }
   }, [selectedInventory, areaBasis]);
-
-  useEffect(() => {
-  // auto-update ONLY if user did not type manually
-  if (!isAreaManuallyEdited && calculatedArea > 0) {
-    setBaseAreaSqft(String(Number(calculatedArea).toFixed(2)));
-  }
-}, [calculatedArea, isAreaManuallyEdited]);
-
 
   // ==============================
   // Payment plan handlers
@@ -3719,26 +3716,11 @@ const CostSheetCreate = () => {
             <div className="cs-field">
               <label className="cs-label">Total Area (sq. ft.)</label>
               <input
-  type="text"
-  className="cs-input"
-  inputMode="decimal"
-  value={baseAreaSqft}
-  onChange={(e) => {
-    const val = e.target.value;
-
-    // allow digits + single decimal
-    if (/^\d*\.?\d*$/.test(val)) {
-      setIsAreaManuallyEdited(true);   // 🔒 lock auto updates
-      setBaseAreaSqft(val);
-    }
-  }}
-  onBlur={() => {
-    if (baseAreaSqft !== "") {
-      setBaseAreaSqft(Number(baseAreaSqft).toFixed(2));
-    }
-  }}
-/>
-
+                type="number"
+                className="cs-input"
+                value={baseAreaSqft}
+                onChange={(e) => setBaseAreaSqft(e.target.value)}
+              />
             </div>
 
             <div className="cs-field">
@@ -4276,11 +4258,14 @@ const CostSheetCreate = () => {
                             margin: "0 4px",
                           }}
                         />{" "}
-                        PSF ×{" "}
+                        {/* PSF ×{" "}
                         {formatINR(
                           (selectedInventory && selectedInventory.carpet_sqft) || baseAreaSqft || 0
                         )}{" "}
-                        sq. ft.
+                        sq. ft. */}
+
+                        PSF × {formatINR(baseAreaSqft || 0)} sq. ft.
+
                       </span>
                       <span>
                         {formatINR(developmentChargesAmount)}
