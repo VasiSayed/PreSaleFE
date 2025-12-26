@@ -912,7 +912,7 @@ export default function SalesNavigation() {
     }
 
     // 2. Logic for SALES or MANAGER (Fixed the comparison logic here)
-    if (userRole === "SALES" || userRole === "MANAGER") {
+    if (userRole === "SALES") {
       return [
         { id: "dashboard", label: "Dashboard", route: "/dashboard", section: "pre-sales" },
         { id: "upcomming", label: "Upcomming Events", route: "/upcommingevent", section: "pre-sales" },
@@ -926,6 +926,36 @@ export default function SalesNavigation() {
         { id: "on-site", label: "Customer Registration Form ", route: "/onsite-registration", section: "pre-sales" },
       ];
     }
+
+    if (userRole === "MANAGER") {
+    return [
+    {
+      id: "dashboard",
+      label: "Dashboard",
+      route: "/dashboard",
+      section: "pre-sales",
+    },
+    {
+      id: "opportunities",
+      label: "Opportunities",
+      route: "/sales/opportunities",
+      section: "pre-sales",
+    },
+    {
+      id: "leads",
+      label: "Leads",
+      route: "/leads",
+      section: "pre-sales",
+    },
+    // {
+    //   id: "booking-Approval",
+    //   label: "Booking Approval",
+    //   route: "/booking/approvals",
+    //   section: "pre-sales",
+    // },
+  ];
+}
+
 
     // 3. Logic for RECEPTION
     if (userRole === "RECEPTION") {
