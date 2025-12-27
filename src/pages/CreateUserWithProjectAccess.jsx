@@ -861,6 +861,365 @@
 // }
 
 
+// import React, { useEffect, useMemo, useState } from "react";
+// import { toast, ToastContainer } from "react-toastify";
+// import "react-toastify/dist/ReactToastify.css";
+// import axiosInstance from "../api/axiosInstance";
+
+// /* ================= CONSTANTS ================= */
+// const BRAND_KEY = "BRAND_THEME";
+// const PROJECTS_KEY = "AUTHORIZE_PROJECTS";
+// const REGISTER_URL = "accounts/register-with-project/";
+// const USERS_LIST_URL = "accounts/users/";
+// const USER_UPDATE_URL = (id) => `accounts/users/${id}/`;
+
+// const USER_KEYS = ["user", "USER", "USER_DATA", "USER_DETAILS", "userData", "user_details", "persist:root"];
+
+// /* ================= HELPERS ================= */
+// function safeParseJSON(raw) {
+//   if (!raw) return null;
+//   try { return JSON.parse(raw); } catch { return null; }
+// }
+
+// function toInt(val) {
+//   const n = Number(val);
+//   return Number.isFinite(n) ? n : null;
+// }
+
+// function looksLikeHtml(s) {
+//   if (!s) return false;
+//   const t = String(s).trim();
+//   return t.startsWith("<!DOCTYPE") || t.startsWith("<html") || t.includes("<body") || /<[^>]+>/.test(t);
+// }
+
+// function getNiceErrorMessage(err) {
+//   const status = err?.response?.status;
+//   const data = err?.response?.data;
+//   if (!err?.response) return "Network error. Please check internet.";
+//   if (status === 401) return "Session expired. Please login again.";
+//   if (status === 403) return "You do not have permission.";
+//   if (typeof data === "string") return looksLikeHtml(data) ? "Request failed." : data;
+//   if (data?.detail) return data.detail;
+//   if (typeof data === "object") {
+//     const [k, v] = Object.entries(data)[0] || [];
+//     return `${k}: ${Array.isArray(v) ? v[0] : v}`;
+//   }
+//   return "Request failed.";
+// }
+
+// function getCurrentUserFromLS() {
+//   for (const k of USER_KEYS) {
+//     const raw = localStorage.getItem(k);
+//     const parsed = safeParseJSON(raw);
+//     if (!parsed) continue;
+//     if (k === "persist:root") {
+//       const candidates = ["user", "auth", "accounts", "userSlice"];
+//       for (const c of candidates) {
+//         const sliceRaw = parsed?.[c];
+//         const slice = typeof sliceRaw === "string" ? safeParseJSON(sliceRaw) : sliceRaw;
+//         const u = slice?.id ?? slice?.user?.id ?? slice?.data?.id ?? null;
+//         if (u) return slice?.user || slice?.data || slice;
+//       }
+//     } else if (parsed?.id) return parsed;
+//   }
+//   return null;
+// }
+
+// /* ================= SWITCH COMPONENT ================= */
+// function Switch({ checked, onChange, disabled, theme }) {
+//   return (
+//     <button
+//       type="button"
+//       disabled={disabled}
+//       onClick={() => !disabled && onChange(!checked)}
+//       style={{
+//         width: 46, height: 26, borderRadius: 999,
+//         border: `1px solid ${checked ? theme.accent_color : "rgba(0,0,0,0.22)"}`,
+//         background: checked ? theme.accent_color : "rgba(0,0,0,0.08)",
+//         position: "relative", cursor: disabled ? "not-allowed" : "pointer",
+//         opacity: disabled ? 0.7 : 1, padding: 0,
+//       }}
+//     >
+//       <span style={{
+//         width: 22, height: 22, borderRadius: "50%", background: "#fff",
+//         position: "absolute", top: 1.5, left: checked ? 22 : 2,
+//         transition: "left 150ms ease", boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+//       }} />
+//     </button>
+//   );
+// }
+
+// /* ================= MAIN COMPONENT ================= */
+// export default function CreateUserWithProjectAccess() {
+//   const [brand, setBrand] = useState(null);
+//   const [authorizedProjects, setAuthorizedProjects] = useState([]);
+//   const [currentUser, setCurrentUser] = useState(null);
+//   const [users, setUsers] = useState([]);
+//   const [searchTerm, setSearchTerm] = useState(""); // NEW: Search term state
+//   const [usersLoading, setUsersLoading] = useState(false);
+//   const [editingUser, setEditingUser] = useState(null);
+
+//   const [form, setForm] = useState({
+//     username: "", password: "", first_name: "", last_name: "",
+//     email: "", role: "SALES", can_view: true, can_edit: false, project_ids: [],
+//   });
+
+//   const [submitting, setSubmitting] = useState(false);
+
+//   const theme = useMemo(() => {
+//     const fallback = {
+//       font_family: "Helvetica, Arial, sans-serif",
+//       base_font_size: 14, background_color: "#f3f4f6",
+//       heading_color: "#111827", primary_color: "#102a54", accent_color: "#2563EB",
+//       button_primary_bg: "#102A54", button_primary_text: "#FFFFFF",
+//     };
+//     return { ...fallback, ...(brand || {}) };
+//   }, [brand]);
+
+//   useEffect(() => {
+//     setBrand(safeParseJSON(localStorage.getItem(BRAND_KEY)));
+//     const p = safeParseJSON(localStorage.getItem(PROJECTS_KEY)) || [];
+//     setAuthorizedProjects(p.map(x => ({ id: toInt(x.id), name: x.name })).filter(x => x.id));
+//     setCurrentUser(getCurrentUserFromLS());
+//     fetchUsers();
+//   }, []);
+
+//   async function fetchUsers() {
+//     setUsersLoading(true);
+//     try {
+//       const res = await axiosInstance.get(USERS_LIST_URL);
+//       const list = Array.isArray(res.data) ? res.data : res.data?.results || [];
+//       setUsers(list.filter((u) => u.role !== "SUPER_ADMIN" && u.role !== "KYC_TEAM"));
+//     } catch (err) { toast.error("Could not fetch users list"); }
+//     finally { setUsersLoading(false); }
+//   }
+
+//   // Filter Logic
+//   const filteredUsers = useMemo(() => {
+//     if (!searchTerm.trim()) return users;
+//     const lowSearch = searchTerm.toLowerCase();
+//     return users.filter(u => 
+//       u.username?.toLowerCase().includes(lowSearch) || 
+//       u.email?.toLowerCase().includes(lowSearch) || 
+//       u.role?.toLowerCase().includes(lowSearch) ||
+//       `${u.first_name} ${u.last_name}`.toLowerCase().includes(lowSearch)
+//     );
+//   }, [users, searchTerm]);
+
+//   const isAdminUser = currentUser?.role === "ADMIN" && !currentUser?.is_staff;
+  
+//   function updateData(target, setter, name, value) {
+//     setter({ ...target, [name]: value });
+//   }
+
+//   async function onSubmit(e) {
+//     e.preventDefault();
+//     if (!form.project_ids.length) return toast.error("Select at least one project");
+//     setSubmitting(true);
+//     try {
+//       const adminId = isAdminUser ? currentUser.id : currentUser?.admin_id;
+//       await axiosInstance.post(REGISTER_URL, { ...form, admin_id: adminId });
+//       toast.success("User created successfully ✅");
+//       setForm({ ...form, username: "", password: "", email: "", first_name: "", last_name: "", project_ids: [] });
+//       fetchUsers();
+//     } catch (err) { toast.error(getNiceErrorMessage(err)); }
+//     finally { setSubmitting(false); }
+//   }
+
+//   async function saveUserChanges() {
+//     try {
+//       const fd = new FormData();
+//       fd.append("username", editingUser.username);
+//       fd.append("email", editingUser.email || "");
+//       fd.append("first_name", editingUser.first_name || "");
+//       fd.append("last_name", editingUser.last_name || "");
+//       fd.append("role", editingUser.role);
+//       fd.append("can_view", editingUser.can_view);
+//       fd.append("can_edit", editingUser.can_edit);
+//       (editingUser.project_ids || []).forEach((pid) => fd.append("project_ids", pid));
+
+//       await axiosInstance.patch(USER_UPDATE_URL(editingUser.id), fd);
+//       toast.success("User updated successfully");
+//       setEditingUser(null);
+//       fetchUsers();
+//     } catch (err) { toast.error(getNiceErrorMessage(err)); }
+//   }
+
+//   async function deleteUser(userId) {
+//     if (!window.confirm("Are you sure you want to delete this user?")) return;
+//     try {
+//       await axiosInstance.delete(USER_UPDATE_URL(userId));
+//       toast.success("User deleted successfully");
+//       fetchUsers();
+//     } catch (err) { toast.error(getNiceErrorMessage(err)); }
+//   }
+
+//   const toggleSelection = (target, setter, id, isOn) => {
+//     const s = new Set(target.project_ids || []);
+//     isOn ? s.add(id) : s.delete(id);
+//     setter({ ...target, project_ids: [...s] });
+//   };
+
+//   /* --- STYLES --- */
+//   const cardStyle = { maxWidth: "100%", margin: "0 auto", background: "#fff", borderRadius: 16, border: `1px solid rgba(0,0,0,0.08)`, boxShadow: "0 12px 30px rgba(0,0,0,0.08)", overflow: "hidden" };
+//   const inputStyle = { width: "100%", padding: "10px 12px", borderRadius: 12, border: "1px solid rgba(0,0,0,0.18)", outline: "none", fontFamily: "Helvetica, Arial, sans-serif", fontWeight: 400 };
+//   const labelStyle = { fontSize: 13, fontWeight: 400, opacity: 0.9, marginBottom: 6, fontFamily: "Helvetica, Arial, sans-serif" };
+//   const buttonStyle = { background: theme.button_primary_bg, color: theme.button_primary_text, border: `1px solid ${theme.primary_color}`, borderRadius: 12, padding: "10px 14px", fontWeight: 400, cursor: "pointer", fontFamily: "Helvetica, Arial, sans-serif" };
+//   const smallBtnStyle = { borderRadius: 12, padding: "8px 10px", fontWeight: 400, border: `1px solid rgba(0,0,0,0.14)`, background: "#fff", cursor: "pointer", fontFamily: "Helvetica, Arial, sans-serif" };
+
+//   return (
+//     <div style={{ minHeight: "100vh", background: theme.background_color, padding: "24px", fontFamily: "Helvetica, Arial, sans-serif", fontWeight: 400 }}>
+//       <ToastContainer position="top-right" />
+      
+//       {/* 1. CREATION FORM */}
+//       <div style={cardStyle}>
+//         <div style={{ padding: 20 }}>
+//           <form onSubmit={onSubmit}>
+//             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+//               <div><div style={labelStyle}>Username *</div><input style={inputStyle} value={form.username} onChange={e => updateData(form, setForm, "username", e.target.value)} required /></div>
+//               <div><div style={labelStyle}>Password *</div><input style={inputStyle} type="password" value={form.password} onChange={e => updateData(form, setForm, "password", e.target.value)} required /></div>
+//               <div><div style={labelStyle}>First Name</div><input style={inputStyle} value={form.first_name} onChange={e => updateData(form, setForm, "first_name", e.target.value)} /></div>
+//               <div><div style={labelStyle}>Last Name</div><input style={inputStyle} value={form.last_name} onChange={e => updateData(form, setForm, "last_name", e.target.value)} /></div>
+//               <div style={{ gridColumn: "span 2" }}><div style={labelStyle}>Email *</div><input style={inputStyle} type="email" value={form.email} onChange={e => updateData(form, setForm, "email", e.target.value)} required /></div>
+//             </div>
+
+//             <div style={{ marginTop: 16 }}>
+//               <div style={labelStyle}>Role</div>
+//               <select style={inputStyle} value={form.role} onChange={e => updateData(form, setForm, "role", e.target.value)}>
+//                 <option value="SALES">Sales Person (Default)</option>
+//                 <option value="MANAGER">Manager</option>
+//                 <option value="FULL_CONTROL">Admin</option>
+//                 <option value="RECEPTION">Reception</option>
+//                 <option value="CHANNEL_PARTNER">Channel Partner</option>
+//                 <option value="CALLING_TEAM">Calling Team</option>  
+//               </select>
+//             </div>
+
+//             <div style={{ marginTop: 16, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+//               <div style={{ fontSize: 14, fontWeight: 400, color: theme.primary_color }}>Project Access *</div>
+//               <div style={{ display: "flex", gap: 10 }}>
+//                 <button type="button" style={smallBtnStyle} onClick={() => setForm({...form, project_ids: authorizedProjects.map(x=>x.id)})}>Select All</button>
+//                 <button type="button" style={smallBtnStyle} onClick={() => setForm({...form, project_ids: []})}>Clear</button>
+//               </div>
+//             </div>
+
+//             <div style={{ marginTop: 10, display: "grid", gap: 10 }}>
+//               {authorizedProjects.map(p => (
+//                 <div key={p.id} style={{ display: "flex", justifyContent: "space-between", padding: 12, borderRadius: 14, border: "1px solid rgba(0,0,0,0.12)", background: form.project_ids.includes(p.id) ? "rgba(37,99,235,0.06)" : "#fff" }}>
+//                   <div><div style={{ fontWeight: 400 }}>{p.name}</div><div style={{ fontSize: 12, opacity: 0.7 }}>ID: {p.id}</div></div>
+//                   <Switch checked={form.project_ids.includes(p.id)} onChange={on => toggleSelection(form, setForm, p.id, on)} theme={theme} />
+//                 </div>
+//               ))}
+//             </div>
+
+//             <div style={{ display: "flex", gap: 20, marginTop: 14 }}>
+//               <div style={{ display: "flex", alignItems: "center", gap: 10 }}><div style={{ fontWeight: 400 }}>Can View</div><Switch checked={form.can_view} onChange={v => updateData(form, setForm, "can_view", v)} theme={theme} /></div>
+//               <div style={{ display: "flex", alignItems: "center", gap: 10 }}><div style={{ fontWeight: 400 }}>Can Edit</div><Switch checked={form.can_edit} onChange={v => updateData(form, setForm, "can_edit", v)} theme={theme} /></div>
+//             </div>
+
+//             <div style={{ textAlign: "right", marginTop: 18 }}>
+//               <button type="submit" style={buttonStyle} disabled={submitting}>{submitting ? "Creating..." : "Create User"}</button>
+//             </div>
+//           </form>
+//         </div>
+//       </div>
+
+//       {/* 2. USER MANAGEMENT LIST */}
+//       <div style={{ ...cardStyle, marginTop: 30 }}>
+//         <div style={{ padding: 20 }}>
+//           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20, gap: 20 }}>
+//             <h3 style={{ margin: 0, color: theme.primary_color, fontWeight: 400 }}>Active Users</h3>
+            
+//             {/* SEARCH INPUT FIELD */}
+//             <div style={{ flex: 1, maxWidth: 400 }}>
+//               <input 
+//                 type="text" 
+//                 placeholder="Search by Name, Email, or Role..." 
+//                 style={{ ...inputStyle, background: "#f9fafb" }}
+//                 value={searchTerm}
+//                 onChange={(e) => setSearchTerm(e.target.value)}
+//               />
+//             </div>
+//           </div>
+
+//           {usersLoading ? <div>Loading...</div> : (
+//             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+//               {filteredUsers.length > 0 ? filteredUsers.map(u => (
+//                 <div key={u.id} style={{ display: "flex", justifyContent: "space-between", padding: "14px 12px", border: "1px solid #f0f0f0", borderRadius: 12, alignItems: "center" }}>
+//                   <div>
+//                     <div style={{ fontWeight: 400, fontSize: 15 }}>{u.username} <span style={{fontSize: 12, color: "#666"}}>({u.first_name} {u.last_name})</span></div>
+//                     <div style={{ fontSize: 12, opacity: 0.6, marginTop: 2 }}>{u.role} • {u.email}</div>
+//                   </div>
+//                   <div style={{ display: "flex", gap: 10 }}>
+//                     <button onClick={() => setEditingUser({ ...u })} style={smallBtnStyle}>Edit</button>
+//                     <button onClick={() => deleteUser(u.id)} style={{ ...smallBtnStyle, border: "1px solid #ef4444", background: "#fee2e2", color: "#991b1b" }}>Delete</button>
+//                   </div>
+//                 </div>
+//               )) : (
+//                 <div style={{ textAlign: "center", padding: 20, color: "#666" }}>No users found matching your search.</div>
+//               )}
+//             </div>
+//           )}
+//         </div>
+//       </div>
+
+//       {/* 3. EDIT MODAL */}
+//       {editingUser && (
+//         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: 20 }}>
+//           <div style={{ background: "#fff", padding: 24, borderRadius: 16, width: "100%", maxWidth: 650, maxHeight: '90vh', overflowY: 'auto', fontFamily: "Helvetica, Arial, sans-serif" }}>
+//             <h3 style={{ marginTop: 0, color: theme.primary_color, fontWeight: 400 }}>Modify User: {editingUser.username}</h3>
+//             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+//               <div><div style={labelStyle}>Username</div><input style={inputStyle} value={editingUser.username} onChange={e => updateData(editingUser, setEditingUser, "username", e.target.value)} /></div>
+//               <div><div style={labelStyle}>Email</div><input style={inputStyle} value={editingUser.email} onChange={e => updateData(editingUser, setEditingUser, "email", e.target.value)} /></div>
+//               <div><div style={labelStyle}>First Name</div><input style={inputStyle} value={editingUser.first_name || ""} onChange={e => updateData(editingUser, setEditingUser, "first_name", e.target.value)} /></div>
+//               <div><div style={labelStyle}>Last Name</div><input style={inputStyle} value={editingUser.last_name || ""} onChange={e => updateData(editingUser, setEditingUser, "last_name", e.target.value)} /></div>
+//             </div>
+
+//             <div style={{ marginTop: 16 }}>
+//               <div style={labelStyle}>Role</div>
+//               <select style={inputStyle} value={editingUser.role} onChange={e => updateData(editingUser, setEditingUser, "role", e.target.value)}>
+//                 <option value="SALES">Sales Person</option>
+//                 <option value="MANAGER">Manager</option>
+//                 <option value="FULL_CONTROL">Full Control</option>
+//                 <option value="RECEPTION">Reception</option>
+//                 <option value="CHANNEL_PARTNER">Channel Partner</option>
+//                 <option value="CALLING_TEAM">Calling Team</option>
+//               </select>
+//             </div>
+
+//             <div style={{ marginTop: 16, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+//               <div style={{ ...labelStyle, marginBottom: 0 }}>Project Access</div>
+//               <div style={{ display: "flex", gap: 8 }}>
+//                 <button type="button" style={{...smallBtnStyle, fontSize:11}} onClick={() => setEditingUser({...editingUser, project_ids: authorizedProjects.map(x=>x.id)})}>All</button>
+//                 <button type="button" style={{...smallBtnStyle, fontSize:11}} onClick={() => setEditingUser({...editingUser, project_ids: []})}>None</button>
+//               </div>
+//             </div>
+//             <div style={{ marginTop: 10, display: "grid", gap: 8 }}>
+//               {authorizedProjects.map(p => (
+//                 <div key={p.id} style={{ display: "flex", justifyContent: "space-between", padding: 10, borderRadius: 12, border: "1px solid #eee" }}>
+//                   <div style={{ fontSize: 13, fontWeight: 400 }}>{p.name}</div>
+//                   <Switch checked={editingUser.project_ids?.includes(p.id)} onChange={on => toggleSelection(editingUser, setEditingUser, p.id, on)} theme={theme} />
+//                 </div>
+//               ))}
+//             </div>
+
+//             <div style={{ display: "flex", gap: 20, marginTop: 20, borderTop: "1px solid #eee", paddingTop: 15 }}>
+//               <div style={{ display: "flex", alignItems: "center", gap: 10 }}><div style={{ fontWeight: 400 }}>Can View</div><Switch checked={editingUser.can_view} onChange={v => updateData(editingUser, setEditingUser, "can_view", v)} theme={theme} /></div>
+//               <div style={{ display: "flex", alignItems: "center", gap: 10 }}><div style={{ fontWeight: 400 }}>Can Edit</div><Switch checked={editingUser.can_edit} onChange={v => updateData(editingUser, setEditingUser, "can_edit", v)} theme={theme} /></div>
+//             </div>
+
+//             <div style={{ display: "flex", gap: 12, marginTop: 24, justifyContent: "flex-end" }}>
+//               <button onClick={() => setEditingUser(null)} style={{ padding: "10px 20px", borderRadius: 12, border: "1px solid #ddd", cursor: "pointer", background: "none", fontWeight: 400, fontFamily: "Helvetica, Arial, sans-serif" }}>Cancel</button>
+//               <button onClick={saveUserChanges} style={{ ...buttonStyle, padding: "10px 24px" }}>Save Changes</button>
+//             </div>
+//           </div>
+//         </div>
+//       )}
+//     </div>
+//   );
+// }
+
+
 import React, { useEffect, useMemo, useState } from "react";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -869,7 +1228,8 @@ import axiosInstance from "../api/axiosInstance";
 /* ================= CONSTANTS ================= */
 const BRAND_KEY = "BRAND_THEME";
 const PROJECTS_KEY = "AUTHORIZE_PROJECTS";
-const REGISTER_URL = "accounts/register-with-project/";
+const REGISTER_URL = "accounts/users/";
+const PROJECT_ACCESS_URL = "/accounts/project-user-access/";
 const USERS_LIST_URL = "accounts/users/";
 const USER_UPDATE_URL = (id) => `accounts/users/${id}/`;
 
@@ -886,19 +1246,12 @@ function toInt(val) {
   return Number.isFinite(n) ? n : null;
 }
 
-function looksLikeHtml(s) {
-  if (!s) return false;
-  const t = String(s).trim();
-  return t.startsWith("<!DOCTYPE") || t.startsWith("<html") || t.includes("<body") || /<[^>]+>/.test(t);
-}
-
 function getNiceErrorMessage(err) {
   const status = err?.response?.status;
   const data = err?.response?.data;
   if (!err?.response) return "Network error. Please check internet.";
   if (status === 401) return "Session expired. Please login again.";
   if (status === 403) return "You do not have permission.";
-  if (typeof data === "string") return looksLikeHtml(data) ? "Request failed." : data;
   if (data?.detail) return data.detail;
   if (typeof data === "object") {
     const [k, v] = Object.entries(data)[0] || [];
@@ -955,15 +1308,17 @@ export default function CreateUserWithProjectAccess() {
   const [authorizedProjects, setAuthorizedProjects] = useState([]);
   const [currentUser, setCurrentUser] = useState(null);
   const [users, setUsers] = useState([]);
-  const [searchTerm, setSearchTerm] = useState(""); // NEW: Search term state
+  const [managers, setManagers] = useState([]);
+  const [searchTerm, setSearchTerm] = useState("");
   const [usersLoading, setUsersLoading] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
+  const [editingSubmitting, setEditingSubmitting] = useState(false);
 
   const [form, setForm] = useState({
     username: "", password: "", first_name: "", last_name: "",
-    email: "", role: "SALES", can_view: true, can_edit: false, project_ids: [],
+    email: "", role: "SALES", can_view: true, can_edit: false,
+    project_ids: [], assigned_manager: null,
   });
-
   const [submitting, setSubmitting] = useState(false);
 
   const theme = useMemo(() => {
@@ -975,6 +1330,17 @@ export default function CreateUserWithProjectAccess() {
     };
     return { ...fallback, ...(brand || {}) };
   }, [brand]);
+
+  // Logic to get correct Admin ID for assignment
+  const currentAdminId = useMemo(() => {
+    if (!currentUser) return null;
+    // If the current user is an Admin, they are the "creator"
+    if (currentUser.role === "ADMIN" || currentUser.role === "FULL_CONTROL") {
+      return currentUser.id;
+    }
+    // If not, they use the admin_id assigned to them
+    return currentUser.admin_id || null;
+  }, [currentUser]);
 
   useEffect(() => {
     setBrand(safeParseJSON(localStorage.getItem(BRAND_KEY)));
@@ -989,60 +1355,113 @@ export default function CreateUserWithProjectAccess() {
     try {
       const res = await axiosInstance.get(USERS_LIST_URL);
       const list = Array.isArray(res.data) ? res.data : res.data?.results || [];
-      setUsers(list.filter((u) => u.role !== "SUPER_ADMIN" && u.role !== "KYC_TEAM"));
-    } catch (err) { toast.error("Could not fetch users list"); }
-    finally { setUsersLoading(false); }
+      const filtered = list.filter((u) => u.role !== "SUPER_ADMIN" && u.role !== "KYC_TEAM");
+      setUsers(filtered);
+
+      const managerList = filtered.filter(u => u.role === "MANAGER");
+      setManagers(managerList);
+    } catch (err) {
+      toast.error("Could not fetch users list");
+    } finally {
+      setUsersLoading(false);
+    }
   }
 
-  // Filter Logic
   const filteredUsers = useMemo(() => {
     if (!searchTerm.trim()) return users;
     const lowSearch = searchTerm.toLowerCase();
-    return users.filter(u => 
-      u.username?.toLowerCase().includes(lowSearch) || 
-      u.email?.toLowerCase().includes(lowSearch) || 
+    return users.filter(u =>
+      u.username?.toLowerCase().includes(lowSearch) ||
+      u.email?.toLowerCase().includes(lowSearch) ||
       u.role?.toLowerCase().includes(lowSearch) ||
-      `${u.first_name} ${u.last_name}`.toLowerCase().includes(lowSearch)
+      `${u.first_name ?? ''} ${u.last_name ?? ''}`.toLowerCase().includes(lowSearch)
     );
   }, [users, searchTerm]);
 
-  const isAdminUser = currentUser?.role === "ADMIN" && !currentUser?.is_staff;
-  
   function updateData(target, setter, name, value) {
     setter({ ...target, [name]: value });
   }
 
   async function onSubmit(e) {
-    e.preventDefault();
-    if (!form.project_ids.length) return toast.error("Select at least one project");
-    setSubmitting(true);
-    try {
-      const adminId = isAdminUser ? currentUser.id : currentUser?.admin_id;
-      await axiosInstance.post(REGISTER_URL, { ...form, admin_id: adminId });
-      toast.success("User created successfully ✅");
-      setForm({ ...form, username: "", password: "", email: "", first_name: "", last_name: "", project_ids: [] });
-      fetchUsers();
-    } catch (err) { toast.error(getNiceErrorMessage(err)); }
-    finally { setSubmitting(false); }
+  e.preventDefault();
+
+  if (!form.project_ids.length)
+    return toast.error("Select at least one project");
+
+  if (!currentAdminId)
+    return toast.error("Admin information not found. Please log in again.");
+
+  setSubmitting(true);
+
+  try {
+    const userFormData = new FormData();
+    userFormData.append("username", form.username);
+    userFormData.append("password", form.password);
+    userFormData.append("first_name", form.first_name || "");
+    userFormData.append("last_name", form.last_name || "");
+    userFormData.append("email", form.email);
+    userFormData.append("role", form.role);
+
+    // 🔥 THIS IS THE ONLY FIX
+    userFormData.append("admin", currentAdminId);
+
+    userFormData.append("is_active", true);
+
+    const userRes = await axiosInstance.post(REGISTER_URL, userFormData);
+    const newUserId = userRes.data.id;
+
+    await axiosInstance.post(PROJECT_ACCESS_URL, {
+      user: newUserId,
+      project_ids: form.project_ids,
+      manager: form.assigned_manager,
+      can_view: form.can_view,
+      can_edit: form.can_edit,
+    });
+
+    toast.success("User created with admin assigned ✅");
+    fetchUsers();
+
+  } catch (err) {
+    toast.error(getNiceErrorMessage(err));
+  } finally {
+    setSubmitting(false);
   }
+}
+
 
   async function saveUserChanges() {
+    if (!currentAdminId) return toast.error("Admin session error.");
+    setEditingSubmitting(true);
     try {
-      const fd = new FormData();
-      fd.append("username", editingUser.username);
-      fd.append("email", editingUser.email || "");
-      fd.append("first_name", editingUser.first_name || "");
-      fd.append("last_name", editingUser.last_name || "");
-      fd.append("role", editingUser.role);
-      fd.append("can_view", editingUser.can_view);
-      fd.append("can_edit", editingUser.can_edit);
-      (editingUser.project_ids || []).forEach((pid) => fd.append("project_ids", pid));
+      // Update User details
+      const userFormData = new FormData();
+      userFormData.append("username", editingUser.username);
+      userFormData.append("email", editingUser.email || "");
+      userFormData.append("first_name", editingUser.first_name || "");
+      userFormData.append("last_name", editingUser.last_name || "");
+      userFormData.append("role", editingUser.role);
+      userFormData.append("admin_id", currentAdminId);
 
-      await axiosInstance.patch(USER_UPDATE_URL(editingUser.id), fd);
+      await axiosInstance.patch(USER_UPDATE_URL(editingUser.id), userFormData);
+
+      // Update Access/Manager details
+      await axiosInstance.post(PROJECT_ACCESS_URL, {
+        user: editingUser.id,
+        project_ids: editingUser.project_ids || [],
+        manager: editingUser.assigned_manager,
+        created_by: currentAdminId,
+        can_view: editingUser.can_view,
+        can_edit: editingUser.can_edit,
+      });
+
       toast.success("User updated successfully");
       setEditingUser(null);
       fetchUsers();
-    } catch (err) { toast.error(getNiceErrorMessage(err)); }
+    } catch (err) {
+      toast.error(getNiceErrorMessage(err));
+    } finally {
+      setEditingSubmitting(false);
+    }
   }
 
   async function deleteUser(userId) {
@@ -1051,7 +1470,9 @@ export default function CreateUserWithProjectAccess() {
       await axiosInstance.delete(USER_UPDATE_URL(userId));
       toast.success("User deleted successfully");
       fetchUsers();
-    } catch (err) { toast.error(getNiceErrorMessage(err)); }
+    } catch (err) {
+      toast.error(getNiceErrorMessage(err));
+    }
   }
 
   const toggleSelection = (target, setter, id, isOn) => {
@@ -1060,7 +1481,6 @@ export default function CreateUserWithProjectAccess() {
     setter({ ...target, project_ids: [...s] });
   };
 
-  /* --- STYLES --- */
   const cardStyle = { maxWidth: "100%", margin: "0 auto", background: "#fff", borderRadius: 16, border: `1px solid rgba(0,0,0,0.08)`, boxShadow: "0 12px 30px rgba(0,0,0,0.08)", overflow: "hidden" };
   const inputStyle = { width: "100%", padding: "10px 12px", borderRadius: 12, border: "1px solid rgba(0,0,0,0.18)", outline: "none", fontFamily: "Helvetica, Arial, sans-serif", fontWeight: 400 };
   const labelStyle = { fontSize: 13, fontWeight: 400, opacity: 0.9, marginBottom: 6, fontFamily: "Helvetica, Arial, sans-serif" };
@@ -1070,8 +1490,8 @@ export default function CreateUserWithProjectAccess() {
   return (
     <div style={{ minHeight: "100vh", background: theme.background_color, padding: "24px", fontFamily: "Helvetica, Arial, sans-serif", fontWeight: 400 }}>
       <ToastContainer position="top-right" />
-      
-      {/* 1. CREATION FORM */}
+
+      {/* CREATION FORM */}
       <div style={cardStyle}>
         <div style={{ padding: 20 }}>
           <form onSubmit={onSubmit}>
@@ -1091,7 +1511,24 @@ export default function CreateUserWithProjectAccess() {
                 <option value="FULL_CONTROL">Admin</option>
                 <option value="RECEPTION">Reception</option>
                 <option value="CHANNEL_PARTNER">Channel Partner</option>
-                <option value="CALLING_TEAM">Calling Team</option>  
+                <option value="CALLING_TEAM">Calling Team</option>
+              </select>
+            </div>
+
+            <div style={{ marginTop: 16 }}>
+              <div style={labelStyle}>Assign to Manager {form.role !== "MANAGER" && "(Optional)"}</div>
+              <select
+                style={inputStyle}
+                value={form.assigned_manager || ""}
+                onChange={e => updateData(form, setForm, "assigned_manager", e.target.value ? Number(e.target.value) : null)}
+                disabled={form.role === "MANAGER"}
+              >
+                <option value="">No Manager</option>
+                {managers.map(m => (
+                  <option key={m.id} value={m.id}>
+                    {m.username} ({m.first_name} {m.last_name})
+                  </option>
+                ))}
               </select>
             </div>
 
@@ -1118,40 +1555,37 @@ export default function CreateUserWithProjectAccess() {
             </div>
 
             <div style={{ textAlign: "right", marginTop: 18 }}>
-              <button type="submit" style={buttonStyle} disabled={submitting}>{submitting ? "Creating..." : "Create User"}</button>
+              <button type="submit" style={buttonStyle} disabled={submitting}>
+                {submitting ? "Creating..." : "Create User"}
+              </button>
             </div>
           </form>
         </div>
       </div>
 
-      {/* 2. USER MANAGEMENT LIST */}
+      {/* USER LIST */}
       <div style={{ ...cardStyle, marginTop: 30 }}>
         <div style={{ padding: 20 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20, gap: 20 }}>
             <h3 style={{ margin: 0, color: theme.primary_color, fontWeight: 400 }}>Active Users</h3>
-            
-            {/* SEARCH INPUT FIELD */}
             <div style={{ flex: 1, maxWidth: 400 }}>
-              <input 
-                type="text" 
-                placeholder="Search by Name, Email, or Role..." 
-                style={{ ...inputStyle, background: "#f9fafb" }}
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
+              <input type="text" placeholder="Search by Name, Email, or Role..." style={{ ...inputStyle, background: "#f9fafb" }} value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
             </div>
           </div>
-
           {usersLoading ? <div>Loading...</div> : (
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
               {filteredUsers.length > 0 ? filteredUsers.map(u => (
                 <div key={u.id} style={{ display: "flex", justifyContent: "space-between", padding: "14px 12px", border: "1px solid #f0f0f0", borderRadius: 12, alignItems: "center" }}>
                   <div>
-                    <div style={{ fontWeight: 400, fontSize: 15 }}>{u.username} <span style={{fontSize: 12, color: "#666"}}>({u.first_name} {u.last_name})</span></div>
-                    <div style={{ fontSize: 12, opacity: 0.6, marginTop: 2 }}>{u.role} • {u.email}</div>
+                    <div style={{ fontWeight: 400, fontSize: 15 }}>
+                      {u.username} <span style={{fontSize: 12, color: "#666"}}>({u.first_name ?? ''} {u.last_name ?? ''})</span>
+                    </div>
+                    <div style={{ fontSize: 12, opacity: 0.6, marginTop: 2 }}>
+                      {u.role} • {u.email} {u.assigned_manager_name && ` • Manager: ${u.assigned_manager_name}`}
+                    </div>
                   </div>
                   <div style={{ display: "flex", gap: 10 }}>
-                    <button onClick={() => setEditingUser({ ...u })} style={smallBtnStyle}>Edit</button>
+                    <button onClick={() => setEditingUser({ ...u, project_ids: u.project_ids || [], assigned_manager: u.assigned_manager || null })} style={smallBtnStyle}>Edit</button>
                     <button onClick={() => deleteUser(u.id)} style={{ ...smallBtnStyle, border: "1px solid #ef4444", background: "#fee2e2", color: "#991b1b" }}>Delete</button>
                   </div>
                 </div>
@@ -1163,14 +1597,14 @@ export default function CreateUserWithProjectAccess() {
         </div>
       </div>
 
-      {/* 3. EDIT MODAL */}
+      {/* EDIT MODAL */}
       {editingUser && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: 20 }}>
           <div style={{ background: "#fff", padding: 24, borderRadius: 16, width: "100%", maxWidth: 650, maxHeight: '90vh', overflowY: 'auto', fontFamily: "Helvetica, Arial, sans-serif" }}>
             <h3 style={{ marginTop: 0, color: theme.primary_color, fontWeight: 400 }}>Modify User: {editingUser.username}</h3>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
               <div><div style={labelStyle}>Username</div><input style={inputStyle} value={editingUser.username} onChange={e => updateData(editingUser, setEditingUser, "username", e.target.value)} /></div>
-              <div><div style={labelStyle}>Email</div><input style={inputStyle} value={editingUser.email} onChange={e => updateData(editingUser, setEditingUser, "email", e.target.value)} /></div>
+              <div><div style={labelStyle}>Email</div><input style={inputStyle} value={editingUser.email || ""} onChange={e => updateData(editingUser, setEditingUser, "email", e.target.value)} /></div>
               <div><div style={labelStyle}>First Name</div><input style={inputStyle} value={editingUser.first_name || ""} onChange={e => updateData(editingUser, setEditingUser, "first_name", e.target.value)} /></div>
               <div><div style={labelStyle}>Last Name</div><input style={inputStyle} value={editingUser.last_name || ""} onChange={e => updateData(editingUser, setEditingUser, "last_name", e.target.value)} /></div>
             </div>
@@ -1180,27 +1614,38 @@ export default function CreateUserWithProjectAccess() {
               <select style={inputStyle} value={editingUser.role} onChange={e => updateData(editingUser, setEditingUser, "role", e.target.value)}>
                 <option value="SALES">Sales Person</option>
                 <option value="MANAGER">Manager</option>
-                <option value="FULL_CONTROL">Full Control</option>
+                <option value="FULL_CONTROL">Admin</option>
                 <option value="RECEPTION">Reception</option>
                 <option value="CHANNEL_PARTNER">Channel Partner</option>
                 <option value="CALLING_TEAM">Calling Team</option>
               </select>
             </div>
 
-            <div style={{ marginTop: 16, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <div style={{ ...labelStyle, marginBottom: 0 }}>Project Access</div>
-              <div style={{ display: "flex", gap: 8 }}>
-                <button type="button" style={{...smallBtnStyle, fontSize:11}} onClick={() => setEditingUser({...editingUser, project_ids: authorizedProjects.map(x=>x.id)})}>All</button>
-                <button type="button" style={{...smallBtnStyle, fontSize:11}} onClick={() => setEditingUser({...editingUser, project_ids: []})}>None</button>
-              </div>
+            <div style={{ marginTop: 16 }}>
+              <div style={labelStyle}>Assign to Manager</div>
+              <select
+                style={inputStyle}
+                value={editingUser.assigned_manager || ""}
+                onChange={e => updateData(editingUser, setEditingUser, "assigned_manager", e.target.value ? Number(e.target.value) : null)}
+                disabled={editingUser.role === "MANAGER"}
+              >
+                <option value="">No Manager</option>
+                {managers.map(m => (
+                  <option key={m.id} value={m.id}>{m.username}</option>
+                ))}
+              </select>
             </div>
-            <div style={{ marginTop: 10, display: "grid", gap: 8 }}>
-              {authorizedProjects.map(p => (
-                <div key={p.id} style={{ display: "flex", justifyContent: "space-between", padding: 10, borderRadius: 12, border: "1px solid #eee" }}>
-                  <div style={{ fontSize: 13, fontWeight: 400 }}>{p.name}</div>
-                  <Switch checked={editingUser.project_ids?.includes(p.id)} onChange={on => toggleSelection(editingUser, setEditingUser, p.id, on)} theme={theme} />
-                </div>
-              ))}
+
+            <div style={{ marginTop: 20 }}>
+              <div style={labelStyle}>Project Access</div>
+              <div style={{ display: "grid", gap: 8, maxHeight: 200, overflowY: "auto", padding: "4px" }}>
+                {authorizedProjects.map(p => (
+                  <div key={p.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 12px", borderRadius: 10, background: "#f9fafb", border: "1px solid #eee" }}>
+                    <div style={{ fontSize: 13, fontWeight: 400 }}>{p.name}</div>
+                    <Switch checked={editingUser.project_ids?.includes(p.id)} onChange={on => toggleSelection(editingUser, setEditingUser, p.id, on)} theme={theme} />
+                  </div>
+                ))}
+              </div>
             </div>
 
             <div style={{ display: "flex", gap: 20, marginTop: 20, borderTop: "1px solid #eee", paddingTop: 15 }}>
@@ -1209,8 +1654,10 @@ export default function CreateUserWithProjectAccess() {
             </div>
 
             <div style={{ display: "flex", gap: 12, marginTop: 24, justifyContent: "flex-end" }}>
-              <button onClick={() => setEditingUser(null)} style={{ padding: "10px 20px", borderRadius: 12, border: "1px solid #ddd", cursor: "pointer", background: "none", fontWeight: 400, fontFamily: "Helvetica, Arial, sans-serif" }}>Cancel</button>
-              <button onClick={saveUserChanges} style={{ ...buttonStyle, padding: "10px 24px" }}>Save Changes</button>
+              <button onClick={() => setEditingUser(null)} style={{ padding: "10px 20px", borderRadius: 12, border: "1px solid #ddd", cursor: "pointer", background: "none", fontWeight: 400 }}>Cancel</button>
+              <button onClick={saveUserChanges} style={{ ...buttonStyle, padding: "10px 24px" }} disabled={editingSubmitting}>
+                {editingSubmitting ? "Saving..." : "Save Changes"}
+              </button>
             </div>
           </div>
         </div>

@@ -11,7 +11,7 @@ const SCOPE_URL = "/client/my-scope/";
 function getDashboardUrl(role) {
   const r = role || "";
 
-  if (r === "ADMIN" || r === "SUPER_ADMIN") {
+  if (r === "ADMIN" || r === "SUPER_ADMIN"|| r === "MANAGER") {
     return "/dashboard/admin/";
   }
 

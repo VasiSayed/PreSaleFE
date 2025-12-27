@@ -30,6 +30,8 @@ export function AuthProvider({ children }) {
   const navigate = useNavigate();
   const isAuthed = !!access;
 
+  const safeRole = user?.role || "";
+
   // 🔹 my-scope fetcher (same as before)
   const fetchAndStoreScope = async () => {
     try {
@@ -179,6 +181,7 @@ export function AuthProvider({ children }) {
       refresh,
       user,
       brand,
+      role:safeRole,
       authorizedProjects, // 🆕 expose this
       isAuthed,
       login,
