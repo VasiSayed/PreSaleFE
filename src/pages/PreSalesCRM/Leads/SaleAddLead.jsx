@@ -6,6 +6,59 @@ import api from "../../../api/axiosInstance";
 import { showToast } from "../../../utils/toast";
 import "./SaleAddLead.css";
 
+function extractCityAndLocalityFromPostOffices(postOffices = []) {
+  if (!Array.isArray(postOffices) || postOffices.length === 0) {
+    return { city: "", locality: "" };
+  }
+
+  const city = postOffices[0]?.District || "";
+
+  // 1️⃣ Block priority ONLY if meaningful (not NA) + East/West
+  for (const po of postOffices) {
+    if (po.Block && po.Block !== "NA") {
+      const block = po.Block.toLowerCase();
+
+      if (block.includes("east") || block.includes("west")) {
+        return {
+          city,
+          locality: po.Block, // ✅ Malad West, Andheri East
+        };
+      }
+    }
+  }
+
+  // 2️⃣ If Block is NA or useless → use Name (current location)
+  for (const po of postOffices) {
+    if (po.Name && po.Name !== "NA") {
+      return {
+        city,
+        locality: po.Name, // ✅ Sakinaka, Orlem, Liberty Garden
+      };
+    }
+  }
+
+  // 3️⃣ Final fallback (very rare)
+  return { city, locality: "" };
+}
+function extractLocalityOptions(postOffices = []) {
+  const set = new Set();
+
+  postOffices.forEach((po) => {
+    // Block preferred if valid
+    if (po.Block && po.Block !== "NA") {
+      set.add(po.Block);
+    }
+
+    // Name always useful
+    if (po.Name && po.Name !== "NA") {
+      set.add(po.Name);
+    }
+  });
+
+  return Array.from(set); // unique list
+}
+
+
 const SECTION_KEY = "lead_setup";
 
 // Budget slabs (2 Cr to 7 Cr)
@@ -289,15 +342,26 @@ const FIELDS = [
     span: 1,
     parse: "identity",
   },
+  // {
+  //   section: "address",
+  //   name: "area",
+  //   label: "Area",
+  //   type: "text",
+  //   required: false,
+  //   span: 1,
+  //   parse: "identity",
+  // },
   {
-    section: "address",
-    name: "area",
-    label: "Area",
-    type: "text",
-    required: false,
-    span: 1,
-    parse: "identity",
-  },
+  section: "address",
+  name: "area",
+  label: "Area / Locality",
+  type: "select",
+  required: false,
+  span: 1,
+  parse: "identity",
+  optionsFrom: "localityOptions", // custom
+},
+
   {
     section: "address",
     name: "pin_code",
@@ -461,6 +525,7 @@ const SaleAddLead = ({ handleLeadSubmit, leadId: propLeadId }) => {
     address: true,
     description: true,
   });
+  const [localityOptions, setLocalityOptions] = useState([]);
 
   const [projects, setProjects] = useState([]);
   const [emailRequired, setEmailRequired] = useState(false);
@@ -595,34 +660,77 @@ const SaleAddLead = ({ handleLeadSubmit, leadId: propLeadId }) => {
   }, [form.mobile_number, form.project_id, isEditing]);
 
   // -------- Pincode lookup (6 digits) --------
-  useEffect(() => {
-    const pincodeDigits = (form.pin_code || "").replace(/\D/g, "");
+  // useEffect(() => {
+  //   const pincodeDigits = (form.pin_code || "").replace(/\D/g, "");
 
-    if (pincodeDigits.length === 6) {
-      setLoadingPincode(true);
-      fetch(`https://api.postalpincode.in/pincode/${pincodeDigits}`)
-        .then((res) => res.json())
-        .then((dataArray) => {
-          // Response is an array: [{"Message":"...","Status":"Success","PostOffice":[...]}]
-          const response = dataArray?.[0];
-          if (response?.Status === "Success" && response?.PostOffice?.length > 0) {
-            const postOffice = response.PostOffice[0]; // Use first post office
-            setForm((prev) => ({
-              ...prev,
-              city: postOffice.District || prev.city,
-              state: postOffice.State || prev.state,
-              country: postOffice.Country || prev.country,
-              area: postOffice.Name || prev.area,
-            }));
-          }
-        })
-        .catch((err) => {
-          console.error("pincode lookup failed", err);
-          // Silent fail - manual entry still available
-        })
-        .finally(() => setLoadingPincode(false));
-    }
-  }, [form.pin_code]);
+  //   if (pincodeDigits.length === 6) {
+  //     setLoadingPincode(true);
+  //     fetch(`https://api.postalpincode.in/pincode/${pincodeDigits}`)
+  //       .then((res) => res.json())
+  //       .then((dataArray) => {
+  //         // Response is an array: [{"Message":"...","Status":"Success","PostOffice":[...]}]
+  //         const response = dataArray?.[0];
+  //         if (response?.Status === "Success" && response?.PostOffice?.length > 0) {
+  //           const postOffice = response.PostOffice[0]; // Use first post office
+  //           setForm((prev) => ({
+  //             ...prev,
+  //             city: postOffice.District || prev.city,
+  //             state: postOffice.State || prev.state,
+  //             country: postOffice.Country || prev.country,
+  //             area: postOffice.Name || prev.area,
+  //           }));
+  //         }
+  //       })
+  //       .catch((err) => {
+  //         console.error("pincode lookup failed", err);
+  //         // Silent fail - manual entry still available
+  //       })
+  //       .finally(() => setLoadingPincode(false));
+  //   }
+  // }, [form.pin_code]);
+
+  useEffect(() => {
+  const pincodeDigits = (form.pin_code || "").replace(/\D/g, "");
+
+  if (pincodeDigits.length === 6) {
+    setLoadingPincode(true);
+
+    fetch(`https://api.postalpincode.in/pincode/${pincodeDigits}`)
+      .then((res) => res.json())
+      .then((dataArray) => {
+        const response = dataArray?.[0];
+
+        if (
+          response?.Status === "Success" &&
+          Array.isArray(response.PostOffice)
+        ) {
+          const postOffices = response.PostOffice;
+
+          // ✅ Use YOUR function
+          const { city, locality } =
+            extractCityAndLocalityFromPostOffices(postOffices);
+
+          // ✅ Dropdown options
+          const options = extractLocalityOptions(postOffices);
+
+          setLocalityOptions(options);
+
+          setForm((prev) => ({
+            ...prev,
+            city: city || prev.city,
+            area: locality || prev.area,
+            state: postOffices[0]?.State || prev.state,
+            country: postOffices[0]?.Country || prev.country,
+          }));
+        }
+      })
+      .catch((err) => {
+        console.error("Pincode lookup failed", err);
+      })
+      .finally(() => setLoadingPincode(false));
+  }
+}, [form.pin_code]);
+
 
   // -------- masters (classification, source, status, etc.) --------
   useEffect(() => {
@@ -1282,6 +1390,13 @@ const SaleAddLead = ({ handleLeadSubmit, leadId: propLeadId }) => {
         label: p.name || p.project_name || p.title || `Project #${p.id}`,
       }));
     }
+    if (field.name === "area") {
+    return localityOptions.map((loc) => ({
+      value: loc,
+      label: loc,
+    }));
+  }
+
 
     if (field.name === "budget") {
       return BUDGET_OPTIONS;

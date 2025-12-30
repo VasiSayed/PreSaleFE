@@ -1504,11 +1504,65 @@
 //   );
 // }
 
+
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../api/axiosInstance"; // adjust path if needed
 import { showToast } from "../utils/toast";
 import "./OnsiteRegistration.css";
+
+function extractCityAndLocalityFromPostOffices(postOffices = []) {
+  if (!Array.isArray(postOffices) || postOffices.length === 0) {
+    return { city: "", locality: "" };
+  }
+
+  const city = postOffices[0]?.District || "";
+
+  // 1️⃣ Block priority ONLY if meaningful (not NA) + East/West
+  for (const po of postOffices) {
+    if (po.Block && po.Block !== "NA") {
+      const block = po.Block.toLowerCase();
+
+      if (block.includes("east") || block.includes("west")) {
+        return {
+          city,
+          locality: po.Block, // ✅ Malad West, Andheri East
+        };
+      }
+    }
+  }
+
+  // 2️⃣ If Block is NA or useless → use Name (current location)
+  for (const po of postOffices) {
+    if (po.Name && po.Name !== "NA") {
+      return {
+        city,
+        locality: po.Name, // ✅ Sakinaka, Orlem, Liberty Garden
+      };
+    }
+  }
+
+  // 3️⃣ Final fallback (very rare)
+  return { city, locality: "" };
+}
+function extractLocalityOptions(postOffices = []) {
+  const set = new Set();
+
+  postOffices.forEach((po) => {
+    // Block preferred if valid
+    if (po.Block && po.Block !== "NA") {
+      set.add(po.Block);
+    }
+
+    // Name always useful
+    if (po.Name && po.Name !== "NA") {
+      set.add(po.Name);
+    }
+  });
+
+  return Array.from(set); // unique list
+}
+
 
 const SCOPE_URL = "/client/my-scope/";
 const ONSITE_API = "/sales/onsite-registration/";
@@ -1591,6 +1645,7 @@ export default function OnsiteRegistration() {
   const [channelPartners, setChannelPartners] = useState([]);
 
   const [submitting, setSubmitting] = useState(false);
+  const [localityOptions, setLocalityOptions] = useState([]);
 
   const [lookupResult, setLookupResult] = useState(null);
   const [checkingPhone, setCheckingPhone] = useState(false);
@@ -1668,35 +1723,88 @@ export default function OnsiteRegistration() {
   }, [form.mobile_number, form.project_id]);
 
   // ---------- Pincode lookup (6 digits) ----------
-  useEffect(() => {
-    const pincodeDigits = (form.residence_pincode || "").replace(/\D/g, "");
 
-    if (pincodeDigits.length === 6) {
-      setLoadingPincode(true);
-      fetch(`https://api.postalpincode.in/pincode/${pincodeDigits}`)
-        .then((res) => res.json())
-        .then((dataArray) => {
-          // Response is an array: [{"Message":"...","Status":"Success","PostOffice":[...]}]
-          const response = dataArray?.[0];
-          if (
-            response?.Status === "Success" &&
-            response?.PostOffice?.length > 0
-          ) {
-            const postOffice = response.PostOffice[0]; // Use first post office
-            setForm((prev) => ({
-              ...prev,
-              residence_city: postOffice.District || prev.residence_city,
-              residence_locality: postOffice.Name || prev.residence_locality,
-            }));
-          }
-        })
-        .catch((err) => {
-          console.error("pincode lookup failed", err);
-          // Silent fail - manual entry still available
-        })
-        .finally(() => setLoadingPincode(false));
-    }
-  }, [form.residence_pincode]);
+  useEffect(() => {
+  const pincode = (form.residence_pincode || "").replace(/\D/g, "");
+
+  // 🔴 Reset auto fields when pincode incomplete
+  if (pincode.length < 6) {
+    setForm((prev) => ({
+      ...prev,
+      residence_city: "",
+      residence_locality: "",
+    }));
+    return;
+  }
+
+  if (pincode.length !== 6) return;
+
+  setLoadingPincode(true);
+
+  fetch(`https://api.postalpincode.in/pincode/${pincode}`)
+    .then((res) => res.json())
+    .then((dataArray) => {
+      const response = dataArray?.[0];
+
+      if (
+        response?.Status === "Success" &&
+        Array.isArray(response.PostOffice) &&
+        response.PostOffice.length > 0
+      ) {
+       const postOffices = response.PostOffice;
+
+// 1️⃣ city + best locality (auto select)
+          const { city, locality } =
+            extractCityAndLocalityFromPostOffices(postOffices);
+
+          // 2️⃣ dropdown options
+          const options = extractLocalityOptions(postOffices);
+
+          setLocalityOptions(options);
+
+          setForm((prev) => ({
+            ...prev,
+            residence_city: city,
+            residence_locality: locality || "", // safe
+          }));
+
+      }
+    })
+    .catch((err) => {
+      console.error("pincode lookup failed", err);
+    })
+    .finally(() => setLoadingPincode(false));
+}, [form.residence_pincode]);
+
+  // useEffect(() => {
+  //   const pincodeDigits = (form.residence_pincode || "").replace(/\D/g, "");
+
+  //   if (pincodeDigits.length === 6) {
+  //     setLoadingPincode(true);
+  //     fetch(`https://api.postalpincode.in/pincode/${pincodeDigits}`)
+  //       .then((res) => res.json())
+  //       .then((dataArray) => {
+  //         // Response is an array: [{"Message":"...","Status":"Success","PostOffice":[...]}]
+  //         const response = dataArray?.[0];
+  //         if (
+  //           response?.Status === "Success" &&
+  //           response?.PostOffice?.length > 0
+  //         ) {
+  //           const postOffice = response.PostOffice[0]; // Use first post office
+  //           setForm((prev) => ({
+  //             ...prev,
+  //             residence_city: postOffice.District || prev.residence_city,
+  //             residence_locality: postOffice.Name || prev.residence_locality,
+  //           }));
+  //         }
+  //       })
+  //       .catch((err) => {
+  //         console.error("pincode lookup failed", err);
+  //         // Silent fail - manual entry still available
+  //       })
+  //       .finally(() => setLoadingPincode(false));
+  //   }
+  // }, [form.residence_pincode]);
 
 
 //   // ---------- Load assignable users for project ----------
@@ -2207,6 +2315,12 @@ export default function OnsiteRegistration() {
       setQuickCpOtpVerifying(false);
     }
   };
+  const filteredAssignableUsers = useMemo(() => {
+  return assignableUsers.filter(
+    (u) => u.role === "SALES" || u.role === "MANAGER"
+  );
+}, [assignableUsers]);
+
 
   const handleQuickCpCreate = async () => {
     if (!quickCpEmailVerified) {
@@ -2517,8 +2631,10 @@ export default function OnsiteRegistration() {
               </select>
             </div>
             {/* Owner / Assign To */}
+             {/* Owner / Assign To */}
               <div className="onsite-field">
                 <label className="onsite-label">Owner / Assign To</label>
+
                 <select
                   className="onsite-input"
                   value={ownerId}
@@ -2526,15 +2642,16 @@ export default function OnsiteRegistration() {
                   disabled={!form.project_id}
                 >
                   <option value="">Select Owner</option>
-                 {assignableUsers.map((u) => (
-                  <option key={u.id} value={u.id}>
-                    {u.name || u.full_name || u.username || u.email}
-                    {u.role ? ` (${u.role})` : ""}
-                  </option>
-                ))}
 
+                  {filteredAssignableUsers.map((u) => (
+                    <option key={u.id} value={u.id}>
+                      {u.name || u.full_name || u.username}
+                      {u.role ? ` (${u.role})` : ""}
+                    </option>
+                  ))}
                 </select>
               </div>
+
 
           </div>
 
@@ -2593,15 +2710,23 @@ export default function OnsiteRegistration() {
 
             <div className="onsite-field">
               <label className="onsite-label">Locality</label>
-              <input
-                className="onsite-input"
-                type="text"
-                value={form.residence_locality}
-                onChange={(e) =>
-                  handleChange("residence_locality", e.target.value)
-                }
-                placeholder="Auto-filled from pincode"
-              />
+              <select
+                  className="onsite-input"
+                  value={form.residence_locality}
+                  onChange={(e) =>
+                    handleChange("residence_locality", e.target.value)
+                  }
+                >
+                  <option value="">Select Locality</option>
+
+                  {localityOptions.map((loc) => (
+                    <option key={loc} value={loc}>
+                      {loc}
+                    </option>
+                  ))}
+                </select>
+
+
             </div>
           </div>
 

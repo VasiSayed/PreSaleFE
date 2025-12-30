@@ -219,6 +219,16 @@ export const ChannelAPI = {
     api.get(URLS.channelCrmIntegrations, { params }).then((r) => r.data),
 };
 
+export const ChannelAPII = {
+  // already exists
+  listAdminProjectPartners: () =>
+    api.get("/channel/admin-project-channel-partners/").then(r => r.data),
+
+  // already exists (dashboard)
+  getAdminDashboard: () =>
+    api.get("/dashboard/admin/").then(r => r.data),
+};
+
 export const PaymentLeadAPI = {
   listPending(params = {}) {
     return axiosInstance

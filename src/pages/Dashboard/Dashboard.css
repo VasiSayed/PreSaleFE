@@ -671,3 +671,78 @@
     align-self: center;
   }
 }
+
+
+/* Container for the 3 cards */
+.status-cards-container {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-top: 20px;
+  width: 100%;
+}
+
+/* Base style for each separate card */
+.status-card {
+  display: flex;
+  align-items: center;
+  padding: 15px;
+  border-radius: 12px;
+  background: #fff;
+  border: 1px solid #eee;
+  transition: transform 0.2s ease;
+}
+
+.status-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.status-icon {
+  font-size: 24px;
+  margin-right: 12px;
+  padding: 10px;
+  border-radius: 10px;
+}
+
+.status-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.status-label {
+  font-size: 13px;
+  color: #666;
+  font-weight: 500;
+}
+
+.status-value {
+  font-size: 20px;
+  font-weight: 700;
+}
+
+/* Specific Colors for Separation */
+.status-card.hot {
+  border-left: 5px solid #e53e3e;
+}
+.status-card.hot .status-icon { background: #fff5f5; }
+.status-card.hot .status-value { color: #e53e3e; }
+
+.status-card.warm {
+  border-left: 5px solid #dd6b20;
+}
+.status-card.warm .status-icon { background: #fffaf0; }
+.status-card.warm .status-value { color: #dd6b20; }
+
+.status-card.cold {
+  border-left: 5px solid #3182ce;
+}
+.status-card.cold .status-icon { background: #ebf8ff; }
+.status-card.cold .status-value { color: #3182ce; }
+
+.metric-value.clickable {
+  cursor: pointer;
+  pointer-events: auto;
+  color: #171717; /* optional */
+  text-decoration: underline;
+}

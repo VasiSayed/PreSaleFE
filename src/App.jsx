@@ -217,9 +217,11 @@ import ProjectsList from "./pages/Setup/ProjectsList";
 import SetupPage from "./pages/Setup/SetupPage";
 import LeadSetupPage from "./pages/LeadSetup/LeadSetupPage";
 import Auth from "./features/auth/Auth";
+import ForgotPassword from "./features/auth/ForgotPassword";
 import ChannelPartnerChat from "./pages/ChannelPartner/ChannelPartnerChat";
 import ChannelPartnerProfile from "./pages/ChannelPartner/ChannelPartnerProfile";
 import Dashboard from "./pages/Dashboard/Dashboard";
+import ChannelPartnerList from "./pages/Dashboard/ChannelPartnerList";
 import ProjectSetupDetail from "./pages/Setup/ProjectSetupDetail";
 import MyBookings from "./pages/Booking/MyBookings";
 import BookingDetail from "./pages/Booking/BookingDetail";
@@ -283,6 +285,8 @@ export default function App() {
         <Routes>
           {/* Public Route */}
           <Route path="/login" element={<Auth />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          
           <Route path="/booking/kyc-review" element={<KycReview />} />
           <Route path="/onsite-registration" element={<OnsiteRegistration />} />
           {/* Protected Routes with MasterLayout */}
@@ -291,6 +295,11 @@ export default function App() {
               {/* Dashboard */}
               <Route path="/" element={<Dashboard />} />
               <Route path="/dashboard" element={<Dashboard />} />
+              <Route
+                path="/channel-partners"
+                element={<ChannelPartnerList />}
+              />
+
 
               <Route path="/new/user" element={<CreateUserWithProjectAccess />} />
 
@@ -304,6 +313,7 @@ export default function App() {
 
               {/* Master Setup */}
               <Route path="/setup" element={<SetupPage />} />
+             
 
               {/* Lead Setup */}
               <Route path="/lead-setup" element={<LeadSetupPage />} />

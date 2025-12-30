@@ -896,11 +896,14 @@ export default function SalesNavigation() {
         { id: "inventory", label: "Inventory Tracking", route: "/sales/inventory", section: "pre-sales" },
         { id: "lead-setup", label: "Lead Setup", route: "/lead-setup", section: "pre-sales" },
         { id: "channel-partner", label: "Channel Partner Setup", route: "/channel-partner-setup", section: "pre-sales" },
+       
         { id: "cost-quotation", label: "Cost Sheet Quotation Setup", route: "/costsheet/templates", section: "pre-sales" },
         { id: "booking-Approval", label: "Booking Approval", route: "/booking/approvals", section: "pre-sales" },
         { id: "user-register", label: "Sales Executive Setup", route: "/new/user", section: "pre-sales" },
         { id: "opportunities", label: "Opportunities", route: "/sales/opportunities", section: "pre-sales" },
         { id: "leads", label: "Leads", route: "/leads", section: "pre-sales" },
+        
+        
       ];
 
       // If FULL_CONTROL, filter out Leads and Opportunities
@@ -924,6 +927,7 @@ export default function SalesNavigation() {
         { id: "booking", label: "Booking", route: "/booking/list", section: "pre-sales" },
         { id: "Documents", label: "Documents", route: "/documents", section: "pre-sales" },
         { id: "on-site", label: "Customer Registration Form ", route: "/onsite-registration", section: "pre-sales" },
+        { id: "channel-partner", label: "Channel-Partner", route: "/channel-partners", section: "pre-sales" },
       ];
     }
 
@@ -953,6 +957,8 @@ export default function SalesNavigation() {
     //   route: "/booking/approvals",
     //   section: "pre-sales",
     // },
+
+     { id: "inventory", label: "Inventory", route: "/inventory-planning/", section: "pre-sales" },
   ];
 }
 

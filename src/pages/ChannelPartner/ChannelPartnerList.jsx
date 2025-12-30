@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { ChannelAPI } from "../../api/endpoints"; // adjust path if needed
+import { ChannelAPI ,ChannelAPII} from "../../api/endpoints"; // adjust path if needed
 import "./ChannelPartnerList.css";
 
 function debounce(fn, delay) {
@@ -29,34 +29,89 @@ export default function ChannelPartnerList() {
     []
   );
 
-  const loadPartners = async () => {
-    setLoading(true);
-    try {
-      const data = await ChannelAPI.listAdminPartners();
-      // data = { admin_id, projects: [...] }
+  // const loadPartners = async () => {
+  //   setLoading(true);
+  //   try {
+  //     const data = await ChannelAPI.listAdminPartners();
+  //     // data = { admin_id, projects: [...] }
 
-      const flat = (data.projects || []).flatMap((project) =>
-        (project.channel_partners || []).map((cp) => ({
-          id: cp.id,
-          partnerName: cp.user_name,
-          mobile: cp.mobile_number,
-          sourceName: cp.source_name,
-          status: cp.status,
-          onboardingStatus: cp.onboarding_status,
+  //     const flat = (data.projects || []).flatMap((project) =>
+  //       (project.channel_partners || []).map((cp) => ({
+  //         id: cp.id,
+  //         partnerName: cp.user_name,
+  //         mobile: cp.mobile_number,
+  //         sourceName: cp.source_name,
+  //         status: cp.status,
+  //         onboardingStatus: cp.onboarding_status,
+  //         projectName: project.name,
+  //         projectStatus: project.status,
+  //         projectApprovalStatus: project.approval_status,
+  //       }))
+  //     );
+
+  //     setPartners(flat);
+  //   } catch (err) {
+  //     console.error("Error loading admin project channel partners:", err);
+  //     setPartners([]);
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // };
+
+  
+ const loadPartners = async () => {
+  setLoading(true);
+  try {
+    // 1️⃣ Fetch both APIs
+    const [projectRes, dashboardRes] = await Promise.all([
+      ChannelAPII.listAdminProjectPartners(),
+      ChannelAPII.getAdminDashboard(),
+    ]);
+
+    const projects = projectRes?.projects || [];
+
+    const cpSummary =
+      dashboardRes?.data?.channel_partners?.cp_summary || [];
+
+    // 2️⃣ Convert CP summary into map
+    const cpMap = {};
+    cpSummary.forEach((cp) => {
+      cpMap[cp.cp_id] = cp;
+    });
+
+    // 3️⃣ Build frontend list (merge)
+    const flat = [];
+
+    projects.forEach((project) => {
+      Object.values(cpMap).forEach((cp) => {
+        flat.push({
+          id: cp.cp_id,
+          partnerName: cp.name,
+          mobile: "-",
+          sourceName: "Channel Partner",
+
           projectName: project.name,
           projectStatus: project.status,
           projectApprovalStatus: project.approval_status,
-        }))
-      );
 
-      setPartners(flat);
-    } catch (err) {
-      console.error("Error loading admin project channel partners:", err);
-      setPartners([]);
-    } finally {
-      setLoading(false);
-    }
-  };
+         
+          status: "ACTIVE",
+
+          leadsCount: cp.leads_count ?? 0,
+          bookingsCount: cp.bookings_count ?? 0,
+          bookedValue: cp.booked_value ?? 0,
+        });
+      });
+    });
+
+    setPartners(flat);
+  } catch (err) {
+    console.error("Failed to load channel partners", err);
+    setPartners([]);
+  } finally {
+    setLoading(false);
+  }
+};
 
   useEffect(() => {
     loadPartners();
@@ -154,14 +209,14 @@ export default function ChannelPartnerList() {
             <table className="data-table">
               <thead>
                 <tr>
-                  <th style={{ width: "120px" }}>Actions</th>
+                  {/* <th style={{ width: "120px" }}>Actions</th> */}
                   <th>Project</th>
                   <th>Partner</th>
-                  <th>Mobile</th>
+                  {/* <th>Mobile</th> */}
                   <th>Source</th>
                   <th>Project Status</th>
                   <th>Approval</th>
-                  <th>Onboarding Status</th>
+                 
                   <th>Partner Status</th>
                 </tr>
               </thead>
@@ -169,7 +224,7 @@ export default function ChannelPartnerList() {
                 {currentData.length > 0 ? (
                   currentData.map((row) => (
                     <tr key={`${row.projectName}-${row.id}`}>
-                      <td className="row-actions">
+                      {/* <td className="row-actions">
                         <button
                           title="View"
                           className="action-btn view-btn"
@@ -196,23 +251,15 @@ export default function ChannelPartnerList() {
                           onClick={() => handleDelete(row.id)}
                         >
                           🗑️
-                        </button>
-                      </td>
+                        </button> */}
+                      
                       <td>{row.projectName}</td>
                       <td className="partner-name">{row.partnerName}</td>
-                      <td>{row.mobile}</td>
+                      {/* <td>{row.mobile}</td> */}
                       <td>{row.sourceName}</td>
                       <td>{row.projectStatus}</td>
                       <td>{row.projectApprovalStatus}</td>
-                      <td>
-                        <span
-                          className={`status-badge ${getStatusBadgeClass(
-                            row.onboardingStatus
-                          )}`}
-                        >
-                          {row.onboardingStatus}
-                        </span>
-                      </td>
+                      
                       <td>
                         <span
                           className={`status-badge ${getStatusBadgeClass(

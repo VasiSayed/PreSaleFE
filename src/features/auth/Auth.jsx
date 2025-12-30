@@ -461,9 +461,11 @@ try {
                     <input type="checkbox" />
                     <span>Remember me</span>
                   </label>
-                  <a href="#" className="forgot-password">
-                    Forgot Password?
-                  </a>
+                  <a href="/forgot-password" className="forgot-password">
+  Forgot Password?
+</a>
+
+
                 </div>
               )}
 

@@ -3715,12 +3715,24 @@ const CostSheetCreate = () => {
 
             <div className="cs-field">
               <label className="cs-label">Total Area (sq. ft.)</label>
-              <input
+
+
+              {/* <input
                 type="number"
                 className="cs-input"
                 value={baseAreaSqft}
                 onChange={(e) => setBaseAreaSqft(e.target.value)}
-              />
+              /> */}
+
+              <input
+                  type="text"
+                  className="cs-input"
+                  value={calculatedArea ? calculatedArea.toFixed(2) : ""}
+                  readOnly
+                />
+
+
+
             </div>
 
             <div className="cs-field">
