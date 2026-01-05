@@ -260,6 +260,8 @@ import ProfilePage from "./pages/Profile";
 import CreateUserWithProjectAccess from "./pages/CreateUserWithProjectAccess";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import SirDashboard from "./pages/SirDashboard";
+
 
 export default function App() {
   return (
@@ -286,7 +288,7 @@ export default function App() {
           {/* Public Route */}
           <Route path="/login" element={<Auth />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
-          
+
           <Route path="/booking/kyc-review" element={<KycReview />} />
           <Route path="/onsite-registration" element={<OnsiteRegistration />} />
           {/* Protected Routes with MasterLayout */}
@@ -299,9 +301,12 @@ export default function App() {
                 path="/channel-partners"
                 element={<ChannelPartnerList />}
               />
+              <Route path="/sir-dashboard" element={<SirDashboard />} />
 
-
-              <Route path="/new/user" element={<CreateUserWithProjectAccess />} />
+              <Route
+                path="/new/user"
+                element={<CreateUserWithProjectAccess />}
+              />
 
               {/* Projects */}
               <Route path="/sales/projects" element={<ProjectsList />} />
@@ -313,7 +318,6 @@ export default function App() {
 
               {/* Master Setup */}
               <Route path="/setup" element={<SetupPage />} />
-             
 
               {/* Lead Setup */}
               <Route path="/lead-setup" element={<LeadSetupPage />} />
