@@ -22,14 +22,7 @@ import {
 } from "recharts";
 
 const SCOPE_URL = "/client/my-scope/";
-
-// ✅ NEW backend urls (assuming axiosInstance baseURL already has /api)
-const EXEC_URL = "/presales/dashboard/executive/";
-const DRILL_LEADS_URL = "/presales/dashboard/drill/leads/";
-const DRILL_INV_URL = "/presales/dashboard/drill/inventory-units/";
-const DRILL_BOOKINGS_URL = "/presales/dashboard/drill/bookings/";
-const DRILL_COSTSHEETS_URL = "/presales/dashboard/drill/cost-sheets/";
-const DRILL_VISITS_URL = "/presales/dashboard/drill/site-visits/";
+const DASH_URL = "/dashboard/presales-exec/";
 
 /* ---------------- helpers ---------------- */
 const upper = (v) => (v == null ? "" : String(v).trim().toUpperCase());
@@ -64,17 +57,6 @@ const formatCompact = (n) => {
   if (Math.abs(num) >= 1e5) return `${(num / 1e5).toFixed(2)}L`;
   if (Math.abs(num) >= 1e3) return `${(num / 1e3).toFixed(2)}k`;
   return `${num}`;
-};
-
-const cleanCaseDateRange = (v) => {
-  // backend expects exact strings: Today/WTD/MTD/QTD/YTD/Custom/ALL
-  const s = String(v || "").trim();
-  if (!s) return "ALL";
-  if (upper(s) === "CUSTOM") return "Custom";
-  if (upper(s) === "TODAY") return "Today";
-  if (upper(s) === "ALL") return "ALL";
-  if (["WTD", "MTD", "QTD", "YTD"].includes(upper(s))) return upper(s);
-  return s; // fallback
 };
 
 /* ---------------- UI components ---------------- */
@@ -118,7 +100,6 @@ const TableCard = ({
   rows = [],
   rightActions = null,
   onExport,
-  onRowClick,
 }) => (
   <div className="table-card">
     <div className="table-header">
@@ -144,11 +125,7 @@ const TableCard = ({
         <tbody>
           {rows?.length ? (
             rows.map((r, i) => (
-              <tr
-                key={i}
-                className={onRowClick ? "row-clickable" : ""}
-                onClick={() => onRowClick?.(r)}
-              >
+              <tr key={i}>
                 {columns.map((c) => (
                   <td key={c}>{r?.[c] ?? "N/A"}</td>
                 ))}
@@ -166,41 +143,6 @@ const TableCard = ({
     </div>
   </div>
 );
-
-/* ---------------- Basic Modal + Drawer ---------------- */
-function Modal({ open, title, onClose, children }) {
-  if (!open) return null;
-  return (
-    <div className="modal-overlay" onMouseDown={onClose}>
-      <div className="modal" onMouseDown={(e) => e.stopPropagation()}>
-        <div className="modal-head">
-          <div className="modal-title">{title}</div>
-          <button className="btn-ghost" type="button" onClick={onClose}>
-            Close
-          </button>
-        </div>
-        <div className="modal-body">{children}</div>
-      </div>
-    </div>
-  );
-}
-
-function Drawer({ open, title, onClose, children }) {
-  if (!open) return null;
-  return (
-    <div className="drawer-overlay" onMouseDown={onClose}>
-      <div className="drawer" onMouseDown={(e) => e.stopPropagation()}>
-        <div className="drawer-head">
-          <div className="drawer-title">{title}</div>
-          <button className="btn-ghost" type="button" onClick={onClose}>
-            Close
-          </button>
-        </div>
-        <div className="drawer-body">{children}</div>
-      </div>
-    </div>
-  );
-}
 
 /* ---------------- Recharts “Chart With Options” ---------------- */
 const SERIES_COLORS = [
@@ -224,7 +166,6 @@ function ChartWithOptions({
   onViewDetail,
   yTickFormatter,
   valueFormatter,
-  onCategoryClick, // ✅ NEW: drill click
 }) {
   const hasMultiSeries = (series?.length || 0) > 1;
 
@@ -292,12 +233,6 @@ function ChartWithOptions({
 
   const tooltipLabel = (label) => `${label}`;
 
-  const onChartClick = (e) => {
-    if (!onCategoryClick) return;
-    const label = e?.activeLabel;
-    if (label != null) onCategoryClick(label);
-  };
-
   const renderChart = () => {
     if (!norm.length) return <div className="mini-empty">No data</div>;
 
@@ -318,11 +253,6 @@ function ChartWithOptions({
                 outerRadius={110}
                 innerRadius={55}
                 paddingAngle={2}
-                onClick={(_, idx) => {
-                  if (!onCategoryClick) return;
-                  const label = pieData?.[idx]?.name;
-                  if (label != null) onCategoryClick(label);
-                }}
               >
                 {pieData.map((_, idx) => (
                   <Cell
@@ -340,12 +270,6 @@ function ChartWithOptions({
               <b>{series.find((s) => s.key === pieMetric)?.name || "Metric"}</b>
             </div>
           ) : null}
-
-          {onCategoryClick ? (
-            <div className="chart-footnote">
-              Tip: click on bar/slice to drill
-            </div>
-          ) : null}
         </div>
       );
     }
@@ -357,7 +281,6 @@ function ChartWithOptions({
             <LineChart
               data={norm}
               margin={{ top: 10, right: 18, left: 6, bottom: 10 }}
-              onClick={onChartClick}
             >
               <CartesianGrid stroke="#eaeaea" strokeDasharray="3 3" />
               <XAxis dataKey={categoryKey} tick={{ fontSize: 12 }} />
@@ -380,12 +303,6 @@ function ChartWithOptions({
               ))}
             </LineChart>
           </ResponsiveContainer>
-
-          {onCategoryClick ? (
-            <div className="chart-footnote">
-              Tip: click on chart to drill (hover then click)
-            </div>
-          ) : null}
         </div>
       );
     }
@@ -397,7 +314,6 @@ function ChartWithOptions({
             <AreaChart
               data={norm}
               margin={{ top: 10, right: 18, left: 6, bottom: 10 }}
-              onClick={onChartClick}
             >
               <CartesianGrid stroke="#eaeaea" strokeDasharray="3 3" />
               <XAxis dataKey={categoryKey} tick={{ fontSize: 12 }} />
@@ -421,12 +337,6 @@ function ChartWithOptions({
               ))}
             </AreaChart>
           </ResponsiveContainer>
-
-          {onCategoryClick ? (
-            <div className="chart-footnote">
-              Tip: click on chart to drill (hover then click)
-            </div>
-          ) : null}
         </div>
       );
     }
@@ -439,7 +349,6 @@ function ChartWithOptions({
           <BarChart
             data={norm}
             margin={{ top: 10, right: 18, left: 6, bottom: 10 }}
-            onClick={onChartClick}
           >
             <CartesianGrid stroke="#eaeaea" strokeDasharray="3 3" />
             <XAxis dataKey={categoryKey} tick={{ fontSize: 12 }} />
@@ -461,10 +370,6 @@ function ChartWithOptions({
             ))}
           </BarChart>
         </ResponsiveContainer>
-
-        {onCategoryClick ? (
-          <div className="chart-footnote">Tip: click on bar group to drill</div>
-        ) : null}
       </div>
     );
   };
@@ -527,65 +432,6 @@ export default function SirDashboard() {
     dash?.meta?.brand?.company_name ||
     "Vibe Pre-Sales Cockpit";
 
-  /* ---------------- Drill States ---------------- */
-  const [leadsDrill, setLeadsDrill] = useState({
-    open: false,
-    title: "Leads",
-    loading: false,
-    error: "",
-    columns: [],
-    rows: [],
-    total: 0,
-    limit: 50,
-    offset: 0,
-    extraParams: {},
-  });
-
-  const [invDrill, setInvDrill] = useState({
-    open: false,
-    title: "Inventory Drill",
-    loading: false,
-    error: "",
-    breadcrumb: [], // [{label, params}]
-    data: null, // response.data
-    params: { level: "site" },
-  });
-
-  /* ---------------- Build common params for all endpoints ---------------- */
-  const buildCommonParams = (overrides = {}) => {
-    const params = {};
-
-    // date range
-    const dr = cleanCaseDateRange(dateRange);
-    params.date_range = dr;
-
-    if (dr === "Custom") {
-      if (customFrom) params.from = customFrom; // backend supports from OR from_date
-      if (customTo) params.to = customTo; // backend supports to OR to_date
-    }
-
-    // site/project
-    if (siteId && siteId !== "ALL") {
-      params.project_id = Number(siteId);
-      params.site_id = Number(siteId); // harmless
-    }
-
-    // other filters
-    if (tower && tower !== "ALL") params.tower = tower; // tower name
-    if (configuration && configuration !== "ALL")
-      params.configuration = configuration;
-    if (leadSource && leadSource !== "ALL") params.lead_source = leadSource;
-
-    if (channelPartnerId && channelPartnerId !== "ALL")
-      params.channel_partner_id = Number(channelPartnerId);
-    if (salesUserId && salesUserId !== "ALL")
-      params.sales_user_id = Number(salesUserId);
-    if (campaignId && campaignId !== "ALL")
-      params.campaign_id = Number(campaignId);
-
-    return { ...params, ...overrides };
-  };
-
   // fetch scope
   useEffect(() => {
     const run = async () => {
@@ -612,13 +458,46 @@ export default function SirDashboard() {
     setError("");
 
     try {
-      const params = buildCommonParams({
+      const params = {
         lead_limit: leadLimit,
         lead_offset: resetOffset ? 0 : leadOffset,
         drill_limit: 10,
-      });
+      };
 
-      const res = await axiosInstance.get(EXEC_URL, { params });
+      // date_mode
+      const dr = upper(dateRange);
+      if (dr === "CUSTOM") {
+        params.date_mode = "CUSTOM";
+        if (customFrom) params.from_date = customFrom;
+        if (customTo) params.to_date = customTo;
+      } else if (dr === "ALL") {
+        params.date_mode = "ALL";
+      } else {
+        params.date_mode = dr;
+      }
+
+      // site filter
+      if (siteId && siteId !== "ALL") {
+        params.site_id = Number(siteId);
+        params.project_id = Number(siteId); // backward compat
+      }
+
+      // other filters
+      if (tower && tower !== "ALL") params.tower = tower;
+      if (configuration && configuration !== "ALL")
+        params.configuration = configuration;
+      if (leadSource && leadSource !== "ALL") params.lead_source = leadSource;
+
+      if (channelPartnerId && channelPartnerId !== "ALL")
+        params.channel_partner_id = Number(channelPartnerId);
+
+      if (salesUserId && salesUserId !== "ALL")
+        params.sales_user_id = Number(salesUserId);
+
+      if (campaignId && campaignId !== "ALL")
+        params.campaign_id = Number(campaignId);
+
+      const res = await axiosInstance.get(DASH_URL, { params });
 
       if (res.data?.success === false)
         throw new Error(res.data?.error || "Dashboard error");
@@ -641,221 +520,6 @@ export default function SirDashboard() {
     fetchDashboard({ resetOffset: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [scope]);
-
-  /* ---------------- Drill API: Leads ---------------- */
-  const openLeadsDrill = async (extraParams = {}, title = "Leads") => {
-    setLeadsDrill((s) => ({
-      ...s,
-      open: true,
-      title,
-      loading: true,
-      error: "",
-      rows: [],
-      total: 0,
-      offset: 0,
-      limit: 50,
-      extraParams,
-    }));
-
-    try {
-      const params = buildCommonParams({
-        ...extraParams,
-        limit: 50,
-        offset: 0,
-      });
-      const res = await axiosInstance.get(DRILL_LEADS_URL, { params });
-
-      if (res.data?.success === false)
-        throw new Error(res.data?.error || "Drill error");
-
-      const data = res.data?.data || {};
-      setLeadsDrill((s) => ({
-        ...s,
-        loading: false,
-        columns: data.columns || autoColumns(data.rows || []),
-        rows: data.rows || [],
-        total: data.total || 0,
-        limit: data.limit ?? 50,
-        offset: data.offset ?? 0,
-      }));
-    } catch (e) {
-      setLeadsDrill((s) => ({
-        ...s,
-        loading: false,
-        error:
-          e?.response?.data?.detail ||
-          e?.message ||
-          "Unable to load leads drill",
-      }));
-    }
-  };
-
-  const paginateLeadsDrill = async (nextOffset) => {
-    setLeadsDrill((s) => ({ ...s, loading: true, error: "" }));
-    try {
-      const params = buildCommonParams({
-        ...leadsDrill.extraParams,
-        limit: leadsDrill.limit,
-        offset: nextOffset,
-      });
-
-      const res = await axiosInstance.get(DRILL_LEADS_URL, { params });
-
-      if (res.data?.success === false)
-        throw new Error(res.data?.error || "Drill error");
-
-      const data = res.data?.data || {};
-      setLeadsDrill((s) => ({
-        ...s,
-        loading: false,
-        columns: data.columns || s.columns,
-        rows: data.rows || [],
-        total: data.total || 0,
-        limit: data.limit ?? s.limit,
-        offset: data.offset ?? nextOffset,
-      }));
-    } catch (e) {
-      setLeadsDrill((s) => ({
-        ...s,
-        loading: false,
-        error: e?.response?.data?.detail || e?.message || "Unable to paginate",
-      }));
-    }
-  };
-
-  /* ---------------- Drill API: Inventory Tree ---------------- */
-  const fetchInventoryDrill = async (params) => {
-    setInvDrill((s) => ({ ...s, loading: true, error: "" }));
-    try {
-      const res = await axiosInstance.get(DRILL_INV_URL, {
-        params: buildCommonParams(params),
-      });
-
-      if (res.data?.success === false)
-        throw new Error(res.data?.error || "Inventory drill error");
-
-      setInvDrill((s) => ({
-        ...s,
-        loading: false,
-        data: res.data?.data || null,
-        params,
-      }));
-    } catch (e) {
-      setInvDrill((s) => ({
-        ...s,
-        loading: false,
-        error:
-          e?.response?.data?.detail ||
-          e?.message ||
-          "Unable to load inventory drill",
-      }));
-    }
-  };
-
-  const openInventoryDrill = async (
-    initialParams = { level: "site" },
-    title = "Inventory Drill"
-  ) => {
-    setInvDrill({
-      open: true,
-      title,
-      loading: false,
-      error: "",
-      breadcrumb: [{ label: "Root", params: initialParams }],
-      data: null,
-      params: initialParams,
-    });
-    await fetchInventoryDrill(initialParams);
-  };
-
-  const invGoToCrumb = async (idx) => {
-    const crumb = invDrill.breadcrumb[idx];
-    if (!crumb) return;
-    const nextBreadcrumb = invDrill.breadcrumb.slice(0, idx + 1);
-    setInvDrill((s) => ({ ...s, breadcrumb: nextBreadcrumb }));
-    await fetchInventoryDrill(crumb.params);
-  };
-
-  const invOnNodeClick = async (node) => {
-    const p = node?.drill_params;
-    if (!p) return;
-
-    const nextCrumb = { label: node?.label || "Next", params: p };
-    setInvDrill((s) => ({ ...s, breadcrumb: [...s.breadcrumb, nextCrumb] }));
-    await fetchInventoryDrill(p);
-  };
-
-  const invUnitPaginate = async (offsetDelta) => {
-    const cur = invDrill.data;
-    const p = invDrill.params || {};
-    const limit = Number(cur?.limit || 200);
-    const offset = Number(cur?.offset || 0);
-
-    const nextOffset = Math.max(offset + offsetDelta, 0);
-    await fetchInventoryDrill({
-      ...p,
-      level: "unit",
-      limit,
-      offset: nextOffset,
-    });
-  };
-
-  /* ---------------- Drill API: Simple list drills (Bookings/Cost/Visits) ---------------- */
-  const [simpleDrill, setSimpleDrill] = useState({
-    open: false,
-    title: "",
-    loading: false,
-    error: "",
-    rows: [],
-    columns: [],
-    total: 0,
-    limit: 50,
-    offset: 0,
-    url: "",
-  });
-
-  const openSimpleDrill = async (url, title) => {
-    setSimpleDrill({
-      open: true,
-      title,
-      loading: true,
-      error: "",
-      rows: [],
-      columns: [],
-      total: 0,
-      limit: 50,
-      offset: 0,
-      url,
-    });
-
-    try {
-      const res = await axiosInstance.get(url, {
-        params: buildCommonParams({ limit: 50, offset: 0 }),
-      });
-
-      if (res.data?.success === false)
-        throw new Error(res.data?.error || "Drill error");
-      const data = res.data?.data || {};
-
-      const rows = data.rows || [];
-      setSimpleDrill((s) => ({
-        ...s,
-        loading: false,
-        rows,
-        columns: autoColumns(rows),
-        total: data.total ?? rows.length ?? 0,
-        limit: data.limit ?? 50,
-        offset: data.offset ?? 0,
-      }));
-    } catch (e) {
-      setSimpleDrill((s) => ({
-        ...s,
-        loading: false,
-        error:
-          e?.response?.data?.detail || e?.message || "Unable to load drill",
-      }));
-    }
-  };
 
   /* ------------ map API data ------------ */
   const meta = dash?.meta || {};
@@ -956,15 +620,6 @@ export default function SirDashboard() {
   }, [invRows]);
 
   const isLoading = loadingScope || loadingDash;
-
-  // helpers for mapping label->id
-  const siteIdByName = (siteName) => {
-    const s = sites.find((x) => (x.label || x.name) === siteName);
-    return s?.id || null;
-  };
-  const cpIdByLabel = (label) => cps.find((x) => x.label === label)?.id || null;
-  const spIdByLabel = (label) =>
-    salesPeople.find((x) => x.label === label)?.id || null;
 
   return (
     <div className="sir-dashboard">
@@ -1162,35 +817,6 @@ export default function SirDashboard() {
             >
               Apply
             </button>
-
-            {/* Optional quick drill buttons */}
-            <button
-              className="btn-ghost"
-              type="button"
-              onClick={() =>
-                openSimpleDrill(DRILL_BOOKINGS_URL, "Bookings Drill")
-              }
-            >
-              Bookings Drill
-            </button>
-            <button
-              className="btn-ghost"
-              type="button"
-              onClick={() =>
-                openSimpleDrill(DRILL_COSTSHEETS_URL, "Cost Sheets Drill")
-              }
-            >
-              CostSheets Drill
-            </button>
-            <button
-              className="btn-ghost"
-              type="button"
-              onClick={() =>
-                openSimpleDrill(DRILL_VISITS_URL, "Site Visits Drill")
-              }
-            >
-              Visits Drill
-            </button>
           </div>
         </header>
 
@@ -1236,14 +862,9 @@ export default function SirDashboard() {
                 categoryKey="stage"
                 series={[{ key: "count", name: "Count" }]}
                 defaultType="bar"
-                onViewDetail={() => openLeadsDrill({}, "Leads Drill")}
+                onViewDetail={() => scrollTo(secLeadsRef)}
                 yTickFormatter={(v) => formatCompact(v)}
                 valueFormatter={(v) => formatCompact(v)}
-                // Optional: drill by stage (best effort)
-                onCategoryClick={(stage) => {
-                  // You can add smarter mapping later. For now open leads.
-                  openLeadsDrill({}, `Leads Drill • ${stage}`);
-                }}
               />
 
               <ChartWithOptions
@@ -1260,15 +881,9 @@ export default function SirDashboard() {
                   { key: "bookings", name: "Bookings" },
                 ]}
                 defaultType="stacked"
-                onViewDetail={() => openLeadsDrill({}, "Leads Drill")}
+                onViewDetail={() => scrollTo(secLeadsRef)}
                 yTickFormatter={(v) => formatCompact(v)}
                 valueFormatter={(v) => formatCompact(v)}
-                onCategoryClick={(src) =>
-                  openLeadsDrill(
-                    { lead_source: src },
-                    `Leads Drill • Source: ${src}`
-                  )
-                }
               />
 
               <ChartWithOptions
@@ -1290,18 +905,9 @@ export default function SirDashboard() {
                   },
                 ]}
                 defaultType="line"
-                onViewDetail={() => openLeadsDrill({}, "Leads Drill")}
+                onViewDetail={() => scrollTo(secOverviewRef)}
                 yTickFormatter={(v) => `${v}%`}
                 valueFormatter={(v) => `${toNum(v)}%`}
-                onCategoryClick={(siteName) => {
-                  const pid = siteIdByName(siteName);
-                  if (pid)
-                    return openLeadsDrill(
-                      { project_id: pid, site_id: pid },
-                      `Leads Drill • Site: ${siteName}`
-                    );
-                  return openLeadsDrill({}, `Leads Drill • Site: ${siteName}`);
-                }}
               />
 
               <div className="note">
@@ -1311,23 +917,13 @@ export default function SirDashboard() {
             </div>
           </section>
 
-          {/* Site Summary Table (row click -> inventory drill) */}
+          {/* Site Summary Table */}
           <section className="band">
             <TableCard
               title={tSite?.title || "Site Summary"}
               columns={tSite?.columns || autoColumns(tSite?.rows || [])}
               rows={tSite?.rows || []}
               onExport={() => console.log("Export Site Summary")}
-              onRowClick={(row) => {
-                const siteName = row?.Site;
-                const pid = siteIdByName(siteName);
-                if (pid)
-                  return openInventoryDrill(
-                    { level: "tower", project_id: pid },
-                    `Inventory • ${siteName}`
-                  );
-                return openInventoryDrill({ level: "site" }, "Inventory Drill");
-              }}
             />
           </section>
 
@@ -1387,16 +983,6 @@ export default function SirDashboard() {
                   >
                     Next
                   </button>
-
-                  <button
-                    className="btn-ghost"
-                    type="button"
-                    onClick={() =>
-                      openLeadsDrill({}, "Leads Drill (Full List)")
-                    }
-                  >
-                    Drill
-                  </button>
                 </div>
               }
               onExport={() => console.log("Export Lead List")}
@@ -1411,18 +997,10 @@ export default function SirDashboard() {
               columns={tConfig?.columns || autoColumns(tConfig?.rows || [])}
               rows={tConfig?.rows || []}
               onExport={() => console.log("Export Config Matrix")}
-              onRowClick={(row) => {
-                const cfg = row?.Configuration;
-                if (!cfg) return;
-                openLeadsDrill(
-                  { configuration: cfg },
-                  `Leads Drill • Config: ${cfg}`
-                );
-              }}
             />
           </section>
 
-          {/* CP Performance (row click -> leads drill by CP) */}
+          {/* CP Performance */}
           <section className="band" ref={secCPRef}>
             <div className="band-title">Channel Partners</div>
             <TableCard
@@ -1430,20 +1008,10 @@ export default function SirDashboard() {
               columns={tCP?.columns || autoColumns(tCP?.rows || [])}
               rows={tCP?.rows || []}
               onExport={() => console.log("Export CP")}
-              onRowClick={(row) => {
-                const name = row?.["CP Name"];
-                const id = cpIdByLabel(name);
-                if (id)
-                  return openLeadsDrill(
-                    { channel_partner_id: id },
-                    `Leads Drill • CP: ${name}`
-                  );
-                openLeadsDrill({}, `Leads Drill • CP: ${name}`);
-              }}
             />
           </section>
 
-          {/* Sales Performance (row click -> leads drill by salesperson) */}
+          {/* Sales Performance */}
           <section className="band" ref={secSalesRef}>
             <div className="band-title">Sales Team</div>
             <TableCard
@@ -1451,16 +1019,6 @@ export default function SirDashboard() {
               columns={tSales?.columns || autoColumns(tSales?.rows || [])}
               rows={tSales?.rows || []}
               onExport={() => console.log("Export Sales")}
-              onRowClick={(row) => {
-                const name = row?.Salesperson;
-                const id = spIdByLabel(name);
-                if (id)
-                  return openLeadsDrill(
-                    { sales_user_id: id },
-                    `Leads Drill • Sales: ${name}`
-                  );
-                openLeadsDrill({}, `Leads Drill • Sales: ${name}`);
-              }}
             />
           </section>
 
@@ -1512,14 +1070,9 @@ export default function SirDashboard() {
                   { key: "blocked", name: "Blocked" },
                 ]}
                 defaultType="stacked"
-                onViewDetail={() =>
-                  openInventoryDrill({ level: "site" }, "Inventory Drill")
-                }
+                onViewDetail={() => scrollTo(secInvTableRef)}
                 yTickFormatter={(v) => formatCompact(v)}
                 valueFormatter={(v) => formatCompact(v)}
-                onCategoryClick={() =>
-                  openInventoryDrill({ level: "site" }, "Inventory Drill")
-                }
               />
 
               <ChartWithOptions
@@ -1534,21 +1087,9 @@ export default function SirDashboard() {
                   { key: "blocked", name: "Blocked" },
                 ]}
                 defaultType="stacked"
-                onViewDetail={() =>
-                  openInventoryDrill({ level: "site" }, "Inventory Drill")
-                }
+                onViewDetail={() => scrollTo(secInvTableRef)}
                 yTickFormatter={(v) => formatCompact(v)}
                 valueFormatter={(v) => formatCompact(v)}
-                onCategoryClick={(towerName) => {
-                  // jump to floors for this tower name (backend supports tower_id as name)
-                  const base = {};
-                  if (siteId && siteId !== "ALL")
-                    base.project_id = Number(siteId);
-                  openInventoryDrill(
-                    { level: "floor", ...base, tower_id: towerName },
-                    `Inventory • Tower: ${towerName}`
-                  );
-                }}
               />
             </div>
           </section>
@@ -1563,276 +1104,10 @@ export default function SirDashboard() {
               }
               rows={tInventory?.rows || []}
               onExport={() => console.log("Export Inventory")}
-              onRowClick={() =>
-                openInventoryDrill({ level: "site" }, "Inventory Drill")
-              }
             />
           </section>
         </main>
       </div>
-
-      {/* ---------------- Leads Drill Modal ---------------- */}
-      <Modal
-        open={leadsDrill.open}
-        title={leadsDrill.title}
-        onClose={() => setLeadsDrill((s) => ({ ...s, open: false }))}
-      >
-        {leadsDrill.error ? (
-          <div className="alert alert-error">{leadsDrill.error}</div>
-        ) : null}
-        {leadsDrill.loading ? (
-          <div className="alert">Loading drill…</div>
-        ) : null}
-
-        <div className="drill-toolbar">
-          <div className="drill-meta">
-            Total: <b>{leadsDrill.total}</b> • Offset:{" "}
-            <b>{leadsDrill.offset}</b> • Limit: <b>{leadsDrill.limit}</b>
-          </div>
-          <div className="drill-actions">
-            <button
-              className="btn-ghost"
-              type="button"
-              disabled={leadsDrill.loading || leadsDrill.offset <= 0}
-              onClick={() =>
-                paginateLeadsDrill(
-                  Math.max(leadsDrill.offset - leadsDrill.limit, 0)
-                )
-              }
-            >
-              Prev
-            </button>
-            <button
-              className="btn-ghost"
-              type="button"
-              disabled={
-                leadsDrill.loading ||
-                leadsDrill.offset + leadsDrill.limit >= leadsDrill.total
-              }
-              onClick={() =>
-                paginateLeadsDrill(leadsDrill.offset + leadsDrill.limit)
-              }
-            >
-              Next
-            </button>
-          </div>
-        </div>
-
-        <div className="table-scroll drill-table">
-          <table>
-            <thead>
-              <tr>
-                {(leadsDrill.columns || []).map((c) => (
-                  <th key={c}>{c}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {(leadsDrill.rows || []).length ? (
-                leadsDrill.rows.map((r, i) => (
-                  <tr key={i}>
-                    {leadsDrill.columns.map((c) => (
-                      <td key={c}>{r?.[c] ?? "N/A"}</td>
-                    ))}
-                  </tr>
-                ))
-              ) : (
-                <tr>
-                  <td
-                    className="empty-cell"
-                    colSpan={Math.max(leadsDrill.columns.length, 1)}
-                  >
-                    No rows
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </Modal>
-
-      {/* ---------------- Simple Drill Modal (Bookings/Cost/Visits) ---------------- */}
-      <Modal
-        open={simpleDrill.open}
-        title={simpleDrill.title}
-        onClose={() => setSimpleDrill((s) => ({ ...s, open: false }))}
-      >
-        {simpleDrill.error ? (
-          <div className="alert alert-error">{simpleDrill.error}</div>
-        ) : null}
-        {simpleDrill.loading ? (
-          <div className="alert">Loading drill…</div>
-        ) : null}
-
-        <div className="drill-toolbar">
-          <div className="drill-meta">
-            Total: <b>{simpleDrill.total}</b>
-          </div>
-        </div>
-
-        <div className="table-scroll drill-table">
-          <table>
-            <thead>
-              <tr>
-                {(simpleDrill.columns || []).map((c) => (
-                  <th key={c}>{c}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {(simpleDrill.rows || []).length ? (
-                simpleDrill.rows.map((r, i) => (
-                  <tr key={i}>
-                    {simpleDrill.columns.map((c) => (
-                      <td key={c}>{r?.[c] ?? "N/A"}</td>
-                    ))}
-                  </tr>
-                ))
-              ) : (
-                <tr>
-                  <td
-                    className="empty-cell"
-                    colSpan={Math.max(simpleDrill.columns.length, 1)}
-                  >
-                    No rows
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </Modal>
-
-      {/* ---------------- Inventory Drill Drawer ---------------- */}
-      <Drawer
-        open={invDrill.open}
-        title={invDrill.title}
-        onClose={() => setInvDrill((s) => ({ ...s, open: false }))}
-      >
-        {invDrill.error ? (
-          <div className="alert alert-error">{invDrill.error}</div>
-        ) : null}
-        {invDrill.loading ? (
-          <div className="alert">Loading inventory…</div>
-        ) : null}
-
-        {/* Breadcrumb */}
-        <div className="crumbs">
-          {invDrill.breadcrumb.map((c, idx) => (
-            <button
-              key={idx}
-              className={`crumb ${
-                idx === invDrill.breadcrumb.length - 1 ? "crumb-active" : ""
-              }`}
-              type="button"
-              onClick={() => invGoToCrumb(idx)}
-            >
-              {c.label}
-            </button>
-          ))}
-        </div>
-
-        {/* Content */}
-        {invDrill.data?.level !== "unit" ? (
-          <div className="inv-nodes">
-            {(invDrill.data?.nodes || []).map((n) => (
-              <button
-                key={String(n.id)}
-                className="inv-node"
-                type="button"
-                onClick={() => invOnNodeClick(n)}
-              >
-                <div className="inv-node-title">{n.label}</div>
-                <div className="inv-node-counts">
-                  <span>
-                    Total: <b>{n?.counts?.total ?? 0}</b>
-                  </span>
-                  <span>
-                    Avail: <b>{n?.counts?.available ?? 0}</b>
-                  </span>
-                  <span>
-                    Booked: <b>{n?.counts?.booked ?? 0}</b>
-                  </span>
-                  <span>
-                    Blocked: <b>{n?.counts?.blocked ?? 0}</b>
-                  </span>
-                </div>
-                <div className="inv-node-next">Next: {n.next_level}</div>
-              </button>
-            ))}
-            {!invDrill.loading && !(invDrill.data?.nodes || []).length ? (
-              <div className="mini-empty">No nodes</div>
-            ) : null}
-          </div>
-        ) : (
-          <div>
-            <div className="drill-toolbar">
-              <div className="drill-meta">
-                Total: <b>{invDrill.data?.total ?? 0}</b> • Offset:{" "}
-                <b>{invDrill.data?.offset ?? 0}</b> • Limit:{" "}
-                <b>{invDrill.data?.limit ?? 0}</b>
-              </div>
-              <div className="drill-actions">
-                <button
-                  className="btn-ghost"
-                  type="button"
-                  disabled={
-                    invDrill.loading || (invDrill.data?.offset ?? 0) <= 0
-                  }
-                  onClick={() =>
-                    invUnitPaginate(-(invDrill.data?.limit || 200))
-                  }
-                >
-                  Prev
-                </button>
-                <button
-                  className="btn-ghost"
-                  type="button"
-                  disabled={invDrill.loading || !invDrill.data?.has_next}
-                  onClick={() => invUnitPaginate(invDrill.data?.limit || 200)}
-                >
-                  Next
-                </button>
-              </div>
-            </div>
-
-            <div className="table-scroll drill-table">
-              <table>
-                <thead>
-                  <tr>
-                    {autoColumns(invDrill.data?.rows || []).map((c) => (
-                      <th key={c}>{c}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {(invDrill.data?.rows || []).length ? (
-                    invDrill.data.rows.map((r, i) => (
-                      <tr key={i}>
-                        {autoColumns(invDrill.data?.rows || []).map((c) => (
-                          <td key={c}>{r?.[c] ?? "N/A"}</td>
-                        ))}
-                      </tr>
-                    ))
-                  ) : (
-                    <tr>
-                      <td
-                        className="empty-cell"
-                        colSpan={Math.max(
-                          autoColumns(invDrill.data?.rows || []).length,
-                          1
-                        )}
-                      >
-                        No rows
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
-      </Drawer>
     </div>
   );
 }
