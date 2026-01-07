@@ -15,6 +15,21 @@ function debounce(fn, delay) {
   };
 }
 
+
+const formatDMY = (v) => {
+  if (!v) return "-";
+  const d = new Date(v);
+  if (Number.isNaN(d.getTime())) return "-";
+
+  const dd = String(d.getDate()).padStart(2, "0");
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const yyyy = d.getFullYear();
+
+  return `${dd}/${mm}/${yyyy}`;
+};
+
+
+
 // Helper: Convert text to sentence case
 function toSentenceCase(text) {
   if (!text || typeof text !== "string") return text;
@@ -28,6 +43,15 @@ function toSentenceCase(text) {
   return words[0].charAt(0).toUpperCase() + words[0].slice(1).toLowerCase() + 
     " " + words.slice(1).map(w => w.toLowerCase()).join(" ");
 }
+
+
+const asTitle = (v) => {
+  if (v == null) return "-";
+  const s = String(v).trim();
+  if (!s) return "-";
+  return toTitleCase(s);
+};
+
 
 // Helper: Convert text to title case (first letter of every word capitalized)
 function toTitleCase(text) {
@@ -772,7 +796,7 @@ const downloadSampleExcel = () => {
               {loading ? (
                 <tr>
                   <td
-                    colSpan={9}
+                    colSpan={11}
                     style={{ textAlign: "center", padding: "40px" }}
                   >
                     <div className="loading-spinner"></div>
@@ -784,22 +808,26 @@ const downloadSampleExcel = () => {
               ) : rows.length ? (
                 rows.map((o) => {
                   const contact = o.mobile_number || "-";
-                  const projectName = toSentenceCase(
+                  const projectName = asTitle(
                     o.project_name || o.project?.name || o.project || "-"
                   );
+
+                  const remarkRaw = o.raw_payload?.remark
+                    ? String(o.raw_payload.remark)
+                    : "";
+                  const remarkShown = remarkRaw
+                    ? asTitle(
+                        remarkRaw.length > 60
+                          ? remarkRaw.slice(0, 60) + "..."
+                          : remarkRaw
+                      )
+                    : "-";
+
+                  const statusText = asTitle(o.status_config_label || "Fresh");
 
                   return (
                     <tr key={o.id}>
                       <td className="row-actions">
-                        {/* Convert */}
-                        {/* <button
-                        className="icon-btn icon-btn-view"
-                        title="Convert to Lead"
-                        onClick={() => handleConvert(o.id)}
-                      >
-                        <i className="fa fa-exchange" />
-                      </button> */}
-                        {/* Change Status */}
                         <button
                           className="icon-btn icon-btn-edit"
                           title="Edit opportunity"
@@ -819,18 +847,26 @@ const downloadSampleExcel = () => {
                           <i className="fa fa-tag" />
                         </button>
                       </td>
-                      <td>{o.full_name || "-"}</td>
+
+                      {/* ✅ Title Case */}
+                      <td>{asTitle(o.full_name)}</td>
+
+                      {/* mobile number same */}
                       <td>📱 {contact}</td>
-                      <td>{o.email ? toTitleCase(o.email) : "-"}</td>
-                      <td>{toSentenceCase(o.source_system || "")}</td>
-                      <td>
-                        {o.source_name ? toTitleCase(o.source_name) : "-"}
-                      </td>
+
+                      {/* ⚠️ email ko title-case mat karo; email always lowercase best */}
+                      <td>{o.email ? String(o.email).toLowerCase() : "-"}</td>
+
+                      <td>{asTitle(o.source_system)}</td>
+                      <td>{asTitle(o.source_name)}</td>
+
                       <td>{projectName}</td>
+
+                      {/* owner email also lowercase */}
                       <td style={{ maxWidth: 220 }}>
                         {o.owner_email ? (
                           <span title={o.owner_email}>
-                            {o.owner_email.toLowerCase()}
+                            {String(o.owner_email).toLowerCase()}
                           </span>
                         ) : (
                           "-"
@@ -838,36 +874,28 @@ const downloadSampleExcel = () => {
                       </td>
 
                       <td>
-                        {o.status_config_label ? (
-                          <span className="status-badge">
-                            {toSentenceCase(o.status_config_label)}
-                          </span>
-                        ) : (
-                          <span className="status-badge">Fresh</span>
-                        )}
+                        <span className="status-badge">{statusText}</span>
                       </td>
 
-                      {/* ✅ ADD THIS BLOCK */}
                       <td style={{ maxWidth: 260 }}>
-                        {o.raw_payload?.remark ? (
-                          <span title={o.raw_payload.remark}>
-                            {o.raw_payload.remark.length > 60
-                              ? o.raw_payload.remark.slice(0, 60) + "..."
-                              : o.raw_payload.remark}
-                          </span>
+                        {remarkRaw ? (
+                          <span title={remarkRaw}>{remarkShown}</span>
                         ) : (
                           "-"
                         )}
                       </td>
 
-                      <td>{formatDT(o.created_at)}</td>
+                      <td title={formatDT(o.created_at)}>
+                        {formatDMY(o.created_at)}
+                      </td>
+                      
                     </tr>
                   );
                 })
               ) : (
                 <tr>
                   <td
-                    colSpan={9}
+                    colSpan={11}
                     style={{ textAlign: "center", padding: "40px" }}
                   >
                     <div style={{ fontSize: "48px", marginBottom: "12px" }}>

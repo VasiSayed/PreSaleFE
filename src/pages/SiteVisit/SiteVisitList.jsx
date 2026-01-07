@@ -23,6 +23,21 @@ function toTitleCase(text) {
     .join(" ");
 }
 
+
+const formatDMY = (v) => {
+  if (!v) return "-";
+  const d = new Date(v);
+  if (Number.isNaN(d.getTime())) return "-";
+
+  const dd = String(d.getDate()).padStart(2, "0");
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const yyyy = d.getFullYear();
+
+  return `${dd}/${mm}/${yyyy}`;
+};
+
+
+
 export default function SiteVisitList() {
   const navigate = useNavigate();
 
@@ -327,7 +342,7 @@ export default function SiteVisitList() {
                         {toTitleCase(v.project || "")}
                       </div>
                     </td>
-                    <td>{formatDT(v.latest_scheduled_at)}</td>
+                    <td>{formatDMY(v.latest_scheduled_at)}</td>
                     <td>
                       <span
                         className="status-badge"

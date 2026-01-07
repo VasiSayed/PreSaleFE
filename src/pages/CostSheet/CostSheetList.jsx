@@ -4,6 +4,21 @@ import axiosInstance from "../../api/axiosInstance";
 import SearchBar from "../../common/SearchBar";
 import "../PreSalesCRM/Leads/LeadsList.css";
 
+
+const formatDMY = (v) => {
+  if (!v) return "-";
+  const d = new Date(v);
+  if (Number.isNaN(d.getTime())) return "-";
+
+  const dd = String(d.getDate()).padStart(2, "0");
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const yyyy = d.getFullYear();
+
+  return `${dd}/${mm}/${yyyy}`;
+};
+
+
+
 // Helper: Convert text to title case (first letter of every word capitalized)
 function toTitleCase(text) {
   if (!text || typeof text !== "string") return text;
@@ -192,14 +207,12 @@ export default function CostSheetList() {
                       {t.customer_name ? toTitleCase(t.customer_name) : "-"}
                     </td>
 
-                    {/* PROJECT NAME */}
                     <td>
                       {t.project_name || t.project?.name
                         ? toTitleCase(t.project_name || t.project?.name)
                         : "-"}
                     </td>
 
-                    {/* SALES EXECUTIVE */}
                     <td>
                       {t.prepared_by_name ||
                       t.prepared_by_username ||
@@ -211,9 +224,10 @@ export default function CostSheetList() {
                           )
                         : "-"}
                     </td>
-
                     {/* VALIDITY DATE */}
-                    <td>{t.valid_till || t.validity_date || "-"}</td>
+                    <td title={t.valid_till || t.validity_date || "-"}>
+                      {formatDMY(t.valid_till || t.validity_date || "-")}
+                    </td>
 
                     {/* ATTACHMENTS COUNT */}
                     <td style={{ textAlign: "center" }}>
