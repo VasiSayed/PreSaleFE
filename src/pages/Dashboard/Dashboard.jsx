@@ -1,59 +1,99 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import axiosInstance from "../../api/axiosInstance";
 import { useAuth } from "../../context/AuthContext";
-import "./Dashboard.css"; // ✅ IMPORTANT (your old: import "./"; was wrong)
+import "./Dashboard.css";
+
+import {
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  LineChart,
+  Line,
+  AreaChart,
+  Area,
+  PieChart,
+  Pie,
+  Cell,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+} from "recharts";
 
 const SCOPE_URL = "/client/my-scope/";
 const DASH_URL = "/dashboard/presales-exec/";
 
-const filters = {
-  dateRanges: ["ALL", "Today", "WTD", "MTD", "QTD", "YTD", "Custom"],
-};
-
+/* ---------------- helpers ---------------- */
 const upper = (v) => (v == null ? "" : String(v).trim().toUpperCase());
 const safeArr = (v) => (Array.isArray(v) ? v : []);
+const uniq = (arr) => [...new Set((arr || []).filter(Boolean))];
+
+const toNum = (v) => {
+  if (typeof v === "number" && Number.isFinite(v)) return v;
+  if (v == null) return 0;
+  const s = String(v).trim();
+  if (!s || s.toUpperCase() === "N/A") return 0;
+
+  if (s.endsWith("%")) {
+    const n = parseFloat(s.replace("%", ""));
+    return Number.isFinite(n) ? n : 0;
+  }
+
+  const cleaned = s.replace(/[₹,\s]/g, "");
+  const n = parseFloat(cleaned);
+  return Number.isFinite(n) ? n : 0;
+};
+
 const autoColumns = (rows) => {
   const r0 = rows?.[0];
   return r0 && typeof r0 === "object" ? Object.keys(r0) : [];
 };
 
-// numbers from "₹0", "0.0%", "N/A"
-const toNum = (v) => {
-  if (v == null) return 0;
-  if (typeof v === "number") return Number.isFinite(v) ? v : 0;
-  const s = String(v).replace(/[^0-9.\-]/g, "");
-  const n = Number(s);
-  return Number.isFinite(n) ? n : 0;
+const formatCompact = (n) => {
+  const num = typeof n === "number" ? n : toNum(n);
+  if (!Number.isFinite(num)) return "0";
+  if (Math.abs(num) >= 1e7) return `${(num / 1e7).toFixed(2)}Cr`;
+  if (Math.abs(num) >= 1e5) return `${(num / 1e5).toFixed(2)}L`;
+  if (Math.abs(num) >= 1e3) return `${(num / 1e3).toFixed(2)}k`;
+  return `${num}`;
 };
 
-const fmt = (v) => (v == null || v === "" ? "N/A" : String(v));
-
-// --- KPI Card ---
+/* ---------------- UI components ---------------- */
 const KPICard = ({ title, value, sub }) => (
   <div className="kpi-card">
     <div className="kpi-title">{title}</div>
-    <div className="kpi-value">{fmt(value)}</div>
+    <div className="kpi-value">{value ?? "N/A"}</div>
     {sub ? <div className="kpi-sub">{sub}</div> : null}
   </div>
 );
 
-// --- Chart Card ---
-const ChartCard = ({ title, subtitle, children, onViewDetail }) => (
+const ChartCard = ({
+  title,
+  subtitle,
+  rightActions,
+  children,
+  onViewDetail,
+}) => (
   <div className="chart-card">
     <div className="chart-header">
-      <div>
+      <div className="chart-head-left">
         <div className="chart-title">{title}</div>
         {subtitle ? <div className="chart-sub">{subtitle}</div> : null}
       </div>
-      <button className="btn-ghost" type="button" onClick={onViewDetail}>
-        View detail
-      </button>
+
+      <div className="chart-actions">
+        {rightActions}
+        <button className="btn-ghost" type="button" onClick={onViewDetail}>
+          View detail
+        </button>
+      </div>
     </div>
+
     <div className="chart-body">{children}</div>
   </div>
 );
 
-// --- Table Card ---
 const TableCard = ({
   title,
   columns = [],
@@ -81,8 +121,9 @@ const TableCard = ({
             ))}
           </tr>
         </thead>
+
         <tbody>
-          {rows.length ? (
+          {rows?.length ? (
             rows.map((r, i) => (
               <tr key={i}>
                 {columns.map((c) => (
@@ -103,158 +144,295 @@ const TableCard = ({
   </div>
 );
 
-// =====================
-// ✅ PURE CSS MINI CHARTS (no library, always visible)
-// =====================
+/* ---------------- Recharts “Chart With Options” ---------------- */
+const SERIES_COLORS = [
+  "var(--blue)",
+  "var(--orange)",
+  "var(--green)",
+  "var(--red)",
+  "#0ea5e9",
+  "#a855f7",
+  "#14b8a6",
+];
 
-const MiniBarList = ({ data = [], labelKey, valueKey, maxValue }) => {
-  const max =
-    typeof maxValue === "number"
-      ? maxValue
-      : Math.max(1, ...data.map((d) => toNum(d?.[valueKey])));
+function ChartWithOptions({
+  chartId,
+  title,
+  subtitle,
+  data = [],
+  categoryKey,
+  series = [], // [{key,name}]
+  defaultType = "bar", // bar | stacked | line | area | pie
+  onViewDetail,
+  yTickFormatter,
+  valueFormatter,
+}) {
+  const hasMultiSeries = (series?.length || 0) > 1;
 
-  return (
-    <div className="mini-chart">
-      {data?.length ? (
-        data.map((d, i) => {
-          const label = d?.[labelKey] ?? "N/A";
-          const val = toNum(d?.[valueKey]);
-          const pct = Math.max(0, Math.min(100, (val / max) * 100));
-          return (
-            <div className="mini-row" key={i}>
-              <div className="mini-left">
-                <div className="mini-label">{label}</div>
-                <div className="mini-value">{val}</div>
-              </div>
-              <div className="mini-track">
-                <div
-                  className="mini-fill c-blue"
-                  style={{ width: `${pct}%` }}
-                />
-              </div>
-            </div>
-          );
-        })
-      ) : (
-        <div className="mini-empty">No data</div>
-      )}
-    </div>
-  );
-};
+  const [chartType, setChartType] = useState(defaultType);
+  const [pieMetric, setPieMetric] = useState(series?.[0]?.key || "");
 
-const MiniStacked = ({ data = [], labelKey, series = [] }) => {
-  const totals = data.map((d) =>
-    series.reduce((acc, s) => acc + toNum(d?.[s.key]), 0)
-  );
-  const maxTotal = Math.max(1, ...totals);
-
-  return (
-    <div className="mini-chart">
-      <div className="mini-legend">
-        {series.map((s) => (
-          <span key={s.key} className="mini-leg">
-            <span className={`mini-dot ${s.color}`} />
-            {s.name}
-          </span>
-        ))}
-      </div>
-
-      {data?.length ? (
-        data.map((d, i) => {
-          const label = d?.[labelKey] ?? "N/A";
-          const rowTotal = series.reduce(
-            (acc, s) => acc + toNum(d?.[s.key]),
-            0
-          );
-          const widthPct = (rowTotal / maxTotal) * 100;
-
-          return (
-            <div className="mini-row" key={i}>
-              <div className="mini-left">
-                <div className="mini-label">{label}</div>
-                <div className="mini-value">{rowTotal}</div>
-              </div>
-
-              <div className="mini-track">
-                <div className="mini-stack" style={{ width: `${widthPct}%` }}>
-                  {series.map((s) => {
-                    const v = toNum(d?.[s.key]);
-                    const segPct = rowTotal ? (v / rowTotal) * 100 : 0;
-                    return (
-                      <div
-                        key={s.key}
-                        className={`mini-seg ${s.color}`}
-                        style={{ width: `${segPct}%` }}
-                        title={`${s.name}: ${v}`}
-                      />
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-          );
-        })
-      ) : (
-        <div className="mini-empty">No data</div>
-      )}
-    </div>
-  );
-};
-
-// ----- inventory aggregations from table rows -----
-const aggregateBy = (rows, groupKey, keys) => {
-  const map = new Map();
-  (rows || []).forEach((r) => {
-    const g = r?.[groupKey] ?? "N/A";
-    const prev = map.get(g) || { [groupKey]: g };
-    keys.forEach((k) => {
-      prev[k] = (prev[k] || 0) + toNum(r?.[k]);
+  // normalize numeric series values for recharts
+  const norm = useMemo(() => {
+    const arr = safeArr(data).map((d) => {
+      const out = { ...d };
+      series.forEach((s) => {
+        out[s.key] = toNum(d?.[s.key]);
+      });
+      out[categoryKey] = d?.[categoryKey] ?? "N/A";
+      return out;
     });
-    map.set(g, prev);
-  });
-  return Array.from(map.values());
-};
+    return arr;
+  }, [data, series, categoryKey]);
 
-const sumKey = (rows, key) =>
-  (rows || []).reduce((acc, r) => acc + toNum(r?.[key]), 0);
+  const pieData = useMemo(() => {
+    const metric = pieMetric || series?.[0]?.key;
+    return norm.map((d) => ({
+      name: d?.[categoryKey] ?? "N/A",
+      value: toNum(d?.[metric]),
+    }));
+  }, [norm, pieMetric, categoryKey, series]);
 
+  const toolbar = (
+    <div className="chart-tools">
+      <select
+        className="chart-select"
+        value={chartType}
+        onChange={(e) => setChartType(e.target.value)}
+        title="Chart type"
+      >
+        <option value="bar">Bar</option>
+        {hasMultiSeries ? <option value="stacked">Stacked Bar</option> : null}
+        <option value="line">Line</option>
+        <option value="area">Area</option>
+        <option value="pie">Pie</option>
+      </select>
+
+      {chartType === "pie" && hasMultiSeries ? (
+        <select
+          className="chart-select"
+          value={pieMetric}
+          onChange={(e) => setPieMetric(e.target.value)}
+          title="Pie metric"
+        >
+          {series.map((s) => (
+            <option key={s.key} value={s.key}>
+              {s.name}
+            </option>
+          ))}
+        </select>
+      ) : null}
+    </div>
+  );
+
+  const tooltipFormatter = (val, name) => {
+    const v =
+      typeof valueFormatter === "function" ? valueFormatter(val, name) : val;
+    return [v, name];
+  };
+
+  const tooltipLabel = (label) => `${label}`;
+
+  const renderChart = () => {
+    if (!norm.length) return <div className="mini-empty">No data</div>;
+
+    if (chartType === "pie") {
+      return (
+        <div className="chart-canvas">
+          <ResponsiveContainer width="100%" height="100%">
+            <PieChart>
+              <Tooltip
+                formatter={tooltipFormatter}
+                labelFormatter={tooltipLabel}
+              />
+              <Legend />
+              <Pie
+                data={pieData}
+                dataKey="value"
+                nameKey="name"
+                outerRadius={110}
+                innerRadius={55}
+                paddingAngle={2}
+              >
+                {pieData.map((_, idx) => (
+                  <Cell
+                    key={idx}
+                    fill={SERIES_COLORS[idx % SERIES_COLORS.length]}
+                  />
+                ))}
+              </Pie>
+            </PieChart>
+          </ResponsiveContainer>
+
+          {hasMultiSeries ? (
+            <div className="chart-footnote">
+              Pie shows:{" "}
+              <b>{series.find((s) => s.key === pieMetric)?.name || "Metric"}</b>
+            </div>
+          ) : null}
+        </div>
+      );
+    }
+
+    if (chartType === "line") {
+      return (
+        <div className="chart-canvas">
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart
+              data={norm}
+              margin={{ top: 10, right: 18, left: 6, bottom: 10 }}
+            >
+              <CartesianGrid stroke="#eaeaea" strokeDasharray="3 3" />
+              <XAxis dataKey={categoryKey} tick={{ fontSize: 12 }} />
+              <YAxis tick={{ fontSize: 12 }} tickFormatter={yTickFormatter} />
+              <Tooltip
+                formatter={tooltipFormatter}
+                labelFormatter={tooltipLabel}
+              />
+              <Legend />
+              {series.map((s, i) => (
+                <Line
+                  key={s.key}
+                  type="monotone"
+                  dataKey={s.key}
+                  name={s.name}
+                  stroke={SERIES_COLORS[i % SERIES_COLORS.length]}
+                  strokeWidth={2.5}
+                  dot={false}
+                />
+              ))}
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      );
+    }
+
+    if (chartType === "area") {
+      return (
+        <div className="chart-canvas">
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart
+              data={norm}
+              margin={{ top: 10, right: 18, left: 6, bottom: 10 }}
+            >
+              <CartesianGrid stroke="#eaeaea" strokeDasharray="3 3" />
+              <XAxis dataKey={categoryKey} tick={{ fontSize: 12 }} />
+              <YAxis tick={{ fontSize: 12 }} tickFormatter={yTickFormatter} />
+              <Tooltip
+                formatter={tooltipFormatter}
+                labelFormatter={tooltipLabel}
+              />
+              <Legend />
+              {series.map((s, i) => (
+                <Area
+                  key={s.key}
+                  type="monotone"
+                  dataKey={s.key}
+                  name={s.name}
+                  stroke={SERIES_COLORS[i % SERIES_COLORS.length]}
+                  fill={SERIES_COLORS[i % SERIES_COLORS.length]}
+                  fillOpacity={0.12}
+                  strokeWidth={2.2}
+                />
+              ))}
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
+      );
+    }
+
+    // bar / stacked
+    const isStacked = chartType === "stacked";
+    return (
+      <div className="chart-canvas">
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart
+            data={norm}
+            margin={{ top: 10, right: 18, left: 6, bottom: 10 }}
+          >
+            <CartesianGrid stroke="#eaeaea" strokeDasharray="3 3" />
+            <XAxis dataKey={categoryKey} tick={{ fontSize: 12 }} />
+            <YAxis tick={{ fontSize: 12 }} tickFormatter={yTickFormatter} />
+            <Tooltip
+              formatter={tooltipFormatter}
+              labelFormatter={tooltipLabel}
+            />
+            <Legend />
+            {series.map((s, i) => (
+              <Bar
+                key={s.key}
+                dataKey={s.key}
+                name={s.name}
+                fill={SERIES_COLORS[i % SERIES_COLORS.length]}
+                radius={[8, 8, 0, 0]}
+                stackId={isStacked ? "a" : undefined}
+              />
+            ))}
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+    );
+  };
+
+  return (
+    <ChartCard
+      title={title}
+      subtitle={subtitle}
+      rightActions={toolbar}
+      onViewDetail={onViewDetail}
+    >
+      {renderChart()}
+    </ChartCard>
+  );
+}
+
+/* ---------------- main ---------------- */
 export default function SirDashboard() {
   const { user } = useAuth();
 
   const [scope, setScope] = useState(null);
-
-  const [dateRange, setDateRange] = useState("ALL");
-  const [customFrom, setCustomFrom] = useState("");
-  const [customTo, setCustomTo] = useState("");
-
-  const [siteId, setSiteId] = useState("ALL");
-  const [tower, setTower] = useState("");
-  const [configuration, setConfiguration] = useState("");
-  const [leadSource, setLeadSource] = useState("");
-  const [channelPartner, setChannelPartner] = useState("");
-  const [salesPerson, setSalesPerson] = useState("");
-  const [campaign, setCampaign] = useState("");
-
-  const [leadLimit, setLeadLimit] = useState(20);
-  const [leadOffset, setLeadOffset] = useState(0);
-
   const [dash, setDash] = useState(null);
 
   const [loadingScope, setLoadingScope] = useState(true);
   const [loadingDash, setLoadingDash] = useState(false);
   const [error, setError] = useState("");
 
-  const brand = scope?.brand;
+  // Filters
+  const [dateRange, setDateRange] = useState("ALL");
+  const [customFrom, setCustomFrom] = useState("");
+  const [customTo, setCustomTo] = useState("");
 
-  // refs (scroll buttons)
+  const [siteId, setSiteId] = useState("ALL");
+  const [tower, setTower] = useState("ALL");
+  const [configuration, setConfiguration] = useState("ALL");
+  const [leadSource, setLeadSource] = useState("ALL");
+  const [channelPartnerId, setChannelPartnerId] = useState("ALL");
+  const [salesUserId, setSalesUserId] = useState("ALL");
+  const [campaignId, setCampaignId] = useState("ALL");
+
+  // lead pagination
+  const [leadLimit, setLeadLimit] = useState(20);
+  const [leadOffset, setLeadOffset] = useState(0);
+
+  // scroll refs (pills)
   const secOverviewRef = useRef(null);
-  const secLeadRef = useRef(null);
+  const secChartsRef = useRef(null);
+  const secLeadsRef = useRef(null);
+  const secConfigRef = useRef(null);
   const secCPRef = useRef(null);
   const secSalesRef = useRef(null);
-  const secInvSnapRef = useRef(null);
+  const secInvWidgetsRef = useRef(null);
   const secInvTableRef = useRef(null);
 
-  // ---------- fetch scope ----------
+  const scrollTo = (ref) =>
+    ref?.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+
+  const brandName =
+    scope?.brand?.company_name ||
+    dash?.meta?.brand?.company_name ||
+    "Vibe Pre-Sales Cockpit";
+
+  // fetch scope
   useEffect(() => {
     const run = async () => {
       setLoadingScope(true);
@@ -264,10 +442,7 @@ export default function SirDashboard() {
         setScope(res.data || null);
         setSiteId("ALL");
       } catch (e) {
-        console.error(e);
-        setError(
-          e?.response?.data?.detail || "Unable to load scope. Please try again."
-        );
+        setError(e?.response?.data?.detail || "Unable to load scope.");
       } finally {
         setLoadingScope(false);
       }
@@ -275,13 +450,8 @@ export default function SirDashboard() {
     run();
   }, []);
 
-  const buildProjectParams = (selectedProjectId) => {
-    if (!selectedProjectId || selectedProjectId === "ALL") return {};
-    return { project_id: Number(selectedProjectId) };
-  };
-
-  // ---------- fetch dashboard ----------
-  const fetchDashboard = async () => {
+  // fetch dashboard
+  const fetchDashboard = async ({ resetOffset = false } = {}) => {
     if (!scope) return;
 
     setLoadingDash(true);
@@ -290,10 +460,11 @@ export default function SirDashboard() {
     try {
       const params = {
         lead_limit: leadLimit,
-        lead_offset: leadOffset,
+        lead_offset: resetOffset ? 0 : leadOffset,
         drill_limit: 10,
       };
 
+      // date_mode
       const dr = upper(dateRange);
       if (dr === "CUSTOM") {
         params.date_mode = "CUSTOM";
@@ -305,77 +476,150 @@ export default function SirDashboard() {
         params.date_mode = dr;
       }
 
-      Object.assign(params, buildProjectParams(siteId));
+      // site filter
+      if (siteId && siteId !== "ALL") {
+        params.site_id = Number(siteId);
+        params.project_id = Number(siteId); // backward compat
+      }
 
-      // (optional) backend params not confirmed yet — keep UI only
-      // params.tower = tower || undefined; etc...
+      // other filters
+      if (tower && tower !== "ALL") params.tower = tower;
+      if (configuration && configuration !== "ALL")
+        params.configuration = configuration;
+      if (leadSource && leadSource !== "ALL") params.lead_source = leadSource;
+
+      if (channelPartnerId && channelPartnerId !== "ALL")
+        params.channel_partner_id = Number(channelPartnerId);
+
+      if (salesUserId && salesUserId !== "ALL")
+        params.sales_user_id = Number(salesUserId);
+
+      if (campaignId && campaignId !== "ALL")
+        params.campaign_id = Number(campaignId);
 
       const res = await axiosInstance.get(DASH_URL, { params });
 
-      if (res.data?.success === false) {
-        throw new Error(res.data?.error || "Dashboard API returned error");
-      }
+      if (res.data?.success === false)
+        throw new Error(res.data?.error || "Dashboard error");
 
       setDash(res.data?.data || null);
+      if (resetOffset) setLeadOffset(0);
     } catch (e) {
-      console.error(e);
       setDash(null);
       setError(
-        e?.response?.data?.detail ||
-          e?.message ||
-          "Unable to load dashboard. Please try again."
+        e?.response?.data?.detail || e?.message || "Unable to load dashboard."
       );
     } finally {
       setLoadingDash(false);
     }
   };
 
-  // auto initial load once scope arrives
+  // initial load
   useEffect(() => {
     if (!scope) return;
-    fetchDashboard();
+    fetchDashboard({ resetOffset: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [scope]);
 
-  // ============= DATA FROM RESPONSE =============
+  /* ------------ map API data ------------ */
+  const meta = dash?.meta || {};
+  const fo = dash?.filter_options || {};
+
+  const dateRanges = useMemo(
+    () => [
+      "ALL",
+      ...(fo?.dateRanges || ["Today", "WTD", "MTD", "QTD", "YTD", "Custom"]),
+    ],
+    [fo]
+  );
+
+  const sites = safeArr(fo?.sites);
+  const towers = uniq(safeArr(fo?.towers));
+  const configs = uniq(safeArr(fo?.configurations));
+  const leadSources = uniq(safeArr(fo?.lead_sources));
+  const cps = safeArr(fo?.channel_partners);
+  const salesPeople = safeArr(fo?.sales_people);
+  const campaigns = safeArr(fo?.campaigns);
+
   const kpis = safeArr(dash?.overview?.kpis);
 
-  const funnel = safeArr(dash?.overview?.charts?.lead_pipeline_funnel?.data);
-  const sourceWise = safeArr(dash?.overview?.charts?.source_wise?.data);
-  const siteConv = safeArr(dash?.overview?.charts?.site_wise_conversion?.data);
+  const chartFunnel = safeArr(
+    dash?.overview?.charts?.lead_pipeline_funnel?.data
+  ).map((r) => ({
+    stage: r?.stage ?? "N/A",
+    count: toNum(r?.count),
+  }));
+
+  const chartSource = safeArr(dash?.overview?.charts?.source_wise?.data).map(
+    (r) => ({
+      source: r?.source ?? "Unknown",
+      leads: toNum(r?.leads),
+      bookings: toNum(r?.bookings),
+    })
+  );
+
+  const chartSiteConv = safeArr(
+    dash?.overview?.charts?.site_wise_conversion?.data
+  ).map((r) => ({
+    site: r?.site ?? "N/A",
+    lead_to_booking_pct: toNum(r?.lead_to_booking_pct),
+    lead_to_registration_pct:
+      String(r?.lead_to_registration_pct || "").toUpperCase() === "N/A"
+        ? 0
+        : toNum(r?.lead_to_registration_pct),
+  }));
 
   const tables = dash?.tables || {};
   const tSite = tables?.site_summary || null;
   const tLeads = tables?.lead_list || null;
+  const tConfig = tables?.configuration_matrix || null;
   const tCP = tables?.cp_performance || null;
   const tSales = tables?.sales_performance || null;
-  const tInv = tables?.inventory || null;
-  const tConfig = tables?.configuration_matrix || null;
-  const tCampaign = tables?.campaign_performance || null;
+  const tInventory = tables?.inventory || null;
 
-  const leadPage = dash?.meta?.lead_pagination || null;
+  const leadPage = meta?.lead_pagination || null;
 
-  // inventory snapshot from inventory table
-  const invRows = safeArr(tInv?.rows);
-  const invTotalUnits = sumKey(invRows, "Units Total");
-  const invAvailable = sumKey(invRows, "Available");
-  const invBooked = sumKey(invRows, "Booked");
-  const invBlocked = sumKey(invRows, "Blocked");
-  const invRegistered = sumKey(invRows, "Registered"); // may be N/A => 0
+  // inventory widgets compute
+  const invRows = safeArr(tInventory?.rows);
+  const invTotals = useMemo(() => {
+    const total = invRows.reduce((a, r) => a + toNum(r?.["Units Total"]), 0);
+    const available = invRows.reduce((a, r) => a + toNum(r?.Available), 0);
+    const booked = invRows.reduce((a, r) => a + toNum(r?.Booked), 0);
+    const blocked = invRows.reduce((a, r) => a + toNum(r?.Blocked), 0);
+    const registered = invRows.reduce((a, r) => a + toNum(r?.Registered), 0);
+    return { total, available, booked, blocked, registered };
+  }, [invRows]);
 
-  const invByConfig = useMemo(
-    () => aggregateBy(invRows, "Config", ["Available", "Booked", "Blocked"]),
-    [invRows]
-  );
-  const invByTower = useMemo(
-    () => aggregateBy(invRows, "Tower", ["Available", "Booked", "Blocked"]),
-    [invRows]
-  );
+  // inventory chart data by config
+  const invByConfig = useMemo(() => {
+    return invRows.map((r) => ({
+      config: r?.Config || "UNKNOWN",
+      available: toNum(r?.Available),
+      booked: toNum(r?.Booked),
+      blocked: toNum(r?.Blocked),
+    }));
+  }, [invRows]);
+
+  // inventory chart data by tower
+  const invByTower = useMemo(() => {
+    const map = new Map();
+    invRows.forEach((r) => {
+      const key = r?.Tower || "N/A";
+      const prev = map.get(key) || {
+        tower: key,
+        available: 0,
+        booked: 0,
+        blocked: 0,
+      };
+      prev.available += toNum(r?.Available);
+      prev.booked += toNum(r?.Booked);
+      prev.blocked += toNum(r?.Blocked);
+      map.set(key, prev);
+    });
+    return [...map.values()];
+  }, [invRows]);
 
   const isLoading = loadingScope || loadingDash;
-
-  const scrollTo = (ref) =>
-    ref?.current?.scrollIntoView({ behavior: "smooth", block: "start" });
 
   return (
     <div className="sir-dashboard">
@@ -385,22 +629,20 @@ export default function SirDashboard() {
           <div className="header-top">
             <div className="app-logo">
               <span className="brand-mark" />
-              {brand?.company_name
-                ? brand.company_name
-                : "Vibe Pre-Sales Cockpit"}
+              {brandName}
             </div>
 
             <div className="user-info">
-              Logged in as: <b>{user?.role ? user.role : "User"}</b>
+              <b>{user?.role || "User"}</b>
               <span className="sep">•</span>
-              as_of: <b>{dash?.meta?.as_of || "N/A"}</b>
+              as_of: <b>{meta?.as_of || "N/A"}</b>
             </div>
           </div>
 
-          {/* quick nav pills (no sidebar) */}
+          {/* Pills */}
           <div className="pill-row">
             <button
-              className="pill"
+              className="pill pill-active"
               type="button"
               onClick={() => scrollTo(secOverviewRef)}
             >
@@ -409,9 +651,23 @@ export default function SirDashboard() {
             <button
               className="pill"
               type="button"
-              onClick={() => scrollTo(secLeadRef)}
+              onClick={() => scrollTo(secChartsRef)}
             >
-              Lead Pipeline
+              Charts
+            </button>
+            <button
+              className="pill"
+              type="button"
+              onClick={() => scrollTo(secLeadsRef)}
+            >
+              Leads
+            </button>
+            <button
+              className="pill"
+              type="button"
+              onClick={() => scrollTo(secConfigRef)}
+            >
+              Config & Source
             </button>
             <button
               className="pill"
@@ -430,9 +686,9 @@ export default function SirDashboard() {
             <button
               className="pill"
               type="button"
-              onClick={() => scrollTo(secInvSnapRef)}
+              onClick={() => scrollTo(secInvWidgetsRef)}
             >
-              Inventory Snapshot
+              Inventory Widgets
             </button>
             <button
               className="pill"
@@ -443,13 +699,13 @@ export default function SirDashboard() {
             </button>
           </div>
 
-          {/* FILTERS */}
+          {/* Filters */}
           <div className="filters-row">
             <select
               value={dateRange}
               onChange={(e) => setDateRange(e.target.value)}
             >
-              {filters.dateRanges.map((d) => (
+              {dateRanges.map((d) => (
                 <option key={d} value={d}>
                   {d}
                 </option>
@@ -473,51 +729,90 @@ export default function SirDashboard() {
 
             <select value={siteId} onChange={(e) => setSiteId(e.target.value)}>
               <option value="ALL">All Sites (Group View)</option>
-              {(scope?.projects || []).map((p) => (
+              {(sites.length ? sites : scope?.projects || []).map((p) => (
                 <option key={p.id} value={p.id}>
-                  {p.name}
+                  {p.label || p.name}
                 </option>
               ))}
             </select>
 
-            <input
-              value={tower}
-              onChange={(e) => setTower(e.target.value)}
-              placeholder="Tower / Phase / Wing"
-            />
-            <input
+            <select value={tower} onChange={(e) => setTower(e.target.value)}>
+              <option value="ALL">All Towers</option>
+              {towers.map((t) => (
+                <option key={t} value={t}>
+                  {t}
+                </option>
+              ))}
+            </select>
+
+            <select
               value={configuration}
               onChange={(e) => setConfiguration(e.target.value)}
-              placeholder="Configuration (1BHK, 2BHK...)"
-            />
-            <input
+            >
+              <option value="ALL">All Config</option>
+              {configs.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
+
+            <select
               value={leadSource}
               onChange={(e) => setLeadSource(e.target.value)}
-              placeholder="Lead Source"
-            />
-            <input
-              value={channelPartner}
-              onChange={(e) => setChannelPartner(e.target.value)}
-              placeholder="Channel Partner"
-            />
-            <input
-              value={salesPerson}
-              onChange={(e) => setSalesPerson(e.target.value)}
-              placeholder="Sales Person"
-            />
-            <input
-              value={campaign}
-              onChange={(e) => setCampaign(e.target.value)}
-              placeholder="Campaign"
-            />
+            >
+              <option value="ALL">All Lead Sources</option>
+              {leadSources.map((s) => (
+                <option key={s} value={s}>
+                  {s}
+                </option>
+              ))}
+            </select>
+
+            <select
+              value={channelPartnerId}
+              onChange={(e) => setChannelPartnerId(e.target.value)}
+            >
+              <option value="ALL">All Channel Partners</option>
+              {cps.map((cp) => (
+                <option key={cp.id} value={cp.id}>
+                  {cp.label}
+                </option>
+              ))}
+            </select>
+
+            <select
+              value={salesUserId}
+              onChange={(e) => setSalesUserId(e.target.value)}
+            >
+              <option value="ALL">All Sales People</option>
+              {salesPeople.map((sp) => (
+                <option key={sp.id} value={sp.id}>
+                  {sp.label}
+                </option>
+              ))}
+            </select>
+
+            <select
+              value={campaignId}
+              onChange={(e) => setCampaignId(e.target.value)}
+            >
+              <option value="ALL">All Campaigns</option>
+              {campaigns?.length ? (
+                campaigns.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.label}
+                  </option>
+                ))
+              ) : (
+                <option value="ALL">No campaigns</option>
+              )}
+            </select>
 
             <button
               className="btn-primary"
               type="button"
-              onClick={() => {
-                setLeadOffset(0);
-                fetchDashboard();
-              }}
+              onClick={() => fetchDashboard({ resetOffset: true })}
               disabled={loadingDash}
             >
               Apply
@@ -525,12 +820,12 @@ export default function SirDashboard() {
           </div>
         </header>
 
-        {/* MAIN */}
+        {/* BODY */}
         <main className="main-content">
           {error ? <div className="alert alert-error">{error}</div> : null}
           {isLoading ? <div className="alert">Loading analytics…</div> : null}
 
-          {/* OVERVIEW KPIs */}
+          {/* Overview KPIs */}
           <section className="band" ref={secOverviewRef}>
             <div className="band-title">Overview KPIs</div>
             <div className="kpi-grid">
@@ -549,69 +844,81 @@ export default function SirDashboard() {
             </div>
           </section>
 
-          {/* ✅ LEAD PIPELINE CHARTS (your required titles/subtitles) */}
-          <section className="band" ref={secLeadRef}>
-            <div className="band-title">Lead Pipeline Charts</div>
+          {/* Charts */}
+          <section className="band" ref={secChartsRef}>
+            <div className="band-title">Overview Charts</div>
+
             <div className="charts-grid">
-              <ChartCard
+              <ChartWithOptions
+                chartId="funnel"
                 title={
                   dash?.overview?.charts?.lead_pipeline_funnel?.title ||
                   "Lead Pipeline Funnel"
                 }
                 subtitle={
-                  dash?.overview?.charts?.lead_pipeline_funnel?.subtitle ||
-                  "Registrations metrics are N/A"
+                  dash?.overview?.charts?.lead_pipeline_funnel?.subtitle || ""
                 }
-                onViewDetail={() => {}}
-              >
-                <MiniBarList data={funnel} labelKey="stage" valueKey="count" />
-              </ChartCard>
+                data={chartFunnel}
+                categoryKey="stage"
+                series={[{ key: "count", name: "Count" }]}
+                defaultType="bar"
+                onViewDetail={() => scrollTo(secLeadsRef)}
+                yTickFormatter={(v) => formatCompact(v)}
+                valueFormatter={(v) => formatCompact(v)}
+              />
 
-              <ChartCard
+              <ChartWithOptions
+                chartId="source"
                 title={
                   dash?.overview?.charts?.source_wise?.title ||
                   "Source-wise Leads & Bookings"
                 }
-                subtitle={
-                  dash?.overview?.charts?.source_wise?.subtitle ||
-                  "Based on leads + bookings linkage"
-                }
-                onViewDetail={() => {}}
-              >
-                <MiniStacked
-                  data={sourceWise}
-                  labelKey="source"
-                  series={[
-                    { key: "leads", name: "Leads", color: "c-blue" },
-                    { key: "bookings", name: "Bookings", color: "c-red" },
-                  ]}
-                />
-              </ChartCard>
+                subtitle={dash?.overview?.charts?.source_wise?.subtitle || ""}
+                data={chartSource}
+                categoryKey="source"
+                series={[
+                  { key: "leads", name: "Leads" },
+                  { key: "bookings", name: "Bookings" },
+                ]}
+                defaultType="stacked"
+                onViewDetail={() => scrollTo(secLeadsRef)}
+                yTickFormatter={(v) => formatCompact(v)}
+                valueFormatter={(v) => formatCompact(v)}
+              />
 
-              <ChartCard
+              <ChartWithOptions
+                chartId="conversion"
                 title={
                   dash?.overview?.charts?.site_wise_conversion?.title ||
                   "Site-wise Conversion Ratios"
                 }
                 subtitle={
-                  dash?.overview?.charts?.site_wise_conversion?.subtitle ||
-                  "Lead→Booking % by site (Lead→Registration is N/A)"
+                  dash?.overview?.charts?.site_wise_conversion?.subtitle || ""
                 }
-                onViewDetail={() => {}}
-              >
-                <MiniBarList
-                  data={siteConv}
-                  labelKey="site"
-                  valueKey="lead_to_booking_pct"
-                  maxValue={100}
-                />
-              </ChartCard>
+                data={chartSiteConv}
+                categoryKey="site"
+                series={[
+                  { key: "lead_to_booking_pct", name: "Lead→Booking %" },
+                  {
+                    key: "lead_to_registration_pct",
+                    name: "Lead→Reg % (N/A=0)",
+                  },
+                ]}
+                defaultType="line"
+                onViewDetail={() => scrollTo(secOverviewRef)}
+                yTickFormatter={(v) => `${v}%`}
+                valueFormatter={(v) => `${toNum(v)}%`}
+              />
+
+              <div className="note">
+                Note: Lead→Registration is sometimes N/A in API, shown as 0 for
+                visualization.
+              </div>
             </div>
           </section>
 
-          {/* SITE SUMMARY TABLE */}
+          {/* Site Summary Table */}
           <section className="band">
-            <div className="band-title">Site Summary</div>
             <TableCard
               title={tSite?.title || "Site Summary"}
               columns={tSite?.columns || autoColumns(tSite?.rows || [])}
@@ -620,8 +927,8 @@ export default function SirDashboard() {
             />
           </section>
 
-          {/* LEAD LIST TABLE + PAGER */}
-          <section className="band">
+          {/* Lead List + pagination */}
+          <section className="band" ref={secLeadsRef}>
             <div className="band-title">Lead List</div>
 
             <TableCard
@@ -633,8 +940,12 @@ export default function SirDashboard() {
                   <select
                     value={leadLimit}
                     onChange={(e) => {
-                      setLeadOffset(0);
                       setLeadLimit(Number(e.target.value));
+                      setLeadOffset(0);
+                      setTimeout(
+                        () => fetchDashboard({ resetOffset: true }),
+                        0
+                      );
                     }}
                   >
                     {[10, 20, 50, 100].map((n) => (
@@ -649,11 +960,11 @@ export default function SirDashboard() {
                     type="button"
                     disabled={!leadPage?.prev_offset && leadOffset <= 0}
                     onClick={() => {
-                      setLeadOffset(
+                      const prev =
                         leadPage?.prev_offset ??
-                          Math.max(leadOffset - leadLimit, 0)
-                      );
-                      setTimeout(fetchDashboard, 0);
+                        Math.max(leadOffset - leadLimit, 0);
+                      setLeadOffset(prev);
+                      setTimeout(() => fetchDashboard(), 0);
                     }}
                   >
                     Prev
@@ -664,10 +975,10 @@ export default function SirDashboard() {
                     type="button"
                     disabled={!leadPage?.has_next}
                     onClick={() => {
-                      setLeadOffset(
-                        leadPage?.next_offset ?? leadOffset + leadLimit
-                      );
-                      setTimeout(fetchDashboard, 0);
+                      const next =
+                        leadPage?.next_offset ?? leadOffset + leadLimit;
+                      setLeadOffset(next);
+                      setTimeout(() => fetchDashboard(), 0);
                     }}
                   >
                     Next
@@ -678,7 +989,18 @@ export default function SirDashboard() {
             />
           </section>
 
-          {/* CP PERFORMANCE */}
+          {/* Configuration Matrix */}
+          <section className="band" ref={secConfigRef}>
+            <div className="band-title">Configuration Matrix</div>
+            <TableCard
+              title={tConfig?.title || "Configuration Matrix"}
+              columns={tConfig?.columns || autoColumns(tConfig?.rows || [])}
+              rows={tConfig?.rows || []}
+              onExport={() => console.log("Export Config Matrix")}
+            />
+          </section>
+
+          {/* CP Performance */}
           <section className="band" ref={secCPRef}>
             <div className="band-title">Channel Partners</div>
             <TableCard
@@ -689,7 +1011,7 @@ export default function SirDashboard() {
             />
           </section>
 
-          {/* SALES PERFORMANCE */}
+          {/* Sales Performance */}
           <section className="band" ref={secSalesRef}>
             <div className="band-title">Sales Team</div>
             <TableCard
@@ -700,97 +1022,88 @@ export default function SirDashboard() {
             />
           </section>
 
-          {/* ✅ INVENTORY SNAPSHOT (AFTER SALES TEAM, BEFORE INVENTORY TABLE) */}
-          <section className="band" ref={secInvSnapRef}>
-            <div className="band-title">Inventory Snapshot</div>
+          {/* Inventory widgets + charts */}
+          <section className="band" ref={secInvWidgetsRef}>
+            <div className="band-title">Inventory Widgets & Charts</div>
 
             <div className="kpi-grid kpi-grid-compact">
               <KPICard
                 title="Total Inventory Units"
-                value={invTotalUnits}
-                sub="From Inventory table"
+                value={invTotals.total}
+                sub="Sum of inventory rows"
               />
               <KPICard
                 title="Available Units"
-                value={invAvailable}
+                value={invTotals.available}
                 sub="Ready to sell"
               />
-              <KPICard title="Booked Units" value={invBooked} sub="Booked" />
-              <KPICard title="Blocked Units" value={invBlocked} sub="On hold" />
+              <KPICard
+                title="Booked Units"
+                value={invTotals.booked}
+                sub="Booked/blocked in pipeline"
+              />
+              <KPICard
+                title="Blocked Units"
+                value={invTotals.blocked}
+                sub="Reserved/hold"
+              />
               <KPICard
                 title="Registered Units"
-                value={invRegistered || "N/A"}
-                sub="May be N/A in API"
+                value={invTotals.registered || "N/A"}
+                sub="API is N/A in many cases"
               />
             </div>
 
-            <div style={{ height: 12 }} />
-
-            <div className="charts-grid charts-grid-2">
-              <ChartCard
-                title="Inventory Status by Configuration"
+            <div
+              className="charts-grid charts-grid-2"
+              style={{ marginTop: 12 }}
+            >
+              <ChartWithOptions
+                chartId="inv_config"
+                title="Inventory Mix by Configuration"
                 subtitle="Available / Booked / Blocked"
-                onViewDetail={() => {}}
-              >
-                <MiniStacked
-                  data={invByConfig}
-                  labelKey="Config"
-                  series={[
-                    { key: "Available", name: "Available", color: "c-blue" },
-                    { key: "Booked", name: "Booked", color: "c-red" },
-                    { key: "Blocked", name: "Blocked", color: "c-orange" },
-                  ]}
-                />
-              </ChartCard>
+                data={invByConfig}
+                categoryKey="config"
+                series={[
+                  { key: "available", name: "Available" },
+                  { key: "booked", name: "Booked" },
+                  { key: "blocked", name: "Blocked" },
+                ]}
+                defaultType="stacked"
+                onViewDetail={() => scrollTo(secInvTableRef)}
+                yTickFormatter={(v) => formatCompact(v)}
+                valueFormatter={(v) => formatCompact(v)}
+              />
 
-              <ChartCard
-                title="Inventory Status by Site/Tower"
+              <ChartWithOptions
+                chartId="inv_tower"
+                title="Inventory Mix by Tower"
                 subtitle="Available / Booked / Blocked"
-                onViewDetail={() => {}}
-              >
-                <MiniStacked
-                  data={invByTower}
-                  labelKey="Tower"
-                  series={[
-                    { key: "Available", name: "Available", color: "c-blue" },
-                    { key: "Booked", name: "Booked", color: "c-red" },
-                    { key: "Blocked", name: "Blocked", color: "c-orange" },
-                  ]}
-                />
-              </ChartCard>
+                data={invByTower}
+                categoryKey="tower"
+                series={[
+                  { key: "available", name: "Available" },
+                  { key: "booked", name: "Booked" },
+                  { key: "blocked", name: "Blocked" },
+                ]}
+                defaultType="stacked"
+                onViewDetail={() => scrollTo(secInvTableRef)}
+                yTickFormatter={(v) => formatCompact(v)}
+                valueFormatter={(v) => formatCompact(v)}
+              />
             </div>
           </section>
 
-          {/* INVENTORY TABLE */}
+          {/* Inventory table */}
           <section className="band" ref={secInvTableRef}>
-            <div className="band-title">Inventory Table</div>
+            <div className="band-title">Inventory</div>
             <TableCard
-              title={tInv?.title || "Inventory"}
-              columns={tInv?.columns || autoColumns(tInv?.rows || [])}
-              rows={tInv?.rows || []}
+              title={tInventory?.title || "Inventory"}
+              columns={
+                tInventory?.columns || autoColumns(tInventory?.rows || [])
+              }
+              rows={tInventory?.rows || []}
               onExport={() => console.log("Export Inventory")}
-            />
-          </section>
-
-          {/* CONFIG MATRIX */}
-          <section className="band">
-            <div className="band-title">Configuration Matrix</div>
-            <TableCard
-              title={tConfig?.title || "Configuration Matrix"}
-              columns={tConfig?.columns || autoColumns(tConfig?.rows || [])}
-              rows={tConfig?.rows || []}
-              onExport={() => console.log("Export Config Matrix")}
-            />
-          </section>
-
-          {/* CAMPAIGNS */}
-          <section className="band">
-            <div className="band-title">Campaign Performance</div>
-            <TableCard
-              title={tCampaign?.title || "Campaign Performance"}
-              columns={tCampaign?.columns || autoColumns(tCampaign?.rows || [])}
-              rows={tCampaign?.rows || []}
-              onExport={() => console.log("Export Campaigns")}
             />
           </section>
         </main>

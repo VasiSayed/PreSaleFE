@@ -630,7 +630,7 @@ const downloadSampleExcel = () => {
   const fontFamilyStr = getFontFamily(theme.font_family);
 
   return (
-    <div 
+    <div
       className="leads-list-page"
       style={{
         backgroundColor: theme.background_color,
@@ -713,7 +713,7 @@ const downloadSampleExcel = () => {
                 fontFamily: fontFamilyStr,
               }}
             >
-              <i className="fa fa-plus"  />
+              <i className="fa fa-plus" />
               Add opportunity
             </button>
           </div>
@@ -762,6 +762,7 @@ const downloadSampleExcel = () => {
                 <th>Source System</th>
                 <th>Source Name</th>
                 <th>Project</th>
+                <th>Lead Owner</th>
                 <th>Status</th>
                 <th>Remark</th>
                 <th>Created At</th>
@@ -801,6 +802,16 @@ const downloadSampleExcel = () => {
                         {/* Change Status */}
                         <button
                           className="icon-btn icon-btn-edit"
+                          title="Edit opportunity"
+                          onClick={() =>
+                            navigate(`/sales/opportunities/${o.id}/edit`)
+                          }
+                        >
+                          <i className="fa fa-pencil" />
+                        </button>
+
+                        <button
+                          className="icon-btn icon-btn-edit"
                           title="Change status"
                           onClick={() => openStatusModal(o)}
                           style={{ marginLeft: "4px" }}
@@ -816,33 +827,15 @@ const downloadSampleExcel = () => {
                         {o.source_name ? toTitleCase(o.source_name) : "-"}
                       </td>
                       <td>{projectName}</td>
-                      {/* <td>
-                        {o.status_config_label ? (
-                          <span
-                            className="status-badge"
-                            style={{
-                              backgroundColor: `${getStatusColor(
-                                o.status_config_code || ""
-                              )}20`,
-                              color: getStatusColor(o.status_config_code || ""),
-                            }}
-                          >
-                            {toSentenceCase(o.status_config_label)}
+                      <td style={{ maxWidth: 220 }}>
+                        {o.owner_email ? (
+                          <span title={o.owner_email}>
+                            {o.owner_email.toLowerCase()}
                           </span>
                         ) : (
-                          <span
-                            className="status-badge"
-                            style={{
-                              backgroundColor: "#e5e7eb",
-                              color: "#4b5563",
-                            }}
-                          >
-                            Fresh
-                          </span>
+                          "-"
                         )}
                       </td>
-
-                      <td>{formatDT(o.created_at)}</td> */}
 
                       <td>
                         {o.status_config_label ? (
@@ -867,9 +860,7 @@ const downloadSampleExcel = () => {
                         )}
                       </td>
 
-
                       <td>{formatDT(o.created_at)}</td>
-
                     </tr>
                   );
                 })
@@ -1016,15 +1007,15 @@ const downloadSampleExcel = () => {
             </div>
 
             <div className="filter-actions">
-              <button 
-                className="btn-secondary" 
+              <button
+                className="btn-secondary"
                 onClick={resetFilters}
                 style={{ fontFamily: fontFamilyStr }}
               >
                 Reset
               </button>
-              <button 
-                className="btn-primary" 
+              <button
+                className="btn-primary"
                 onClick={applyFilters}
                 style={{
                   backgroundColor: theme.button_primary_bg,
@@ -1114,8 +1105,8 @@ const downloadSampleExcel = () => {
               >
                 Cancel
               </button>
-              <button 
-                className="btn-primary" 
+              <button
+                className="btn-primary"
                 onClick={submitStatusChange}
                 style={{
                   backgroundColor: theme.button_primary_bg,

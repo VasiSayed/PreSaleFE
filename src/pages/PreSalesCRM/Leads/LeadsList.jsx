@@ -1,27 +1,51 @@
-// src/pages/.../LeadsList.jsx
-import { useEffect, useMemo, useState, useCallback } from "react";
+import { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { LeadAPI } from "../../../api/endpoints";
 import SearchBar from "../../../common/SearchBar";
 import "./LeadsList.css";
 
+const SEARCH_DELAY_MS = 5000; // ✅ Auto search after 5 sec
+const MIN_AUTO_CHARS = 2; // ✅ 2 chars se kam pe auto hit nahi
+
 function debounce(fn, delay) {
   let timeoutId;
-  return (...args) => {
+
+  const debounced = (...args) => {
     if (timeoutId) clearTimeout(timeoutId);
     timeoutId = setTimeout(() => fn(...args), delay);
   };
+
+  debounced.cancel = () => {
+    if (timeoutId) clearTimeout(timeoutId);
+    timeoutId = null;
+  };
+
+  return debounced;
 }
 
 // Helper: Convert text to title case (first letter of every word capitalized)
 function toTitleCase(text) {
   if (!text || typeof text !== "string") return text;
-  // Split by spaces and capitalize first letter of each word
   return text
     .trim()
     .split(/\s+/)
     .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
     .join(" ");
+}
+
+// ✅ SearchBar kabhi string deta hai, kabhi event (e.target.value)
+// Is helper se dono case safe ho jaate.
+function getInputValue(val) {
+  if (typeof val === "string") return val;
+  if (
+    val &&
+    typeof val === "object" &&
+    val.target &&
+    typeof val.target.value === "string"
+  ) {
+    return val.target.value;
+  }
+  return "";
 }
 
 export default function LeadsList() {
@@ -31,14 +55,35 @@ export default function LeadsList() {
   const [q, setQ] = useState("");
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
-  const [count, setCount] = useState(0);
+const [count, setCount] = useState(0);
 
-  // Filters
-  const [filters, setFilters] = useState({
-    status: "",
-    source: "",
-    project: "",
-  });
+// ✅ Filters state FIRST
+const [filters, setFilters] = useState({
+  status: "",
+  source: "",
+  project: "",
+});
+
+// ✅ keep latest values for stable debounce + fetchList
+const qRef = useRef("");
+const pageRef = useRef(1);
+const filtersRef = useRef({
+  status: "",
+  source: "",
+  project: "",
+});
+
+useEffect(() => {
+  qRef.current = q;
+}, [q]);
+
+useEffect(() => {
+  pageRef.current = page;
+}, [page]);
+
+useEffect(() => {
+  filtersRef.current = filters;
+}, [filters]);
 
   const [modalOpen, setModalOpen] = useState(false);
 
@@ -87,51 +132,62 @@ export default function LeadsList() {
     }
   }, []);
 
-  // ---------- 1) Stable fetchList using useCallback ----------
-  const fetchList = useCallback(
-    async (opts = {}) => {
-      setLoading(true);
-      try {
-        const searchParam =
-          typeof opts.q === "string" ? opts.q : q || undefined;
-        const pageParam =
-          typeof opts.page === "number" && opts.page > 0
-            ? opts.page
-            : page || 1;
+  // ---------- 1) Stable fetchList (no deps) ----------
+  const fetchList = useCallback(async (opts = {}) => {
+    setLoading(true);
+    try {
+      const latestQ = qRef.current || "";
+      const latestPage = pageRef.current || 1;
+      const latestFilters = filtersRef.current || {
+        status: "",
+        source: "",
+        project: "",
+      };
 
-        const params = {
-          search: searchParam,
-          page: pageParam,
-          status: opts.status ?? filters.status,
-          source: opts.source ?? filters.source,
-          project: opts.project ?? filters.project,
-        };
+      const searchParam = typeof opts.q === "string" ? opts.q : latestQ;
+      const pageParam =
+        typeof opts.page === "number" && opts.page > 0 ? opts.page : latestPage;
 
-        const data = await LeadAPI.list(params);
+      const params = {
+        page: pageParam,
+        status: opts.status ?? latestFilters.status,
+        source: opts.source ?? latestFilters.source,
+        project: opts.project ?? latestFilters.project,
+      };
 
-        const items = Array.isArray(data) ? data : data.results ?? [];
-        setRows(items);
-        setCount(
-          Array.isArray(data) ? items.length : data.count ?? items.length
-        );
-      } catch (e) {
-        console.error("Failed to load leads", e);
-      } finally {
-        setLoading(false);
+      const cleanedQ = (searchParam || "").trim();
+      if (cleanedQ) {
+        // ✅ send both to be safe (backend q OR search)
+        params.q = cleanedQ;
+        params.search = cleanedQ;
       }
-    },
-    [q, page, filters]
-  );
 
-  // ---------- 2) Debounced search that uses latest fetchList ----------
-  const debouncedSearch = useMemo(
-    () =>
-      debounce((val) => {
-        // always search from page 1 when typing
-        fetchList({ q: val, page: 1 });
-      }, 350),
-    [fetchList]
-  );
+      const data = await LeadAPI.list(params);
+
+      const items = Array.isArray(data) ? data : data.results ?? [];
+      setRows(items);
+      setCount(Array.isArray(data) ? items.length : data.count ?? items.length);
+    } catch (e) {
+      console.error("Failed to load leads", e);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // ---------- 2) Debounced search (1.5 sec) ----------
+  // ---------- 2) Debounced search (5 sec) ----------
+  const debouncedSearch = useMemo(() => {
+    return debounce((val) => {
+      fetchList({ q: val, page: 1 });
+    }, SEARCH_DELAY_MS);
+  }, [fetchList]);
+
+  // cleanup (avoid extra API call on unmount)
+  useEffect(() => {
+    return () => {
+      debouncedSearch.cancel?.();
+    };
+  }, [debouncedSearch]);
 
   // ---------- 3) Initial load ----------
   useEffect(() => {
@@ -140,11 +196,37 @@ export default function LeadsList() {
 
   const totalPages = useMemo(() => Math.max(1, Math.ceil(count / 10)), [count]);
 
-  // ---------- 4) SearchBar handler ----------
-  const handleSearchChange = (value) => {
-    setQ(value);
+  // ---------- 4) Search handlers ----------
+  const handleSearchChange = (valueOrEvent) => {
+    const v = getInputValue(valueOrEvent);
+    setQ(v);
     setPage(1);
-    debouncedSearch(value);
+
+    const trimmed = v.trim();
+
+    // ✅ blank => debounce cancel + reset list (1 API hit)
+    if (!trimmed) {
+      debouncedSearch.cancel?.();
+      fetchList({ q: "", page: 1 });
+      return;
+    }
+
+    // ✅ 2 char se kam pe auto hit nahi
+    if (trimmed.length < MIN_AUTO_CHARS) {
+      debouncedSearch.cancel?.();
+      return;
+    }
+
+    // ✅ auto hit after 5 sec idle
+    debouncedSearch(trimmed);
+  };
+
+  // ✅ Instant Search button / (optional) manual trigger
+  const handleSearchNow = () => {
+    debouncedSearch.cancel?.();
+    const trimmed = (q || "").trim();
+    setPage(1);
+    fetchList({ q: trimmed, page: 1 });
   };
 
   const handleDelete = async (id) => {
@@ -169,7 +251,7 @@ export default function LeadsList() {
     setPage(1);
     setModalOpen(false);
 
-    // page 1 + no filters
+    debouncedSearch.cancel?.();
     fetchList({ ...cleared, q: "", page: 1 });
   };
 
@@ -177,7 +259,7 @@ export default function LeadsList() {
     setPage(1);
     setModalOpen(false);
 
-    // current filters + current search
+    debouncedSearch.cancel?.();
     fetchList({
       status: filters.status,
       source: filters.source,
@@ -201,7 +283,6 @@ export default function LeadsList() {
   };
 
   const handleDownloadSample = () => {
-    // 👇 Columns aligned with backend import_excel
     const header = [
       "first_name",
       "last_name",
@@ -210,7 +291,7 @@ export default function LeadsList() {
       "company",
       "budget",
       "annual_income",
-      "walking", // "true" / "false"
+      "walking",
       "tel_res",
       "tel_office",
       "classification",
@@ -221,7 +302,7 @@ export default function LeadsList() {
       "sub_status",
       "purpose",
       "stage",
-      "cp_email", // Channel Partner user email
+      "cp_email",
       "assign_to_email",
     ];
 
@@ -231,26 +312,25 @@ export default function LeadsList() {
       "rahul@example.com",
       "9876543210",
       "ABC Corp",
-      "30000000", // budget
-      "2500000", // annual_income
-      "true", // walking -> "true" / "false"
-      "0221234567", // tel_res
-      "0227654321", // tel_office
-      "Hot", // classification
-      "Interested - High Budget", // sub_classification
-      "Website", // source
-      "Google Ads", // sub_source
-      "Open", // status
-      "Contacted", // sub_status
-      "Investment", // purpose
-      "New Lead", // stage (LeadStage.name)
-      "cp1@example.com", // cp_email (role = CHANNEL_PARTNER)
+      "30000000",
+      "2500000",
+      "true",
+      "0221234567",
+      "0227654321",
+      "Hot",
+      "Interested - High Budget",
+      "Website",
+      "Google Ads",
+      "Open",
+      "Contacted",
+      "Investment",
+      "New Lead",
+      "cp1@example.com",
       "vasisayed09421@gmail.com",
     ];
 
     const csvContent = `${header.join(",")}\n${sampleRow.join(",")}`;
 
-    // 👇 keep content CSV but download as .xlsx (Excel-friendly)
     const blob = new Blob([csvContent], {
       type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=utf-8;",
     });
@@ -294,13 +374,12 @@ export default function LeadsList() {
     try {
       const formData = new FormData();
       formData.append("file", importFile);
-      formData.append("project_id", importProjectId); // optional body
+      formData.append("project_id", importProjectId);
 
       const data = await LeadAPI.importExcel(importProjectId, formData);
 
       setImportResult(data);
 
-      // Kuch leads create hue to list refresh
       if (data?.created_count > 0) {
         fetchList({ page: 1 });
       }
@@ -335,13 +414,24 @@ export default function LeadsList() {
         {/* Header */}
         <div className="list-header">
           {/* LEFT: Search */}
-          <div className="list-header-left">
+          <div className="list-header-left" style={{ display: "flex", gap: 8 }}>
             <SearchBar
               value={q}
-              onChange={handleSearchChange}
+              onChange={(val) => handleSearchChange(val)}
               placeholder="Search leads by name, email, phone..."
               wrapperClassName="search-box"
             />
+
+            {/* ✅ Optional Instant Search button */}
+            <button
+              type="button"
+              className="filter-btn"
+              onClick={handleSearchNow}
+              disabled={loading}
+              title="Instant search (no wait)"
+            >
+              🔎 Search
+            </button>
           </div>
 
           {/* RIGHT: Filters + Excel + Add Lead */}
@@ -440,16 +530,19 @@ export default function LeadsList() {
                       lead.project?.name ||
                       lead.project_lead?.project?.name ||
                       "-";
+
                     const budget =
                       lead.budget != null
                         ? `₹${Number(lead.budget).toLocaleString()}`
                         : "-";
+
                     const status =
                       lead.status_name ||
                       lead.status?.name ||
                       lead.stage_name ||
                       lead.sub_status?.name ||
                       "New";
+
                     const assignedTo =
                       lead.assigned_to_name ||
                       lead.assign_to_name ||
@@ -488,7 +581,6 @@ export default function LeadsList() {
                         <td>{sourceFormatted}</td>
                         <td>{project}</td>
                         <td>{budget}</td>
-
                         <td>
                           <span
                             className={`status-badge ${getStatusBadgeClass(
@@ -505,7 +597,7 @@ export default function LeadsList() {
                   })
                 ) : (
                   <tr>
-                    <td colSpan="10" className="empty-state">
+                    <td colSpan="11" className="empty-state">
                       No leads found
                     </td>
                   </tr>
@@ -582,8 +674,6 @@ export default function LeadsList() {
                   </option>
                 ))}
               </select>
-
-              {/* future me yaha Source / Project bhi add kar sakte hain */}
             </div>
 
             <div className="filter-actions">
@@ -654,12 +744,7 @@ export default function LeadsList() {
                   onChange={handleImportFileChange}
                 />
                 <p className="small-hint">
-                  Required columns: <b>first_name, mobile_number</b>.{" "}
-                  {/* <br />
-                  Optional: last_name, company, budget, annual_income, walking (
-                  <code>true</code>/<code>false</code>), tel_res, tel_office,
-                  classification, sub_classification, source, sub_source,
-                  status, sub_status, purpose, stage, cp_email. */}
+                  Required columns: <b>first_name, mobile_number</b>.
                 </p>
 
                 {importResult && (

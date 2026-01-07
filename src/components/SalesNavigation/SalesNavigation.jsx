@@ -918,7 +918,7 @@ export default function SalesNavigation() {
     if (userRole === "SALES") {
       return [
         { id: "dashboard", label: "Dashboard", route: "/dashboard", section: "pre-sales" },
-        { id: "upcomming", label: "Upcomming Events", route: "/upcommingevent", section: "pre-sales" },
+        // { id: "upcomming", label: "Upcomming Events", route: "/upcommingevent", section: "pre-sales" },
         { id: "opportunities", label: "Opportunities", route: "/sales/opportunities", section: "pre-sales" },
         { id: "leads", label: "Leads", route: "/leads", section: "pre-sales" },
         { id: "site-visit", label: "Site Visit", route: "/sales/lead/site-visit", section: "pre-sales" },

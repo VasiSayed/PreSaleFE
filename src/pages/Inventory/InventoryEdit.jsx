@@ -14,36 +14,80 @@ const InventoryEdit = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+  const [hydrated, setHydrated] = useState(false);
 
-  const [item, setItem] = useState({
-    project: "",
-    tower: "",
-    floor: "",
-    unit: "",
-    unit_type: "",
-    configuration: "",
-    facing: "",
-    unit_status: "",
-    carpet_area: "",
-    build_up_area: "",
-    saleable_area: "",
-    rera_area: "",
-    block_minutes: "",
-    block_days: "",
-    agreement_value: "",
-    development_charges: "",
-    gst_input: "",
-    gst_mode: "AMOUNT",
-    gst_amount: "",
-    stamp_duty_amount: "",
-    registration_charges: "",
-    legal_fee: "",
-    total_cost: "",
-    inventory_description: "",
-    floor_plan_file: null,
-    other_file: null,
-    project_plan_file: null,
-  });
+  // const [item, setItem] = useState({
+  //   project: "",
+  //   tower: "",
+  //   floor: "",
+  //   unit: "",
+  //   unit_type: "",
+  //   configuration: "",
+  //   facing: "",
+  //   unit_status: "",
+  //   carpet_sqft: "",
+  //   builtup_sqft: "",
+  //   saleable_area: "",
+  //   rera_area: "",
+  //   block_minutes: "",
+  //   block_period_days: "",
+  //   agreement_value: "",
+  //   development_infra_charge: "",
+  //   gst_input: "",
+  //   gst_mode: "AMOUNT",
+  //   gst_amount: "",
+  //   stamp_duty_amount: "",
+  //   registration_charges: "",
+  //   legal_fee: "",
+  //   total_cost: "",
+  //   inventory_description: "",
+  //   floor_plan_file: null,
+  //   other_file: null,
+  //   project_plan_file: null,
+  // });
+
+const [item, setItem] = useState({
+  // Select IDs
+  project: "",
+  tower: "",
+  floor: "",
+  unit: "",
+  unit_type: "",
+  configuration: "",
+  facing: "",
+
+  // Status
+  unit_status: "AVAILABLE",
+  availability_status: "AVAILABLE",
+  // Areas (UI names)
+  carpet_area: "",
+  build_up_area: "",
+  saleable_area: "",
+  rera_area: "",
+
+  // Blocking
+  block_minutes: "",
+  block_days: "",
+
+  // Money
+  agreement_value: "",
+  development_charges: "",
+  gst_mode: "AMOUNT",
+  gst_input: "",
+  gst_amount: "",
+  stamp_duty_amount: "",
+  registration_charges: "",
+  legal_fee: "",
+  total_cost: "",
+
+  // Misc
+  inventory_description: "",
+
+  // Files
+  floor_plan_file: null,
+  project_plan_file: null,
+  other_file: null,
+}); 
 
   // Load setup-bundle + my-scope + inventory item
   useEffect(() => {
@@ -75,20 +119,36 @@ const InventoryEdit = () => {
           floor: toFormValue(inv.floor?.id || inv.floor),
           unit: toFormValue(inv.unit?.id || inv.unit),
           unit_type: toFormValue(inv.unit_type?.id || inv.unit_type),
-          configuration: toFormValue(inv.configuration?.id || inv.configuration),
+          configuration: toFormValue(
+            inv.configuration?.id || inv.configuration
+          ),
           facing: toFormValue(inv.facing?.id || inv.facing),
-          unit_status: inv.availability_status || inv.unit_status || "",
-          carpet_area: toFormValue(inv.carpet_area),
-          build_up_area: toFormValue(inv.build_up_area),
-          saleable_area: toFormValue(inv.saleable_area),
-          rera_area: toFormValue(inv.rera_area),
+          // unit_status: inv.availability_status || inv.unit_status || "",
+          availability_status: inv.availability_status || "",
+          // carpet_area: toFormValue(inv.carpet_area),
+          // build_up_area: toFormValue(inv.build_up_area),
+          // saleable_area: toFormValue(inv.saleable_area),
+          // rera_area: toFormValue(inv.rera_area),
+          carpet_area: toFormValue(inv.carpet_sqft),
+          build_up_area: toFormValue(inv.builtup_sqft),
+          saleable_area: toFormValue(inv.saleable_sqft),
+          rera_area: toFormValue(inv.rera_area_sqft),
+          // block_minutes: toFormValue(inv.block_minutes),
+          // block_days: toFormValue(inv.block_days),
+          // 🔥 BLOCKING
+          block_days: toFormValue(inv.block_period_days),
           block_minutes: toFormValue(inv.block_minutes),
-          block_days: toFormValue(inv.block_days),
+          // 🔥 MONEY
           agreement_value: toFormValue(inv.agreement_value),
-          development_charges: toFormValue(inv.development_charges),
+          development_charges: toFormValue(inv.development_infra_charge),
+          gst_amount: toFormValue(inv.gst_amount),
           gst_input: toFormValue(inv.gst_amount),
           gst_mode: "AMOUNT",
-          gst_amount: toFormValue(inv.gst_amount),
+          // agreement_value: toFormValue(inv.agreement_value),
+          // development_charges: toFormValue(inv.development_charges),
+          // gst_input: toFormValue(inv.gst_amount),
+          // gst_mode: "AMOUNT",
+          // gst_amount: toFormValue(inv.gst_amount),
           stamp_duty_amount: toFormValue(inv.stamp_duty_amount),
           registration_charges: toFormValue(inv.registration_charges),
           legal_fee: toFormValue(inv.legal_fee),
@@ -98,6 +158,9 @@ const InventoryEdit = () => {
           other_file: null,
           project_plan_file: null,
         });
+        setTimeout(() => {
+          setHydrated(true);
+        }, 0);
       } catch (e) {
         console.error("Failed to load inventory", e);
         setError("Failed to load inventory data.");
@@ -118,7 +181,7 @@ const InventoryEdit = () => {
   const facings = bundle?.lookups?.facings ?? [];
   const unitStatuses =
     (bundle?.statuses?.unit ?? []).filter((u) =>
-      ["AVAILABLE", "BLOCKED", "SOLD"].includes(u.code)
+      ["AVAILABLE", "BLOCKED", "SOLD","BOOKED"].includes(u.code)
     ) ?? [];
 
   const getProjectPricePerSqft = (projectId) => {
@@ -219,14 +282,19 @@ const InventoryEdit = () => {
       "gst_mode",
     ];
     if (
-      moneyImpactFields.includes(name) ||
-      name === "project" ||
-      name === "carpet_area"
+      hydrated &&
+      (moneyImpactFields.includes(name) ||
+        name === "project" ||
+        name === "carpet_area")
     ) {
       recomputeGstAndTotal(next);
     }
 
-    setItem(next);
+    if (!hydrated) {
+      setItem(next);
+      return;
+    }
+
   };
 
   const handleFileChange = (name, file) => {
@@ -273,8 +341,8 @@ const InventoryEdit = () => {
       unit_type: toNumberOrNull(item.unit_type),
       configuration: toNumberOrNull(item.configuration),
       facing: toNumberOrNull(item.facing),
-      availability_status: item.unit_status || "AVAILABLE",
-      unit_status: item.unit_status || "AVAILABLE",
+      availability_status: item.availability_status || "",
+      // unit_status: item.unit_status || "",
       carpet_area: toNumberOrNull(item.carpet_area),
       build_up_area: toNumberOrNull(item.build_up_area),
       saleable_area: toNumberOrNull(item.saleable_area),
@@ -342,7 +410,9 @@ const InventoryEdit = () => {
   };
 
   const renderSelect = (label, name, options, placeholder = "Select") => {
-    const currentValue = String(item[name] || "");
+    // const currentValue = String(item[name] || "");
+    const currentValue =
+      item[name] !== null && item[name] !== undefined ? String(item[name]) : "";
     return (
       <div className="form-field">
         <label className="form-label">{label}</label>
@@ -371,7 +441,10 @@ const InventoryEdit = () => {
       <input
         className="form-input"
         type="number"
-        value={item[name] || ""}
+        // value={item[name] || ""}
+        value={
+          item[name] !== null && item[name] !== undefined ? item[name] : ""
+        }
         onChange={(e) => handleChange(name, e.target.value)}
       />
     </div>
@@ -400,7 +473,7 @@ const InventoryEdit = () => {
     </div>
   );
 
-  if (loading) {
+  if (loading || !projects.length) {
     return (
       <div className="inventory-page">
         <div style={{ padding: 24 }}>Loading…</div>
@@ -475,7 +548,7 @@ const InventoryEdit = () => {
 
                 {renderSelect(
                   "Status",
-                  "unit_status",
+                  "availability_status",
                   unitStatuses.map((u) => ({
                     value: u.code,
                     label: u.name || u.code,
@@ -508,11 +581,14 @@ const InventoryEdit = () => {
                   item.gst_mode === "PERCENT"
                     ? "GST Input (%)"
                     : "GST Amount (₹)",
-                  "gst_input"
+                  "gst_amount"
                 )}
 
                 {renderNumber("Stamp Duty (₹)", "stamp_duty_amount")}
-                {renderNumber("Registration Charges (₹)", "registration_charges")}
+                {renderNumber(
+                  "Registration Charges (₹)",
+                  "registration_charges"
+                )}
                 {renderNumber("Legal Fee (₹)", "legal_fee")}
                 {renderNumber("Total Cost (₹)", "total_cost")}
 
@@ -531,11 +607,7 @@ const InventoryEdit = () => {
                 >
                   Cancel
                 </button>
-                <button
-                  type="submit"
-                  className="btn-primary"
-                  disabled={saving}
-                >
+                <button type="submit" className="btn-primary" disabled={saving}>
                   {saving ? "Saving..." : "Update Inventory"}
                 </button>
               </div>
@@ -548,4 +620,3 @@ const InventoryEdit = () => {
 };
 
 export default InventoryEdit;
-
