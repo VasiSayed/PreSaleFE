@@ -7,6 +7,19 @@ import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
 import "./BookingDetail.css";
 
+const formatDMY = (v) => {
+  if (!v) return "-";
+  const d = new Date(v);
+  if (Number.isNaN(d.getTime())) return "-";
+
+  const dd = String(d.getDate()).padStart(2, "0");
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const yyyy = d.getFullYear();
+
+  return `${dd}/${mm}/${yyyy}`;
+};
+
+
 const formatAmount = (value) => {
   if (value === null || value === undefined || value === "") return "";
   const num = Number(value);
@@ -451,7 +464,7 @@ const BookingDetail = () => {
                 <div className="booking-field">
                   <span className="booking-field-label">Created At</span>
                   <span className="booking-field-value">
-                    {formatDate(booking.created_at)}
+                    {formatDMY(booking.created_at)}
                   </span>
                 </div>
               </div>
@@ -581,7 +594,9 @@ const BookingDetail = () => {
                 {booking.tower && (
                   <div className="booking-field">
                     <span className="booking-field-label">Tower</span>
-                    <span className="booking-field-value">{toTitleCase(booking.tower)}</span>
+                    <span className="booking-field-value">
+                      {toTitleCase(booking.tower)}
+                    </span>
                   </div>
                 )}
 
@@ -595,7 +610,9 @@ const BookingDetail = () => {
                 {booking.unit && (
                   <div className="booking-field">
                     <span className="booking-field-label">Flat Number</span>
-                    <span className="booking-field-value">{toTitleCase(booking.unit)}</span>
+                    <span className="booking-field-value">
+                      {toTitleCase(booking.unit)}
+                    </span>
                   </div>
                 )}
 
@@ -875,7 +892,7 @@ const BookingDetail = () => {
                         Plan Created At
                       </span>
                       <span className="booking-field-value">
-                        {formatDate(paymentPlan.created_at)}
+                        {formatDMY(paymentPlan.created_at)}
                       </span>
                     </div>
                   )}
@@ -886,7 +903,7 @@ const BookingDetail = () => {
                         Plan Updated At
                       </span>
                       <span className="booking-field-value">
-                        {formatDate(paymentPlan.updated_at)}
+                        {formatDMY(paymentPlan.updated_at)}
                       </span>
                     </div>
                   )}

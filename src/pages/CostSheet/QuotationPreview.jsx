@@ -260,7 +260,7 @@ const QuotationPreview = () => {
               </div>
               <div className="qp-meta-line">
                 <span className="qp-meta-label">Date:&nbsp;</span>
-                <span className="qp-meta-value">{date || "-"}</span>
+                <span className="qp-meta-value">{formatDMY(date) || "-"}</span>
               </div>
               <div className="qp-meta-line">
                 <span className="qp-meta-label">Valid Until:&nbsp;</span>
