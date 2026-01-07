@@ -462,6 +462,13 @@ const BookingDetail = () => {
                 </div>
 
                 <div className="booking-field">
+                  <span className="booking-field-label">Created By</span>
+                  <span className="booking-field-value">
+                    {booking.created_by_name}
+                  </span>
+                </div>
+
+                <div className="booking-field">
                   <span className="booking-field-label">Created At</span>
                   <span className="booking-field-value">
                     {formatDMY(booking.created_at)}
