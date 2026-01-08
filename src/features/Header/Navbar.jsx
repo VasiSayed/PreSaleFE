@@ -123,9 +123,11 @@ function Navbar({ currentUser, onLogout, showLogout = true }) {
       .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
       .join(" ");
   };
+const roleLabel = currentUser?.custom_role
+  ? formatLabel(currentUser.custom_role)
+  : formatLabel(currentUser?.role);
 
-  const roleLabel = formatLabel(currentUser?.role);
-  const username = currentUser?.username || currentUser?.email || "";
+const username = currentUser?.username || currentUser?.email || "";
 
   const headingText = activeProjectName
     ? `${brandName} – ${activeProjectName}`

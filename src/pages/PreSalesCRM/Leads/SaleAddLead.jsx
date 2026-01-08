@@ -413,6 +413,34 @@ const FIELDS = [
 
 // ---------- helpers ----------
 
+const truthy = (v) => v === true || v === "true";
+
+const pickLowestById = (items = []) => {
+  const arr = (items || []).filter((x) => x && x.id != null);
+  if (!arr.length) return null;
+  return arr.reduce(
+    (min, cur) => (Number(cur.id) < Number(min.id) ? cur : min),
+    arr[0]
+  );
+};
+
+const findDefaultRootClassification = (roots = []) => {
+  const flagged = (roots || []).filter((c) =>
+    truthy(c.is_default_for_new_lead)
+  );
+  return pickLowestById(flagged);
+};
+
+const findDefaultChildSubClassification = (root) => {
+  if (!root) return null;
+  const kids = root.children || root.subclasses || [];
+  const flaggedKids = (kids || []).filter((c) =>
+    truthy(c.is_default_for_converted_lead)
+  );
+  return pickLowestById(flaggedKids);
+};
+
+
 const ROUND_ROBIN_VALUE = "__ROUND_ROBIN__";
 
 const buildInitialFormState = () => {
@@ -551,17 +579,31 @@ const SaleAddLead = ({ handleLeadSubmit, leadId: propLeadId }) => {
   const [cpMode, setCpMode] = useState(CP_MODE.REGISTERED);
   const [selectedCpId, setSelectedCpId] = useState("");
 
+  const [quickCpLoadingPincode, setQuickCpLoadingPincode] = useState(false);
+  const [quickCpLocalityOptions, setQuickCpLocalityOptions] = useState([]);
+
   // Quick CP create
   const [showQuickCpModal, setShowQuickCpModal] = useState(false);
-  const [quickCpForm, setQuickCpForm] = useState({
-    name: "",
-    email: "",
-    mobile_number: "",
-    company_name: "",
-    pan_number: "",
-    rera_number: "",
-    partner_tier_id: "",
-  });
+const [quickCpForm, setQuickCpForm] = useState({
+  name: "",
+  email: "",
+  mobile_number: "",
+  company_name: "",
+  pan_number: "",
+  rera_number: "",
+  partner_tier_id: "",
+
+  // ✅ NEW: company address
+  address_line1: "",
+  address_line2: "",
+  address_landmark: "",
+  address_pincode: "",
+  address_area: "",
+  address_city: "",
+  address_state: "",
+  address_country: "India",
+});
+
   const [quickCpOtpSending, setQuickCpOtpSending] = useState(false);
   const [quickCpOtpVerifying, setQuickCpOtpVerifying] = useState(false);
   const [quickCpOtpCode, setQuickCpOtpCode] = useState("");
@@ -731,6 +773,48 @@ const SaleAddLead = ({ handleLeadSubmit, leadId: propLeadId }) => {
   }
 }, [form.pin_code]);
 
+useEffect(() => {
+  const pin = (quickCpForm.address_pincode || "").replace(/\D/g, "");
+
+  if (pin.length === 6) {
+    setQuickCpLoadingPincode(true);
+
+    fetch(`https://api.postalpincode.in/pincode/${pin}`)
+      .then((res) => res.json())
+      .then((dataArray) => {
+        const response = dataArray?.[0];
+
+        if (
+          response?.Status === "Success" &&
+          Array.isArray(response.PostOffice)
+        ) {
+          const postOffices = response.PostOffice;
+
+          const { city, locality } =
+            extractCityAndLocalityFromPostOffices(postOffices);
+
+          const options = extractLocalityOptions(postOffices);
+          setQuickCpLocalityOptions(options);
+
+          setQuickCpForm((prev) => ({
+            ...prev,
+            address_city: city || prev.address_city,
+            address_area: locality || prev.address_area,
+            address_state: postOffices[0]?.State || prev.address_state,
+            address_country:
+              postOffices[0]?.Country || prev.address_country || "India",
+            address_pincode: pin,
+          }));
+        }
+      })
+      .catch((err) => console.error("Quick CP pincode lookup failed", err))
+      .finally(() => setQuickCpLoadingPincode(false));
+  } else {
+    // optional: reset options when pin not 6 digits
+    setQuickCpLocalityOptions([]);
+  }
+}, [quickCpForm.address_pincode]);
+
 
   // -------- masters (classification, source, status, etc.) --------
   useEffect(() => {
@@ -766,6 +850,29 @@ const SaleAddLead = ({ handleLeadSubmit, leadId: propLeadId }) => {
         console.error("Failed to load partner tiers", err);
       });
   }, [form.project_id]);
+
+  useEffect(() => {
+    // ✅ Only for CREATE mode
+    if (isEditing) return;
+    if (!masters?.classifications?.length) return;
+
+    setForm((prev) => {
+      // If already selected by user, don’t override
+      if (prev.lead_classification_id) return prev;
+
+      const root = findDefaultRootClassification(masters.classifications);
+      if (!root) return prev;
+
+      const child = findDefaultChildSubClassification(root);
+
+      return {
+        ...prev,
+        lead_classification_id: String(root.id),
+        ...(child ? { lead_subclass_id: String(child.id) } : {}),
+      };
+    });
+  }, [masters, isEditing]);
+
 
   // -------- EDIT MODE: fetch lead details and prefill form -------- ⭐ NEW
   useEffect(() => {
@@ -991,7 +1098,11 @@ const SaleAddLead = ({ handleLeadSubmit, leadId: propLeadId }) => {
       }
 
       // ✅ 2) Mobile number and Tel fields: Only allow digits
-      if (name === "mobile_number" || name === "tel_res" || name === "tel_office") {
+      if (
+        name === "mobile_number" ||
+        name === "tel_res" ||
+        name === "tel_office"
+      ) {
         const digits = String(value || "").replace(/\D/g, "");
         newValue = digits;
       }
@@ -1009,12 +1120,30 @@ const SaleAddLead = ({ handleLeadSubmit, leadId: propLeadId }) => {
         "country",
         "description",
       ];
-      if (textFieldsToFormat.includes(name) && typeof newValue === "string" && newValue.trim()) {
+      if (
+        textFieldsToFormat.includes(name) &&
+        typeof newValue === "string" &&
+        newValue.trim()
+      ) {
         newValue = toTitleCase(newValue);
       }
 
       // ✅ 2) Form ka naya object ek hi baar banao
       const next = { ...prev, [name]: newValue };
+
+      // ✅ When classification changes: reset subclass + set default child (if exists)
+      if (name === "lead_classification_id") {
+        next.lead_subclass_id = "";
+
+        const selectedRoot = (masters?.classifications || []).find(
+          (c) => String(c.id) === String(newValue)
+        );
+
+        const child = findDefaultChildSubClassification(selectedRoot);
+        if (child) {
+          next.lead_subclass_id = String(child.id);
+        }
+      }
 
       // ✅ 3) Email change => OTP reset
       if (name === "email") {
@@ -1306,15 +1435,25 @@ const SaleAddLead = ({ handleLeadSubmit, leadId: propLeadId }) => {
       showToast("Please verify CP email first.", "error");
       return;
     }
+if (!quickCpForm.name || !quickCpForm.email || !quickCpForm.partner_tier_id) {
+  showToast("Name, Email, and Partner Tier are required.", "error");
+  return;
+}
 
-    if (
-      !quickCpForm.name ||
-      !quickCpForm.email ||
-      !quickCpForm.partner_tier_id
-    ) {
-      showToast("Name, Email, and Partner Tier are required.", "error");
-      return;
-    }
+if (
+  !quickCpForm.name ||
+  !quickCpForm.email ||
+  !quickCpForm.partner_tier_id ||
+  !quickCpForm.address_line1 ||
+  !(quickCpForm.address_pincode || "").match(/^\d{6}$/)
+) {
+  showToast(
+    "Name, Email, Partner Tier, Address Line 1 and 6-digit Pincode are required.",
+    "error"
+  );
+  return;
+}
+
 
     try {
       const body = {
@@ -1326,6 +1465,16 @@ const SaleAddLead = ({ handleLeadSubmit, leadId: propLeadId }) => {
         rera_number: quickCpForm.rera_number || "",
         partner_tier_id: quickCpForm.partner_tier_id,
         project_id: form.project_id,
+        address: {
+          line1: quickCpForm.address_line1 || "",
+          line2: quickCpForm.address_line2 || "",
+          landmark: quickCpForm.address_landmark || "",
+          area: quickCpForm.address_area || "",
+          city: quickCpForm.address_city || "",
+          state: quickCpForm.address_state || "",
+          pincode: quickCpForm.address_pincode || "",
+          country: quickCpForm.address_country || "India",
+        },
       };
 
       const res = await api.post("/channel/partners/quick-create/", body);
@@ -1345,15 +1494,26 @@ const SaleAddLead = ({ handleLeadSubmit, leadId: propLeadId }) => {
 
       // Close modal
       setShowQuickCpModal(false);
-      setQuickCpForm({
-        name: "",
-        email: "",
-        mobile_number: "",
-        company_name: "",
-        pan_number: "",
-        rera_number: "",
-        partner_tier_id: "",
-      });
+setQuickCpForm({
+  name: "",
+  email: "",
+  mobile_number: "",
+  company_name: "",
+  pan_number: "",
+  rera_number: "",
+  partner_tier_id: "",
+
+  address_line1: "",
+  address_line2: "",
+  address_landmark: "",
+  address_pincode: "",
+  address_area: "",
+  address_city: "",
+  address_state: "",
+  address_country: "India",
+});
+setQuickCpLocalityOptions([]);
+
       setQuickCpOtpCode("");
       setQuickCpEmailVerified(false);
     } catch (err) {
@@ -2281,7 +2441,10 @@ const SaleAddLead = ({ handleLeadSubmit, leadId: propLeadId }) => {
                     backgroundColor: "#fef3c7",
                     border: "1px solid #fbbf24",
                     fontSize: "14px",
-                    marginBottom: lookupResult?.present && existingProjectLead ? "8px" : "0",
+                    marginBottom:
+                      lookupResult?.present && existingProjectLead
+                        ? "8px"
+                        : "0",
                   }}
                 >
                   {checkingPhone ? (
@@ -2289,8 +2452,8 @@ const SaleAddLead = ({ handleLeadSubmit, leadId: propLeadId }) => {
                   ) : lookupResult?.present ? (
                     <>
                       <span>
-                        Lead / opportunity already exists for this mobile. Leads:{" "}
-                        {lookupResult.lead_count || 0}, Opportunities:{" "}
+                        Lead / opportunity already exists for this mobile.
+                        Leads: {lookupResult.lead_count || 0}, Opportunities:{" "}
                         {lookupResult.opportunity_count || 0}.
                       </span>
                       <button
@@ -2328,8 +2491,8 @@ const SaleAddLead = ({ handleLeadSubmit, leadId: propLeadId }) => {
                       marginBottom: "8px",
                     }}
                   >
-                    This customer is already registered in this project. Please edit
-                    the existing lead instead.
+                    This customer is already registered in this project. Please
+                    edit the existing lead instead.
                   </div>
                 )}
 
@@ -2347,8 +2510,8 @@ const SaleAddLead = ({ handleLeadSubmit, leadId: propLeadId }) => {
                       color: "#1e40af",
                     }}
                   >
-                    This customer already exists in another project. You can copy
-                    their data if needed.
+                    This customer already exists in another project. You can
+                    copy their data if needed.
                   </div>
                 )}
             </div>
@@ -2381,7 +2544,9 @@ const SaleAddLead = ({ handleLeadSubmit, leadId: propLeadId }) => {
                 <button
                   type="submit"
                   className="btn-primary"
-                  disabled={loadingLead || (!isEditing && hasExistingLeadInProject)}
+                  disabled={
+                    loadingLead || (!isEditing && hasExistingLeadInProject)
+                  }
                 >
                   {isEditing ? "Update Lead" : "Submit"}
                 </button>
@@ -2577,7 +2742,176 @@ const SaleAddLead = ({ handleLeadSubmit, leadId: propLeadId }) => {
                 onChange={(e) =>
                   setQuickCpForm((prev) => ({
                     ...prev,
-                    company_name: e.target.value ? toTitleCase(e.target.value) : "",
+                    company_name: e.target.value
+                      ? toTitleCase(e.target.value)
+                      : "",
+                  }))
+                }
+              />
+            </div>
+
+            {/* ✅ Company Address */}
+            <div style={{ marginBottom: "15px" }}>
+              <label className="form-label">
+                Address Line 1<span className="required">*</span>
+              </label>
+              <input
+                type="text"
+                className="form-input"
+                value={quickCpForm.address_line1}
+                onChange={(e) =>
+                  setQuickCpForm((prev) => ({
+                    ...prev,
+                    address_line1: e.target.value
+                      ? toTitleCase(e.target.value)
+                      : "",
+                  }))
+                }
+              />
+            </div>
+
+            <div style={{ display: "flex", gap: "10px", marginBottom: "15px" }}>
+              <div style={{ flex: 1 }}>
+                <label className="form-label">Address Line 2</label>
+                <input
+                  type="text"
+                  className="form-input"
+                  value={quickCpForm.address_line2}
+                  onChange={(e) =>
+                    setQuickCpForm((prev) => ({
+                      ...prev,
+                      address_line2: e.target.value
+                        ? toTitleCase(e.target.value)
+                        : "",
+                    }))
+                  }
+                />
+              </div>
+
+              <div style={{ flex: 1 }}>
+                <label className="form-label">Landmark</label>
+                <input
+                  type="text"
+                  className="form-input"
+                  value={quickCpForm.address_landmark}
+                  onChange={(e) =>
+                    setQuickCpForm((prev) => ({
+                      ...prev,
+                      address_landmark: e.target.value
+                        ? toTitleCase(e.target.value)
+                        : "",
+                    }))
+                  }
+                />
+              </div>
+            </div>
+
+            <div style={{ display: "flex", gap: "10px", marginBottom: "15px" }}>
+              <div style={{ flex: 1 }}>
+                <label className="form-label">
+                  Pincode<span className="required">*</span>
+                  {quickCpLoadingPincode && (
+                    <span
+                      style={{
+                        fontSize: 12,
+                        color: "#6b7280",
+                        marginLeft: 6,
+                        fontWeight: "normal",
+                      }}
+                    >
+                      (Looking up...)
+                    </span>
+                  )}
+                </label>
+                <input
+                  type="text"
+                  className="form-input"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  maxLength={6}
+                  value={quickCpForm.address_pincode}
+                  onChange={(e) => {
+                    const digits = e.target.value.replace(/\D/g, "");
+                    setQuickCpForm((prev) => ({
+                      ...prev,
+                      address_pincode: digits,
+                    }));
+                  }}
+                />
+              </div>
+
+              <div style={{ flex: 1 }}>
+                <label className="form-label">Area / Locality</label>
+                <select
+                  className="form-input"
+                  value={quickCpForm.address_area || ""}
+                  onChange={(e) =>
+                    setQuickCpForm((prev) => ({
+                      ...prev,
+                      address_area: e.target.value,
+                    }))
+                  }
+                >
+                  <option value="">Select</option>
+                  {quickCpLocalityOptions.map((loc) => (
+                    <option key={loc} value={loc}>
+                      {loc}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div style={{ display: "flex", gap: "10px", marginBottom: "15px" }}>
+              <div style={{ flex: 1 }}>
+                <label className="form-label">City</label>
+                <input
+                  type="text"
+                  className="form-input"
+                  value={quickCpForm.address_city}
+                  onChange={(e) =>
+                    setQuickCpForm((prev) => ({
+                      ...prev,
+                      address_city: e.target.value
+                        ? toTitleCase(e.target.value)
+                        : "",
+                    }))
+                  }
+                  placeholder="Auto-filled"
+                />
+              </div>
+
+              <div style={{ flex: 1 }}>
+                <label className="form-label">State</label>
+                <input
+                  type="text"
+                  className="form-input"
+                  value={quickCpForm.address_state}
+                  onChange={(e) =>
+                    setQuickCpForm((prev) => ({
+                      ...prev,
+                      address_state: e.target.value
+                        ? toTitleCase(e.target.value)
+                        : "",
+                    }))
+                  }
+                  placeholder="Auto-filled"
+                />
+              </div>
+            </div>
+
+            <div style={{ marginBottom: "15px" }}>
+              <label className="form-label">Country</label>
+              <input
+                type="text"
+                className="form-input"
+                value={quickCpForm.address_country}
+                onChange={(e) =>
+                  setQuickCpForm((prev) => ({
+                    ...prev,
+                    address_country: e.target.value
+                      ? toTitleCase(e.target.value)
+                      : "",
                   }))
                 }
               />
@@ -2619,15 +2953,26 @@ const SaleAddLead = ({ handleLeadSubmit, leadId: propLeadId }) => {
                 className="btn-secondary"
                 onClick={() => {
                   setShowQuickCpModal(false);
-                  setQuickCpForm({
-                    name: "",
-                    email: "",
-                    mobile_number: "",
-                    company_name: "",
-                    pan_number: "",
-                    rera_number: "",
-                    partner_tier_id: "",
-                  });
+setQuickCpForm({
+  name: "",
+  email: "",
+  mobile_number: "",
+  company_name: "",
+  pan_number: "",
+  rera_number: "",
+  partner_tier_id: "",
+
+  address_line1: "",
+  address_line2: "",
+  address_landmark: "",
+  address_pincode: "",
+  address_area: "",
+  address_city: "",
+  address_state: "",
+  address_country: "India",
+});
+setQuickCpLocalityOptions([]);
+
                   setQuickCpOtpCode("");
                   setQuickCpEmailVerified(false);
                 }}

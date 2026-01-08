@@ -258,7 +258,10 @@ export const LeadAPI = {
   importExcel(projectId, formData) {
     return api
       .post(`${URLS.salesLeads}import-excel/`, formData, {
-        params: { project_id: projectId },
+        params: {
+          project_id: projectId,
+          // repair_only: 1, 
+        },
         headers: { "Content-Type": "multipart/form-data" },
       })
       .then((res) => res.data);

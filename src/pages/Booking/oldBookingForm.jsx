@@ -5701,10 +5701,6 @@ import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { toSentenceCase } from "../../utils/text";
 import PaymentLeadCreateModal from "../../components/Payments/PaymentLeadCreateModal";
-import "react-datepicker/dist/react-datepicker.css";
-import DatePicker from "react-datepicker";
-import { useParams } from "react-router-dom";
-import imageCompression from "browser-image-compression";
 
 const BOOK_API_PREFIX = "/book";
 
@@ -5885,9 +5881,6 @@ const BookingForm = () => {
     file: null,
   });
 
- const [previewUrl, setPreviewUrl] = useState(null);
-  const [previewOpen, setPreviewOpen] = useState(false);
-  
   const handlePaymentDocFileChange = (e) => {
     const file = e.target.files && e.target.files[0];
     if (!file) return;
@@ -5933,32 +5926,6 @@ const BookingForm = () => {
     setShowPaymentDocModal(false);
   };
 
-
-const compressImage = async (file) => {
-  console.log("compressImage called for file:", file.name, file.size, "bytes");
-  const options = {
-    maxSizeMB: 0.5,            // 🔥 target size (500KB)
-    maxWidthOrHeight: 1024,    // resize if larger
-    useWebWorker: true,
-  };
-
-  try {
-    const compressedFile = await imageCompression(file, options);
-    console.log(
-      "Compressed size:",
-      (compressedFile.size / 1024 / 1024).toFixed(2),
-      "MB"
-    );
-    // Preserve original filename
-    return new File([compressedFile], file.name, {
-      type: compressedFile.type,
-    });
-  } catch (err) {
-    console.error("Image compression failed:", err);
-    return file; // fallback to original
-  }
-};
-
   // ---------- user + lead ----------
   const [currentUser, setCurrentUser] = useState(null);
   const [leadId] = useState(leadIdFromUrl);
@@ -5997,48 +5964,11 @@ const compressImage = async (file) => {
     applicantSummary: true,
   });
 
-  const handleFileChange = (key) => async (e) => {
-  const file = e.target.files && e.target.files[0];
-  if (!file) return;
-
-  // Optional: validate file type
-  if (!file.type.startsWith("image/") && !file.type.includes("pdf")) {
-    alert("Only images or PDF allowed");
-    return;
-  }
-
-  // Revoke old preview URL if any to avoid leaks
-  if (files[key] && files[key].preview) {
-    URL.revokeObjectURL(files[key].preview);
-  }
-
-  let finalFile = file;
-
-  // Compress only if it's an image
-  if (file.type.startsWith("image/")) {
-    finalFile = await compressImage(file);
-  }
-
-  // Create preview URL for images
-  const preview = file.type.startsWith("image/")
-    ? URL.createObjectURL(finalFile)
-    : null;
-
-  setFiles((prev) => ({
-    ...prev,
-    [key]: { file: finalFile, preview },
-  }));
-};
-
-const handlePreview = (file) => {
-   if (!file) return;
-  console.log("Previewing file:", file);
-  // Only generate URL if it's a File
-  const url = file instanceof File ? URL.createObjectURL(file) : file;
-
-  setPreviewUrl(url);
-  setPreviewOpen(true);
-};
+  const handleFileChange = (key) => (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    setFiles((prev) => ({ ...prev, [key]: file }));
+  };
 
   // ✅ ADD THESE 4 NEW FUNCTIONS
   // PAN validation with toast
@@ -6239,8 +6169,6 @@ const handlePreview = (file) => {
   const [developmentChargesPsf, setDevelopmentChargesPsf] = useState("500"); // Default 500
   const [provisionalMaintenanceMonths, setProvisionalMaintenanceMonths] =
     useState(6);
-   const [provisionalCharges, setProvisionalCharges] =
-    useState(15);
 
   // Computed values for display
   const [additionalChargesTotal, setAdditionalChargesTotal] = useState(0);
@@ -6270,7 +6198,6 @@ const handlePreview = (file) => {
       };
     }
 
-  
     // sort by date (oldest → newest)
     const sorted = [...payments].sort((a, b) => {
       const da = a.payment_date ? new Date(a.payment_date) : 0;
@@ -6890,9 +6817,7 @@ const handlePreview = (file) => {
         } else {
           setProvisionalMaintenanceMonths(6); // default
         }
-        if (template.provisional_maintenance_psf){
-          setProvisionalCharges(Number(template.provisional_maintenance_psf))
-        }
+
         // Store company logo and name
         setCompanyLogoUrl(template.company_logo_url || "");
         setCompanyName(template.company_name || "");
@@ -6923,7 +6848,6 @@ const handlePreview = (file) => {
 
     fetchCostData();
   }, [leadId]);
-
 
   // ---------- KYC status refresh ----------
   const handleRefreshKycStatus = async () => {
@@ -6966,12 +6890,6 @@ const handlePreview = (file) => {
       prev.map((app, i) => (i === index ? { ...app, [field]: value } : app))
     );
   };
-
-  const handleRemoveAdditionalApplicant = (index) => {
-  setAdditionalApplicants((prev) =>
-    prev.filter((_, i) => i !== index)
-  );
-};
 
   const handleAddAdditionalApplicant = () => {
     setAdditionalApplicants((prev) => [
@@ -7634,8 +7552,7 @@ const handlePreview = (file) => {
     );
 
     // Provisional Maintenance @ PSF × total area × months (use editable value)
-    // const provPsqf = Number(costTemplate.provisional_maintenance_psf || 0);
-    const provPsqf = Number(provisionalCharges || 0);
+    const provPsqf = Number(costTemplate.provisional_maintenance_psf || 0);
     const provMonths = Number(
       provisionalMaintenanceMonths ||
         costTemplate.provisional_maintenance_months ||
@@ -7681,7 +7598,6 @@ const handlePreview = (file) => {
     legalFeeEnabled,
     developmentChargesPsf,
     provisionalMaintenanceMonths,
-     provisionalCharges,
   ]);
 
   const effectiveBaseRate = useMemo(() => {
@@ -7717,15 +7633,6 @@ const handlePreview = (file) => {
   // Location: BookingForm.jsx (around line 2600)
   // Replace entire function with this
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-  // console.log("leadId:", leadId);
-const handleCancelBooking = () => {
-   if (leadId) {
-      navigate(`/leads/${leadId}/`);
-    } else {
-      navigate("/leads/"); // fallback
-    }
-};
 
   const handleSaveBooking = async () => {
     // ---------- VALIDATIONS ----------
@@ -7900,6 +7807,7 @@ const handleCancelBooking = () => {
 
     setSaving(true);
     toast.info("Submitting booking...");
+
     try {
       const fd = new FormData();
 
@@ -8015,7 +7923,7 @@ const handleCancelBooking = () => {
       if (selectedOfferId) fd.append("offer_id", selectedOfferId);
       fd.append("offer_discount", offerDiscountValue.toFixed(2));
       fd.append("total_taxes", totalTaxes.toFixed(2));
-      // fd.append("final_amount", finalAmount.toFixed(2));
+      fd.append("final_amount", finalAmount.toFixed(2));
 
       // ==================================================
       // NEW PAYLOAD FIELDS (as per requirements)
@@ -8133,7 +8041,6 @@ const handleCancelBooking = () => {
 
       // Grand Total
       fd.append("grand_total_amount", grandTotal.toFixed(2));
-      fd.append("final_amount", grandTotal.toFixed(2));
 
       // Structured JSON for complete breakdown
       const costBreakdownData = {
@@ -8302,13 +8209,13 @@ const handleCancelBooking = () => {
       fd.append("applicants[0][aadhar_no]", primaryAadharNo || "");
 
       if (files.primaryPanFront)
-        fd.append("applicants[0][pan_front]", files.primaryPanFront.file);
+        fd.append("applicants[0][pan_front]", files.primaryPanFront);
       if (files.primaryPanBack)
-        fd.append("applicants[0][pan_back]", files.primaryPanBack.file);
+        fd.append("applicants[0][pan_back]", files.primaryPanBack);
       if (files.primaryAadharFront)
-        fd.append("applicants[0][aadhar_front]", files.primaryAadharFront.file);
+        fd.append("applicants[0][aadhar_front]", files.primaryAadharFront);
       if (files.primaryAadharBack)
-        fd.append("applicants[0][aadhar_back]", files.primaryAadharBack.file);
+        fd.append("applicants[0][aadhar_back]", files.primaryAadharBack);
 
       // ADDITIONAL APPLICANTS
       let applicantIndex = 1;
@@ -8343,25 +8250,25 @@ const handleCancelBooking = () => {
           // files
           const filePrefix = ["second", "third", "fourth"][idx];
 
-          if (files[`${filePrefix}PanFront.file`])
+          if (files[`${filePrefix}PanFront`])
             fd.append(
               `applicants[${applicantIndex}][pan_front]`,
-              files[`${filePrefix}PanFront.file`]
+              files[`${filePrefix}PanFront`]
             );
-          if (files[`${filePrefix}PanBack.file`])
+          if (files[`${filePrefix}PanBack`])
             fd.append(
               `applicants[${applicantIndex}][pan_back]`,
-              files[`${filePrefix}PanBack.file`]
+              files[`${filePrefix}PanBack`]
             );
-          if (files[`${filePrefix}AadharFront.file`])
+          if (files[`${filePrefix}AadharFront`])
             fd.append(
               `applicants[${applicantIndex}][aadhar_front]`,
-              files[`${filePrefix}AadharFront.file`]
+              files[`${filePrefix}AadharFront`]
             );
-          if (files[`${filePrefix}AadharBack.file`])
+          if (files[`${filePrefix}AadharBack`])
             fd.append(
               `applicants[${applicantIndex}][aadhar_back]`,
-              files[`${filePrefix}AadharBack.file`]
+              files[`${filePrefix}AadharBack`]
             );
 
           applicantIndex++;
@@ -8482,12 +8389,6 @@ const handleCancelBooking = () => {
             { kyc_request_id: kycRequestId }
           );
           console.log("KYC request linked to booking", res.data.id);
-           // ✅ navigate ONLY after success
-            if (leadId) {
-              navigate(`/leads/${leadId}/`);
-            } else {
-              navigate("/leads/"); // fallback
-            }
         } catch (linkErr) {
           console.error("Failed to link KYC request to booking", linkErr);
           toast.warn("Booking saved, but failed to link KYC request.");
@@ -8593,19 +8494,22 @@ const handleCancelBooking = () => {
                     {toSentenceCase(companyName || currentProjectLabel || "")}
                   </div> */}
 
+
                   <div className="bf-top-title">
-                    {(companyName || currentProjectLabel || "")
-                      .toLowerCase()
-                      .split(" ")
-                      .filter(Boolean)
-                      .map((word) => word[0].toUpperCase() + word.slice(1))
-                      .join(" ")}
-                  </div>
+                  {(companyName || currentProjectLabel || "")
+                    .toLowerCase()
+                    .split(" ")
+                    .filter(Boolean)
+                    .map(word => word[0].toUpperCase() + word.slice(1))
+                    .join(" ")}
+                </div>
+
+                  
                 </div>
               )}
 
               <div className="bf-row">
-                {/* <div className="bf-col">
+                <div className="bf-col">
                   <label className="bf-label">
                     {toSentenceCase("Booking Date")}{" "}
                     <span className="bf-required">*</span>
@@ -8616,35 +8520,8 @@ const handleCancelBooking = () => {
                     value={bookingDate}
                     onChange={(e) => setBookingDate(e.target.value)}
                   />
-                </div> */}
-                <div className="bf-col">
-                  <label className="bf-label">
-                    {toSentenceCase("Booking Date")}{" "}
-                    <span className="bf-required">*</span>
-                  </label>
-
-                  <DatePicker
-                    className="bf-input"
-                    placeholderText="DD/MM/YYYY"
-                    dateFormat="dd/MM/yyyy"
-                    showYearDropdown
-                    showMonthDropdown
-                    dropdownMode="select"
-                    selected={bookingDate ? new Date(bookingDate) : null}
-                    onChange={(date) =>
-                      setBookingDate(
-                        date
-                          ? `${date.getFullYear()}-${String(
-                              date.getMonth() + 1
-                            ).padStart(2, "0")}-${String(
-                              date.getDate()
-                            ).padStart(2, "0")}`
-                          : ""
-                      )
-                    }
-                  />
                 </div>
-                {/* <div className="bf-col">
+                <div className="bf-col">
                   <label className="bf-label">{toSentenceCase("Office")}</label>
                   <textarea
                     className="bf-textarea"
@@ -8653,23 +8530,7 @@ const handleCancelBooking = () => {
                     value={office}
                     onChange={(e) => setOffice(e.target.value)}
                   />
-                </div> */}
-                <div className="bf-col">
-                  <label className="bf-label">{toSentenceCase("Office")}</label>
-
-                  <textarea
-                    className="bf-input"
-                    rows={1}
-                    placeholder="Sales Office, Grand Avenue Towers, Sector 18, Gurgaon"
-                    value={office}
-                    onChange={(e) => setOffice(e.target.value)}
-                    onInput={(e) => {
-                      e.target.style.height = "auto";
-                      e.target.style.height = `${e.target.scrollHeight}px`;
-                    }}
-                  />
                 </div>
-
                 {/* ✅ new status field */}
                 <div className="bf-col">
                   <label className="bf-label">
@@ -8681,7 +8542,6 @@ const handleCancelBooking = () => {
                     value={status}
                     onChange={(e) => setStatus(e.target.value)}
                     placeholder="Draft / Confirmed / Cancelled"
-                    readOnly
                   />
                 </div>
               </div>
@@ -8751,18 +8611,7 @@ const handleCancelBooking = () => {
                   </label>
 
                   {/* Circle Preview */}
-                  <div
-                    className="bf-photo-circle"
-                    style={{
-                      backgroundImage: photoFile
-                        ? `url(${URL.createObjectURL(photoFile)})`
-                        : "none",
-                      backgroundSize: "cover",
-                      backgroundPosition: "center",
-                      cursor: photoFile ? "pointer" : "default",
-                    }}
-                    onClick={() => photoFile && handlePreview(photoFile)}
-                  />
+                  <div className="bf-photo-circle" />
 
                   {/* File Input */}
                   <input
@@ -8770,22 +8619,11 @@ const handleCancelBooking = () => {
                     type="file"
                     accept="image/*"
                     style={{ display: "none" }}
-                    onChange={async (e) => {
-                      const f = e.target.files?.[0];
-                      if (!f) return console.log("No file selected");
-
-                      if (!f.type.startsWith("image/")) {
-                        setPhotoError("Please upload a valid image");
-                        return;
-                      }
-
-                      setPhotoError("");
-
-                      try {
-                        const compressedFile = await compressImage(f);
-                        setPhotoFile(compressedFile);
-                      } catch (err) {
-                        console.error("Compression error:", err);
+                    onChange={(e) => {
+                      const f = e.target.files && e.target.files[0];
+                      if (f) {
+                        setPhotoFile(f);
+                        setPhotoError(""); // clear error
                       }
                     }}
                   />
@@ -8820,40 +8658,6 @@ const handleCancelBooking = () => {
                   )}
                 </div>
               </div>
-
-              {/* Popup preview */}
-              {previewOpen && previewUrl && (
-                <div
-                  style={{
-                    position: "fixed",
-                    top: 0,
-                    left: 0,
-                    width: "100%",
-                    height: "100%",
-                    backgroundColor: "rgba(0,0,0,0.6)",
-                    display: "flex",
-                    justifyContent: "center",
-                    alignItems: "center",
-                    zIndex: 1000,
-                  }}
-                  onClick={() => {
-                    URL.revokeObjectURL(previewUrl); // cleanup memory
-                    setPreviewOpen(false);
-                    setPreviewUrl(null);
-                  }}
-                >
-                  <img
-                    src={previewUrl}
-                    alt="Preview"
-                    style={{
-                      maxHeight: "80%",
-                      maxWidth: "80%",
-                      borderRadius: "8px",
-                    }}
-                    onClick={(e) => e.stopPropagation()} // prevent modal close on image click
-                  />
-                </div>
-              )}
 
               {/* Applicant Names */}
               <Section
@@ -8899,7 +8703,7 @@ const handleCancelBooking = () => {
                           />{" "}
                           Mrs.
                         </label>
-                        {/* <label>
+                        <label>
                           <input
                             type="radio"
                             name="title1"
@@ -8908,7 +8712,7 @@ const handleCancelBooking = () => {
                             onChange={(e) => setPrimaryTitle(e.target.value)}
                           />{" "}
                           Dr.
-                        </label> */}
+                        </label>
                       </div>
                     </div>
                     <div className="bf-col">
@@ -8958,7 +8762,6 @@ const handleCancelBooking = () => {
                       style={{ display: "none" }}
                       onChange={handleFileChange("primaryPanFront")}
                     />
-
                     <input
                       id="primaryPanBackInput"
                       type="file"
@@ -8987,73 +8790,17 @@ const handleCancelBooking = () => {
                     <div className="bf-file-names">
                       {files.primaryPanFront && (
                         <div className="bf-file-name">
-                          Front:{" "}
-                          <span
-                            onClick={() =>
-                              handlePreview(files.primaryPanFront.file)
-                            }
-                            style={{
-                              color: "blue",
-                              textDecoration: "underline",
-                              cursor: "pointer",
-                            }}
-                          >
-                            view
-                          </span>
+                          Front: {files.primaryPanFront.name}
                         </div>
                       )}
                       {files.primaryPanBack && (
                         <div className="bf-file-name">
-                          Back:{" "}
-                          <span
-                            onClick={() =>
-                              handlePreview(files.primaryPanBack.file)
-                            }
-                            style={{
-                              color: "blue",
-                              textDecoration: "underline",
-                              cursor: "pointer",
-                            }}
-                          >
-                            view
-                          </span>
+                          Back: {files.primaryPanBack.name}
                         </div>
                       )}
                     </div>
                   </div>
                 </div>
-                {previewOpen && previewUrl && (
-                  <div
-                    style={{
-                      position: "fixed",
-                      top: 0,
-                      left: 0,
-                      width: "100%",
-                      height: "100%",
-                      backgroundColor: "rgba(0,0,0,0.6)",
-                      display: "flex",
-                      justifyContent: "center",
-                      alignItems: "center",
-                      zIndex: 1000,
-                    }}
-                    onClick={() => {
-                      URL.revokeObjectURL(previewUrl); // cleanup memory
-                      setPreviewOpen(false);
-                      setPreviewUrl(null);
-                    }}
-                  >
-                    <img
-                      src={previewUrl}
-                      alt="Preview"
-                      style={{
-                        maxHeight: "80%",
-                        maxWidth: "80%",
-                        borderRadius: "8px",
-                      }}
-                      onClick={(e) => e.stopPropagation()} // prevent modal close on image click
-                    />
-                  </div>
-                )}
 
                 {/* First Applicant Aadhar with file upload */}
                 <div className="bf-row bf-row-upload">
@@ -9111,39 +8858,16 @@ const handleCancelBooking = () => {
                         Back Side
                       </label>
                     </div>
+
                     <div className="bf-file-names">
                       {files.primaryAadharFront && (
                         <div className="bf-file-name">
-                          Front:{" "}
-                          <span
-                            onClick={() =>
-                              handlePreview(files.primaryAadharFront.file)
-                            }
-                            style={{
-                              color: "blue",
-                              textDecoration: "underline",
-                              cursor: "pointer",
-                            }}
-                          >
-                            view
-                          </span>
+                          Front: {files.primaryAadharFront.name}
                         </div>
                       )}
                       {files.primaryAadharBack && (
                         <div className="bf-file-name">
-                          Back:{" "}
-                          <span
-                            onClick={() =>
-                              handlePreview(files.primaryAadharBack.file)
-                            }
-                            style={{
-                              color: "blue",
-                              textDecoration: "underline",
-                              cursor: "pointer",
-                            }}
-                          >
-                            view
-                          </span>
+                          Back: {files.primaryAadharBack.name}
                         </div>
                       )}
                     </div>
@@ -9166,28 +8890,8 @@ const handleCancelBooking = () => {
                         marginBottom: "24px",
                         paddingBottom: "24px",
                         borderBottom: "1px solid #e5e7eb",
-                        position: "relative",
                       }}
                     >
-                      {/* Close Button */}
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveAdditionalApplicant(idx)}
-                        style={{
-                          position: "absolute",
-                          top: 0,
-                          right: 0,
-                          background: "transparent",
-                          border: "none",
-                          color: "#ef4444", // red color
-                          fontWeight: "bold",
-                          fontSize: "20px",
-                          cursor: "pointer",
-                        }}
-                        title="Remove Applicant"
-                      >
-                        &times;
-                      </button>
                       <div className="bf-row">
                         <div className="bf-col">
                           <label className="bf-label">
@@ -9225,7 +8929,7 @@ const handleCancelBooking = () => {
                             }
                           />
                         </div>
-                        {/* <div className="bf-col">
+                        <div className="bf-col">
                           <label className="bf-label">
                             {toSentenceCase("Date of Birth")}
                           </label>
@@ -9239,29 +8943,6 @@ const handleCancelBooking = () => {
                                 idx,
                                 "dob",
                                 e.target.value
-                              )
-                            }
-                          /> 
-                        </div> */}
-                        <div className="bf-col">
-                          <label className="bf-label">
-                            {toSentenceCase("Date of Birth")}
-                          </label>
-
-                          <DatePicker
-                            className="bf-input"
-                            placeholderText="DD/MM/YYYY"
-                            dateFormat="dd/MM/yyyy"
-                            maxDate={new Date()}
-                            showYearDropdown
-                            showMonthDropdown
-                            dropdownMode="select"
-                            selected={app.dob ? new Date(app.dob) : null}
-                            onChange={(date) =>
-                              handleAdditionalApplicantChange(
-                                idx,
-                                "dob",
-                                date ? date.toISOString().split("T")[0] : ""
                               )
                             }
                           />
@@ -9359,42 +9040,6 @@ const handleCancelBooking = () => {
                         Back Side
                       </label>
                     </div>
-                    <div className="bf-file-names">
-                      {files.secondAadharFront && (
-                        <div className="bf-file-name">
-                          Front:{" "}
-                          <span
-                            onClick={() =>
-                              handlePreview(files.secondAadharFront.file)
-                            }
-                            style={{
-                              color: "blue",
-                              textDecoration: "underline",
-                              cursor: "pointer",
-                            }}
-                          >
-                            view
-                          </span>
-                        </div>
-                      )}
-                      {files.secondAadharBack && (
-                        <div className="bf-file-name">
-                          Back:{" "}
-                          <span
-                            onClick={() =>
-                              handlePreview(files.secondAadharBack.file)
-                            }
-                            style={{
-                              color: "blue",
-                              textDecoration: "underline",
-                              cursor: "pointer",
-                            }}
-                          >
-                            view
-                          </span>
-                        </div>
-                      )}
-                    </div>
                   </div>
                   <div className="bf-col">
                     <span className="bf-label">
@@ -9431,42 +9076,6 @@ const handleCancelBooking = () => {
                       >
                         Back Side
                       </label>
-                    </div>
-                    <div className="bf-file-names">
-                      {files.secondPanFront && (
-                        <div className="bf-file-name">
-                          Front:{" "}
-                          <span
-                            onClick={() =>
-                              handlePreview(files.secondPanFront.file)
-                            }
-                            style={{
-                              color: "blue",
-                              textDecoration: "underline",
-                              cursor: "pointer",
-                            }}
-                          >
-                            view
-                          </span>
-                        </div>
-                      )}
-                      {files.secondPanBack && (
-                        <div className="bf-file-name">
-                          Back:{" "}
-                          <span
-                            onClick={() =>
-                              handlePreview(files.secondPanBack.file)
-                            }
-                            style={{
-                              color: "blue",
-                              textDecoration: "underline",
-                              cursor: "pointer",
-                            }}
-                          >
-                            view
-                          </span>
-                        </div>
-                      )}
                     </div>
                   </div>
                 </div>
@@ -9509,42 +9118,6 @@ const handleCancelBooking = () => {
                         Back Side
                       </label>
                     </div>
-                    <div className="bf-file-names">
-                      {files.thirdAadharFront && (
-                        <div className="bf-file-name">
-                          Front:{" "}
-                          <span
-                            onClick={() =>
-                              handlePreview(files.thirdAadharFront.file)
-                            }
-                            style={{
-                              color: "blue",
-                              textDecoration: "underline",
-                              cursor: "pointer",
-                            }}
-                          >
-                            view
-                          </span>
-                        </div>
-                      )}
-                      {files.thirdAadharBack && (
-                        <div className="bf-file-name">
-                          Back:{" "}
-                          <span
-                            onClick={() =>
-                              handlePreview(files.thirdAadharBack.file)
-                            }
-                            style={{
-                              color: "blue",
-                              textDecoration: "underline",
-                              cursor: "pointer",
-                            }}
-                          >
-                            view
-                          </span>
-                        </div>
-                      )}
-                    </div>
                   </div>
                   <div className="bf-col">
                     <span className="bf-label">
@@ -9581,42 +9154,6 @@ const handleCancelBooking = () => {
                       >
                         Back Side
                       </label>
-                    </div>
-                    <div className="bf-file-names">
-                      {files.thirdPanFront && (
-                        <div className="bf-file-name">
-                          Front:{" "}
-                          <span
-                            onClick={() =>
-                              handlePreview(files.thirdPanFront.file)
-                            }
-                            style={{
-                              color: "blue",
-                              textDecoration: "underline",
-                              cursor: "pointer",
-                            }}
-                          >
-                            view
-                          </span>
-                        </div>
-                      )}
-                      {files.thirdPanBack && (
-                        <div className="bf-file-name">
-                          Back:{" "}
-                          <span
-                            onClick={() =>
-                              handlePreview(files.thirdPanBack.file)
-                            }
-                            style={{
-                              color: "blue",
-                              textDecoration: "underline",
-                              cursor: "pointer",
-                            }}
-                          >
-                            view
-                          </span>
-                        </div>
-                      )}
                     </div>
                   </div>
                 </div>
@@ -9659,42 +9196,6 @@ const handleCancelBooking = () => {
                         Back Side
                       </label>
                     </div>
-                    <div className="bf-file-names">
-                      {files.fourthAadharFront && (
-                        <div className="bf-file-name">
-                          Front:{" "}
-                          <span
-                            onClick={() =>
-                              handlePreview(files.fourthAadharFront.file)
-                            }
-                            style={{
-                              color: "blue",
-                              textDecoration: "underline",
-                              cursor: "pointer",
-                            }}
-                          >
-                            view
-                          </span>
-                        </div>
-                      )}
-                      {files.fourthAadharBack && (
-                        <div className="bf-file-name">
-                          Back:{" "}
-                          <span
-                            onClick={() =>
-                              handlePreview(files.fourthAadharBack.file)
-                            }
-                            style={{
-                              color: "blue",
-                              textDecoration: "underline",
-                              cursor: "pointer",
-                            }}
-                          >
-                            view
-                          </span>
-                        </div>
-                      )}
-                    </div>
                   </div>
                   <div className="bf-col">
                     <span className="bf-label">
@@ -9731,42 +9232,6 @@ const handleCancelBooking = () => {
                       >
                         Back Side
                       </label>
-                    </div>
-                    <div className="bf-file-names">
-                      {files.fourthPanFront && (
-                        <div className="bf-file-name">
-                          Front:{" "}
-                          <span
-                            onClick={() =>
-                              handlePreview(files.fourthPanFront.file)
-                            }
-                            style={{
-                              color: "blue",
-                              textDecoration: "underline",
-                              cursor: "pointer",
-                            }}
-                          >
-                            view
-                          </span>
-                        </div>
-                      )}
-                      {files.fourthPanBack && (
-                        <div className="bf-file-name">
-                          Back:{" "}
-                          <span
-                            onClick={() =>
-                              handlePreview(files.fourthPanBack.file)
-                            }
-                            style={{
-                              color: "blue",
-                              textDecoration: "underline",
-                              cursor: "pointer",
-                            }}
-                          >
-                            view
-                          </span>
-                        </div>
-                      )}
                     </div>
                   </div>
                 </div>
@@ -10631,16 +10096,16 @@ const handleCancelBooking = () => {
                 >
                   <div className="bf-subcard">
                     <div className="bf-row">
-                      {/* <div className="bf-col">
+                      <div className="bf-col">
                         <label className="bf-label">
                           {toSentenceCase("GST Percent (%)")}
                         </label>
                         <select
                           className="bf-input"
-                          value={costTemplate.gst_percent || 5}
+                          value={costTemplate.gst_percent || 0}
                           onChange={(e) => {
                             const currentValue = Number(
-                              costTemplate.gst_percent || 5
+                              costTemplate.gst_percent || 0
                             );
                             const newValue = Number(e.target.value);
                             setCostTemplate((prev) => ({
@@ -10651,11 +10116,10 @@ const handleCancelBooking = () => {
                         >
                           {(() => {
                             const currentValue = Number(
-                              costTemplate.gst_percent || 5
+                              costTemplate.gst_percent || 0
                             );
                             const min = Math.max(0, currentValue - 3);
-                            // const max = currentValue + 4;
-                            const max = Math.max(5, currentValue + 4); // ensure 5 is included
+                            const max = currentValue + 4;
                             const options = [];
                             for (let i = min; i <= max; i++) {
                               options.push(
@@ -10667,96 +10131,42 @@ const handleCancelBooking = () => {
                             return options;
                           })()}
                         </select>
-                      </div> */}
-                      {costTemplate && (
-                        <div className="bf-col">
-                          <label className="bf-label">
-                            {toSentenceCase("GST Percent (%)")}
-                          </label>
+                      </div>
 
-                          <select
-                            className="bf-input"
-                            value={Number(costTemplate.gst_percent)}
-                            onChange={(e) => {
-                              const newValue = Number(e.target.value);
-                              setCostTemplate((prev) => ({
-                                ...prev,
-                                gst_percent: newValue,
-                              }));
-                            }}
-                          >
-                            {(() => {
-                              const currentValue = Number(
-                                costTemplate.gst_percent
+                      <div className="bf-col">
+                        <label className="bf-label">
+                          {toSentenceCase("Stamp Duty Percent (%)")}
+                        </label>
+                        <select
+                          className="bf-input"
+                          value={costTemplate.stamp_duty_percent || 0}
+                          onChange={(e) => {
+                            const newValue = Number(e.target.value);
+                            setCostTemplate((prev) => ({
+                              ...prev,
+                              stamp_duty_percent: newValue,
+                            }));
+                          }}
+                        >
+                          {(() => {
+                            const currentValue = Number(
+                              costTemplate.stamp_duty_percent || 0
+                            );
+                            const min = Math.max(0, currentValue - 3);
+                            const max = currentValue + 4;
+                            const options = [];
+                            for (let i = min; i <= max; i++) {
+                              options.push(
+                                <option key={i} value={i}>
+                                  {i}%
+                                </option>
                               );
+                            }
+                            return options;
+                          })()}
+                        </select>
+                      </div>
 
-                              const min = Math.max(0, currentValue - 3);
-                              const max = currentValue + 4;
-
-                              const values = new Set();
-
-                              // dynamic range
-                              for (let i = min; i <= max; i++) values.add(i);
-
-                              // 🔥 GUARANTEE API value exists
-                              values.add(currentValue);
-
-                              return [...values]
-                                .sort((a, b) => a - b)
-                                .map((i) => (
-                                  <option key={i} value={i}>
-                                    {i}%
-                                  </option>
-                                ));
-                            })()}
-                          </select>
-                        </div>
-                      )}
-
-                      {costTemplate && (
-                        <div className="bf-col">
-                          <label className="bf-label">
-                            {toSentenceCase("Stamp Duty Percent (%)")}
-                          </label>
-
-                          <select
-                            className="bf-input"
-                            value={Number(costTemplate.stamp_duty_percent)}
-                            onChange={(e) => {
-                              const newValue = Number(e.target.value);
-                              setCostTemplate((prev) => ({
-                                ...prev,
-                                stamp_duty_percent: newValue,
-                              }));
-                            }}
-                          >
-                            {(() => {
-                              const currentValue = Number(
-                                costTemplate.stamp_duty_percent
-                              );
-
-                              const min = Math.max(0, currentValue - 3);
-                              const max = currentValue + 4;
-
-                              const values = new Set();
-
-                              // dynamic range
-                              for (let i = min; i <= max; i++) values.add(i);
-
-                              // 🔥 GUARANTEE API value exists
-                              values.add(currentValue);
-
-                              return [...values]
-                                .sort((a, b) => a - b)
-                                .map((i) => (
-                                  <option key={i} value={i}>
-                                    {i}%
-                                  </option>
-                                ));
-                            })()}
-                          </select>
-                        </div>
-                      )}
                       <div className="bf-col">
                         <label className="bf-label">
                           Development Charges PSF (₹)
@@ -10812,19 +10222,6 @@ const handleCancelBooking = () => {
                             )
                           )}
                         </select>
-                      </div>
-                      <div className="bf-col">
-                        <label className="bf-label">
-                          Provisional Charges Per Sqft
-                        </label>
-                        <input
-                          className="bf-input"
-                          type="number"
-                          value={provisionalCharges}
-                          onChange={(e) =>
-                            setProvisionalCharges(Number(e.target.value) || 0)
-                          }
-                        />
                       </div>
                     </div>
                   </div>
@@ -10997,6 +10394,7 @@ const handleCancelBooking = () => {
                               </span>
                             </div>
                           )}
+
                           {Number(possessionCharges?.provAmount || 0) > 0 && (
                             <div className="cost-breakdown-row">
                               <span>
@@ -11022,35 +10420,21 @@ const handleCancelBooking = () => {
                                   }}
                                 />{" "}
                                 months @ Rs.{" "}
-                                <input
-                                  type="number"
-                                  value={provisionalCharges}
-                                  onChange={(e) =>
-                                    setProvisionalCharges(
-                                      Number(e.target.value) || 0
-                                    )
-                                  }
-                                  style={{
-                                    width: "80px",
-                                    padding: "4px 8px",
-                                    border: "1px solid #d1d5db",
-                                    borderRadius: "4px",
-                                    fontSize: "14px",
-                                    marginLeft: "4px",
-                                  }}
-                                />
+                                {formatINR(possessionCharges?.provPsqf || 0)}
                               </span>
-
-                              {/* <span>
-                                {formatINR(
-                                  provisionalCharges *
-                                    (provisionalMaintenanceMonths ||
-                                      possessionCharges?.provMonths ||
-                                      6)
-                                )}
-                              </span> */}
                               <span>
                                 {formatINR(possessionCharges?.provAmount || 0)}
+                              </span>
+                            </div>
+                          )}
+
+                          {/* ✅ REMOVED: Parking line - no longer shown here */}
+
+                          {possessionCharges.possessionGst > 0 && (
+                            <div className="cost-breakdown-row">
+                              <span>GST on Possession Charges (18%)</span>
+                              <span>
+                                {formatINR(possessionCharges.possessionGst)}
                               </span>
                             </div>
                           )}
@@ -11068,10 +10452,8 @@ const handleCancelBooking = () => {
                     {registrationEnabled &&
                       costTemplate.registration_amount > 0 && (
                         <div className="cost-breakdown-section">
-                          <div className="cost-breakdown-row cost-breakdown-register">
-                            <span>
-                              Registration Fees & Scanning Charges (3)
-                            </span>
+                          <div className="cost-breakdown-row">
+                            <span>Registration Amount</span>
                             <span>
                               {formatINR(costTemplate.registration_amount)}
                             </span>
@@ -11570,7 +10952,7 @@ const handleCancelBooking = () => {
                             }}
                           >
                             {/* Date */}
-                            {/* <input
+                            <input
                               className="bf-input"
                               type="date"
                               value={slab.due_date || ""}
@@ -11581,18 +10963,8 @@ const handleCancelBooking = () => {
                                   e.target.value
                                 )
                               }
-                            /> */}
-                            <DatePicker
-                              selected={slab.due_date ? new Date(slab.due_date) : null}
-                              onChange={(date) => {
-                                // Convert the selected date to ISO format (yyyy-mm-dd) for your state/backend
-                                const isoDate = date ? date.toISOString().split("T")[0] : null;
-                                handleMasterSlabChange(index, "due_date", isoDate);
-                              }}
-                              dateFormat="dd/MM/yyyy" // display format
-                              placeholderText="DD/MM/YYYY"
-                              className="bf-input"
                             />
+
                             {/* Days */}
                             {/* <input
               className="bf-input"
@@ -11987,7 +11359,7 @@ const handleCancelBooking = () => {
                               Date of Birth:
                             </strong>
                             <div style={{ fontSize: "14px" }}>
-                              {new Date(applicant.dob).toLocaleDateString("en-GB")}
+                              {applicant.dob}
                             </div>
                           </div>
                         )}
@@ -12182,8 +11554,7 @@ const handleCancelBooking = () => {
                     <strong>Lock-In Period & Restrictions on Transfer</strong>
                     <br />
                     As per company policy, there is a lock-in period until
-                    possession/written intimation to the society whichever is
-                    later. During this period, the applicant cannot sell,
+                    possession. During this period, the applicant cannot sell,
                     transfer, or create third-party rights over the flat without
                     the developer’s prior written consent and completion of
                     applicable formalities and charges as per company norms.
@@ -12211,11 +11582,7 @@ const handleCancelBooking = () => {
               </div>
 
               <div className="bf-actions">
-                <button
-                  type="button"
-                  className="bf-btn-secondary"
-                  onClick={handleCancelBooking}
-                >
+                <button type="button" className="bf-btn-secondary">
                   Cancel
                 </button>
                 <button

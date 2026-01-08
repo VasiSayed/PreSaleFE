@@ -2138,3 +2138,104 @@
 .stage-field select {
   width: 100%;
 }
+
+.is-disabled {
+  opacity: 0.55;
+  cursor: not-allowed !important;
+}
+
+.card-btn:disabled,
+.btn-primary:disabled,
+.btn-secondary:disabled,
+.tab:disabled,
+.email-toggle-btn:disabled,
+.filter-select:disabled,
+.input-plain:disabled,
+textarea:disabled,
+select:disabled {
+  opacity: 0.55;
+  cursor: not-allowed !important;
+}
+
+.click-locked {
+  opacity: 0.55;
+  cursor: not-allowed !important;
+  pointer-events: none; /* freeze */
+}
+
+.tab-locked {
+  opacity: 0.6;
+  cursor: not-allowed !important;
+}
+
+
+/* Site visits modal a bit wider */
+.sitevisits-modal {
+  width: min(920px, 96vw);
+}
+
+.sitevisits-form textarea {
+  min-height: 90px;
+}
+
+
+
+/* =========================
+   Shared form styling (Activity + Site Visit)
+========================= */
+.activity-form__field label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 6px;
+  color: #263238;
+}
+
+.activity-form__field input,
+.activity-form__field select,
+.activity-form__field textarea {
+  width: 100%;
+  border: 1px solid #d7dde5;
+  border-radius: 10px;
+  padding: 10px 12px;
+  outline: none;
+  background: #fff;
+  font-size: 14px;
+}
+
+.activity-form__field input,
+.activity-form__field select {
+  height: 44px;
+}
+
+.activity-form__field textarea {
+  min-height: 90px;
+  resize: vertical;
+}
+
+.activity-form__field select:disabled,
+.activity-form__field input:disabled,
+.activity-form__field textarea:disabled {
+  background: #f6f7f9;
+  cursor: not-allowed;
+  opacity: 0.85;
+}
+
+/* 3 columns row (Tower/Floor/Unit) */
+.activity-form__grid3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  align-items: end;
+}
+
+@media (max-width: 900px) {
+  .activity-form__grid3 {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Optional: disabled options look */
+.activity-form__field option:disabled {
+  color: #9aa4ad;
+}

@@ -13,6 +13,19 @@ function toTitleCase(text) {
     .join(" ");
 }
 
+function getUserFromLocalStorage() {
+  try {
+    const raw = localStorage.getItem("user");
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+}
+
+const upper = (v) => (v == null ? "" : String(v).trim().toUpperCase());
+
+
 const LEAD_SOURCES = [
   { value: "DIGITAL", label: "Digital" },
   { value: "DIRECT", label: "Direct / Walk-In" },
@@ -58,6 +71,28 @@ const LeadOpportunityCreate = () => {
 
   const scope = useMemo(() => getScopeFromLocalStorage(), []);
   const projects = scope?.projects || [];
+
+
+    const currentUser = useMemo(() => getUserFromLocalStorage(), []);
+
+    const canEditOwner = useMemo(() => {
+      const role = upper(currentUser?.role);
+      const custom =
+        typeof currentUser?.custom_role === "string"
+          ? upper(currentUser.custom_role)
+          : "";
+
+      // Admin / Superuser -> always allow
+      if (currentUser?.is_superuser || role === "ADMIN") return true;
+
+      // Sales -> only allow if Sales Executive
+      if (role === "SALES") return custom === "SALES EXECUTIVE";
+
+      // Others -> allow (change if you want stricter)
+      return true;
+    }, [currentUser]);
+
+  const ownerDisabled = isEdit && !canEditOwner;
 
   const [form, setForm] = useState({
     project_id: projects[0]?.id || "",
@@ -223,13 +258,24 @@ const payload = {
   return (
     <div className="setup-section">
       <div className="section-content">
-        <h2 style={{ fontSize: 20, fontWeight: 600, color: "#1f2937", marginBottom: 8 }}>
+        <h2
+          style={{
+            fontSize: 20,
+            fontWeight: 600,
+            color: "#1f2937",
+            marginBottom: 8,
+          }}
+        >
           {isEdit ? "Edit Lead Opportunity" : "New Lead Opportunity"}{" "}
-          {scope?.brand?.company_name ? `– ${toTitleCase(scope.brand.company_name)}` : ""}
+          {scope?.brand?.company_name
+            ? `– ${toTitleCase(scope.brand.company_name)}`
+            : ""}
         </h2>
 
         {prefillLoading ? (
-          <div style={{ padding: 16, color: "#6b7280" }}>Loading opportunity...</div>
+          <div style={{ padding: 16, color: "#6b7280" }}>
+            Loading opportunity...
+          </div>
         ) : (
           <form onSubmit={handleSubmit}>
             <div className="form-row">
@@ -237,7 +283,12 @@ const payload = {
                 <label className="form-label">
                   Project <span className="required">*</span>
                 </label>
-                <select name="project_id" value={form.project_id} onChange={handleChange} className="form-input">
+                <select
+                  name="project_id"
+                  value={form.project_id}
+                  onChange={handleChange}
+                  className="form-input"
+                >
                   <option value="">Select project</option>
                   {projects.map((p) => (
                     <option key={p.id} value={p.id}>
@@ -251,7 +302,12 @@ const payload = {
                 <label className="form-label">
                   Lead Source <span className="required">*</span>
                 </label>
-                <select name="source_system" value={form.source_system} onChange={handleChange} className="form-input">
+                <select
+                  name="source_system"
+                  value={form.source_system}
+                  onChange={handleChange}
+                  className="form-input"
+                >
                   {sourceOptions.map((opt) => (
                     <option key={opt.value} value={opt.value}>
                       {opt.label}
@@ -266,7 +322,12 @@ const payload = {
                 </label>
 
                 {hasSubSourceDropdown ? (
-                  <select name="source_name" value={form.source_name} onChange={handleChange} className="form-input">
+                  <select
+                    name="source_name"
+                    value={form.source_name}
+                    onChange={handleChange}
+                    className="form-input"
+                  >
                     <option value="">Select Sub Source</option>
                     {(SUB_SOURCE_MAP[form.source_system] || []).map((sub) => (
                       <option key={sub.value} value={sub.value}>
@@ -305,7 +366,13 @@ const payload = {
 
               <div className="form-field">
                 <label className="form-label">Email</label>
-                <input type="email" name="email" value={form.email} onChange={handleChange} className="form-input" />
+                <input
+                  type="email"
+                  name="email"
+                  value={form.email}
+                  onChange={handleChange}
+                  className="form-input"
+                />
               </div>
 
               <div className="form-field">
@@ -326,7 +393,18 @@ const payload = {
             <div className="form-row">
               <div className="form-field">
                 <label className="form-label">Owner / Assign To</label>
-                <select name="owner_id" value={form.owner_id} onChange={handleChange} className="form-input">
+                <select
+                  name="owner_id"
+                  value={form.owner_id}
+                  onChange={handleChange}
+                  disabled={ownerDisabled}
+                  title={
+                    ownerDisabled
+                      ? "Only Sales Executive/Admin can change Owner (Edit only)"
+                      : ""
+                  }
+                  className="form-input"
+                >
                   <option value="">Select User</option>
                   {assignableUsers.map((u) => (
                     <option key={u.id} value={u.id}>
@@ -352,8 +430,16 @@ const payload = {
             </div>
 
             <div style={{ textAlign: "center", marginTop: 20 }}>
-              <button type="submit" disabled={submitting} className="btn-primary">
-                {submitting ? "Saving..." : isEdit ? "Update Opportunity" : "Create Opportunity"}
+              <button
+                type="submit"
+                disabled={submitting}
+                className="btn-primary"
+              >
+                {submitting
+                  ? "Saving..."
+                  : isEdit
+                  ? "Update Opportunity"
+                  : "Create Opportunity"}
               </button>
 
               <button
