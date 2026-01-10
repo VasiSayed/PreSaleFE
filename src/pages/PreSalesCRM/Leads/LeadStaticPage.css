@@ -2239,3 +2239,13 @@ select:disabled {
 .activity-form__field option:disabled {
   color: #9aa4ad;
 }
+
+.react-datepicker-wrapper {
+display: block;
+}
+
+/* Example: add 8px space between date and time */
+.input-plain {
+  padding-right: 10px;
+  /* more space for time input inside the box */
+}

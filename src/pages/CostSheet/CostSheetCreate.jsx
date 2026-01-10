@@ -2236,6 +2236,8 @@ import api from "../../api/axiosInstance";
 import { toast } from "react-hot-toast";
 import "./CostSheetCreate.css";
 import { formatINR } from "../../utils/number";
+import "react-datepicker/dist/react-datepicker.css";
+import DatePicker from "react-datepicker";
 
 // Generic collapsible section with chevron
 const SectionCard = ({ title, children, defaultOpen = true }) => {
@@ -2325,7 +2327,8 @@ const CostSheetCreate = () => {
   // Discount logic
   const [discountType, setDiscountType] = useState("Fixed");
   const [discountValue, setDiscountValue] = useState("");
-
+  const [provisionalCharges, setProvisionalCharges] =
+      useState(15);
   const baseValue = useMemo(() => {
     const a = parseFloat(baseAreaSqft) || 0;
     const r = parseFloat(baseRatePsf) || 0;
@@ -2588,10 +2591,11 @@ const CostSheetCreate = () => {
         ? Number(template.electrical_watern_n_all_charges)
         : 0;
 
-    const provRate =
-      template && template.provisional_maintenance_psf
-        ? Number(template.provisional_maintenance_psf)
-        : 0;
+    // const provRate =
+    //   template && template.provisional_maintenance_psf
+    //     ? Number(template.provisional_maintenance_psf)
+    //     : 0;
+    const provRate = Number(provisionalCharges || 0);
     // Provisional Maintenance @ PSF × total area × months (use editable value)
     const provMonths = Number(provisionalMaintenanceMonths || (template?.provisional_maintenance_months || 6));
     // const provAmt = provRate * carpetAreaSqft * provMonths;
@@ -2627,6 +2631,7 @@ const CostSheetCreate = () => {
     legalFeeEnabled,
     developmentChargesPsf,
     provisionalMaintenanceMonths,
+    provisionalCharges
   ]);
 
   const registrationAmount = useMemo(() => {
@@ -2750,6 +2755,9 @@ const CostSheetCreate = () => {
           } else {
             setProvisionalMaintenanceMonths(6); // default
           }
+          if (data.template.provisional_maintenance_psf){
+          setProvisionalCharges(Number(data.template.provisional_maintenance_psf))
+        }
         } else {
           setTemplate(data.template);
         }
@@ -3250,47 +3258,117 @@ const CostSheetCreate = () => {
 
   const [chargeFocusIndex, setChargeFocusIndex] = useState(null);
 
-  const handleQuotationDateChange = (e) => {
-    const value = e.target.value;
+  const formatDateForAPI = (date) => {
+  if (!date) return "";
+  const yyyy = date.getFullYear();
+  const mm = String(date.getMonth() + 1).padStart(2, "0");
+  const dd = String(date.getDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
+};
 
-    if (apiToday && value < apiToday) {
-      toast.error("Quoted date cannot be before today.");
-      setQuotationDate(apiToday);
-      return;
-    }
+  // const handleQuotationDateChange = (e) => {
+  //   const value = e.target.value;
 
-    if (validTill && value > validTill) {
-      toast.error("Quoted date cannot be after Valid Until date.");
-      setQuotationDate(validTill);
-      return;
-    }
+  //   if (apiToday && value < apiToday) {
+  //     toast.error("Quoted date cannot be before today.");
+  //     setQuotationDate(apiToday);
+  //     return;
+  //   }
 
-    setQuotationDate(value);
-  };
+  //   if (validTill && value > validTill) {
+  //     toast.error("Quoted date cannot be after Valid Until date.");
+  //     setQuotationDate(validTill);
+  //     return;
+  //   }
 
-  const handleValidTillChange = (e) => {
-    const value = e.target.value;
+  //   setQuotationDate(value);
+  // };
 
-    if (apiToday && value < apiToday) {
-      toast.error("Valid until cannot be before today.");
-      setValidTill(apiToday);
-      return;
-    }
+  const handleQuotationDateChange = (date) => {
+  if (!date) {
+    setQuotationDate(null);
+    return;
+  }
 
-    if (validTillLimit && value > validTillLimit) {
-      toast.error("Valid until cannot go beyond allowed validity.");
-      setValidTill(validTillLimit);
-      return;
-    }
+  const selected = date;
+  const today = apiToday ? new Date(apiToday) : null;
+  const max = validTill ? new Date(validTill) : null;
 
-    if (quotationDate && value < quotationDate) {
-      toast.error("Valid until cannot be before quoted date.");
-      setValidTill(quotationDate);
-      return;
-    }
+  if (today && selected < today) {
+    toast.error("Quoted date cannot be before today.");
+    setQuotationDate(today);
+    return;
+  }
 
-    setValidTill(value);
-  };
+  if (max && selected > max) {
+    toast.error("Quoted date cannot be after Valid Until date.");
+    setQuotationDate(max);
+    return;
+  }
+
+  setQuotationDate(selected);
+};
+
+  // const handleValidTillChange = (e) => {
+  //   const value = e.target.value;
+
+  //   if (apiToday && value < apiToday) {
+  //     toast.error("Valid until cannot be before today.");
+  //     setValidTill(apiToday);
+  //     return;
+  //   }
+
+  //   if (validTillLimit && value > validTillLimit) {
+  //     toast.error("Valid until cannot go beyond allowed validity.");
+  //     setValidTill(validTillLimit);
+  //     return;
+  //   }
+
+  //   if (quotationDate && value < quotationDate) {
+  //     toast.error("Valid until cannot be before quoted date.");
+  //     setValidTill(quotationDate);
+  //     return;
+  //   }
+
+  //   setValidTill(value);
+  // };
+
+  const handleValidTillChange = (date) => {
+  if (!date) {
+    setValidTill(null);
+    return;
+  }
+
+  const selected = date;
+  const today = apiToday ? new Date(apiToday) : null;
+  const maxLimit = validTillLimit ? new Date(validTillLimit) : null;
+  const quoted = quotationDate ? new Date(quotationDate) : null;
+
+  // Check minimum date
+  if (today && selected < today) {
+    toast.error("Valid until cannot be before today.");
+    setValidTill(today);
+    return;
+  }
+
+  // Check maximum limit
+  if (maxLimit && selected > maxLimit) {
+    toast.error("Valid until cannot go beyond allowed validity.");
+    setValidTill(maxLimit);
+    return;
+  }
+
+  // Must be after quotation date
+  if (quoted && selected < quoted) {
+    toast.error("Valid until cannot be before quoted date.");
+    setValidTill(quoted);
+    return;
+  }
+
+  // Valid selection
+  setValidTill(selected);
+};
+
 
   // ==============================
   // Save
@@ -3356,8 +3434,9 @@ const CostSheetCreate = () => {
         inventory_id: Number(selectedInventoryId),
         project_template_id: template ? template.project_template_id : null,
 
-        date: quotationDate,
-        valid_till: validTill,
+        date: formatDateForAPI(quotationDate),
+        // valid_till: validTill,
+        valid_till: formatDateForAPI(validTill),
         status,
         prepared_by: preparedBy || null,
 
@@ -3505,24 +3584,48 @@ const CostSheetCreate = () => {
           <div className="cs-grid-3">
             <div className="cs-field">
               <label className="cs-label">Quote Date</label>
-              <input
+              {/* <input
                 type="date"
                 className="cs-input"
                 value={quotationDate}
                 onChange={handleQuotationDateChange}
                 min={apiToday || undefined}
                 max={validTill || validTillLimit || undefined}
+              /> */}
+              <DatePicker
+                className="cs-input"
+                selected={quotationDate ? new Date(quotationDate) : null}
+                onChange={(date) => handleQuotationDateChange(date)}
+                dateFormat="dd/MM/yyyy"
+                placeholderText="dd/mm/yyyy"
+                minDate={apiToday ? new Date(apiToday) : undefined}
+                maxDate={
+                  validTill
+                    ? new Date(validTill)
+                    : validTillLimit
+                    ? new Date(validTillLimit)
+                    : undefined
+                }
               />
             </div>
             <div className="cs-field">
               <label className="cs-label">Valid Until</label>
-              <input
+              {/* <input
                 type="date"
                 className="cs-input"
                 value={validTill}
                 onChange={handleValidTillChange}
                 min={apiToday || undefined}
                 max={validTillLimit || undefined}
+              /> */}
+              <DatePicker
+                className="cs-input"
+                selected={validTill ? new Date(validTill) : null}
+                onChange={handleValidTillChange}
+                dateFormat="dd/MM/yyyy"
+                placeholderText="dd/mm/yyyy"
+                minDate={apiToday ? new Date(apiToday) : undefined}
+                maxDate={validTillLimit ? new Date(validTillLimit) : undefined}
               />
             </div>
             <div className="cs-field">
@@ -3698,7 +3801,6 @@ const CostSheetCreate = () => {
                   </div>
                 )} */}
 
-
                 {selectedInventory.balcony_area_sqft && (
                   <div className="cs-field">
                     <label className="cs-label">Balcony Area (sq. ft.)</label>
@@ -3716,7 +3818,6 @@ const CostSheetCreate = () => {
             <div className="cs-field">
               <label className="cs-label">Total Area (sq. ft.)</label>
 
-
               {/* <input
                 type="number"
                 className="cs-input"
@@ -3725,20 +3826,15 @@ const CostSheetCreate = () => {
               /> */}
 
               <input
-                  type="text"
-                  className="cs-input"
-                  value={calculatedArea ? calculatedArea.toFixed(2) : ""}
-                  readOnly
-                />
-
-
-
+                type="text"
+                className="cs-input"
+                value={calculatedArea ? calculatedArea.toFixed(2) : ""}
+                readOnly
+              />
             </div>
 
             <div className="cs-field">
-              <label className="cs-label">
-                Base Rate/sq. ft.
-              </label>
+              <label className="cs-label">Base Rate/sq. ft.</label>
 
               <input
                 type="text"
@@ -3853,9 +3949,8 @@ const CostSheetCreate = () => {
                 <label className="cs-label">GST Percent (%)</label>
                 <select
                   className="cs-select"
-                  value={template.gst_percent || 0}
+                  value={Number(template.gst_percent ?? 5)} // default 5%
                   onChange={(e) => {
-                    const currentValue = Number(template.gst_percent || 0);
                     const newValue = Number(e.target.value);
                     setTemplate((prev) => ({
                       ...prev,
@@ -3864,27 +3959,33 @@ const CostSheetCreate = () => {
                   }}
                 >
                   {(() => {
-                    const currentValue = Number(template.gst_percent || 0);
+                    const currentValue = Number(template.gst_percent ?? 5); // default 5%
                     const min = Math.max(0, currentValue - 3);
                     const max = currentValue + 4;
-                    const options = [];
-                    for (let i = min; i <= max; i++) {
-                      options.push(
+
+                    const values = new Set();
+
+                    // dynamic range
+                    for (let i = min; i <= max; i++) values.add(i);
+
+                    // 🔥 ensure current value exists
+                    values.add(currentValue);
+
+                    return [...values]
+                      .sort((a, b) => a - b)
+                      .map((i) => (
                         <option key={i} value={i}>
                           {i}%
                         </option>
-                      );
-                    }
-                    return options;
+                      ));
                   })()}
                 </select>
               </div>
-
               <div className="cs-field">
                 <label className="cs-label">Stamp Duty Percent (%)</label>
                 <select
                   className="cs-select"
-                  value={template.stamp_duty_percent || 0}
+                  value={Number(template.stamp_duty_percent ?? 6)} // default 6%
                   onChange={(e) => {
                     const newValue = Number(e.target.value);
                     setTemplate((prev) => ({
@@ -3894,22 +3995,28 @@ const CostSheetCreate = () => {
                   }}
                 >
                   {(() => {
-                    const currentValue = Number(template.stamp_duty_percent || 0);
+                    const currentValue = Number(template.stamp_duty_percent ?? 6); // default 6%
                     const min = Math.max(0, currentValue - 3);
                     const max = currentValue + 4;
-                    const options = [];
-                    for (let i = min; i <= max; i++) {
-                      options.push(
+                  
+                    const values = new Set();
+                  
+                    // dynamic range
+                    for (let i = min; i <= max; i++) values.add(i);
+                  
+                    // 🔥 ensure current value exists
+                    values.add(currentValue);
+                  
+                    return [...values]
+                      .sort((a, b) => a - b)
+                      .map((i) => (
                         <option key={i} value={i}>
                           {i}%
                         </option>
-                      );
-                    }
-                    return options;
+                      ));
                   })()}
                 </select>
               </div>
-
               <div className="cs-field">
                 <label className="cs-label">Development Charges PSF (₹)</label>
                 <input
@@ -3939,7 +4046,9 @@ const CostSheetCreate = () => {
               </div>
 
               <div className="cs-field">
-                <label className="cs-label">Provisional Maintenance Months</label>
+                <label className="cs-label">
+                  Provisional Maintenance Months
+                </label>
                 <select
                   className="cs-select"
                   value={provisionalMaintenanceMonths || 6}
@@ -3959,6 +4068,20 @@ const CostSheetCreate = () => {
                     </option>
                   ))}
                 </select>
+              </div>
+
+              <div className="bf-col">
+                <label className="bf-label">
+                  Provisional Charges Per Sqft
+                </label>
+                <input
+                  className="bf-input"
+                  type="number"
+                  value={provisionalCharges}
+                  onChange={(e) =>
+                    setProvisionalCharges(Number(e.target.value) || 0)
+                  }
+                />
               </div>
             </div>
           </SectionCard>
@@ -4139,7 +4262,8 @@ const CostSheetCreate = () => {
           {!template ? (
             <div className="cs-subcard">
               <p style={{ color: "#6b7280" }}>
-                Cost breakdown will be available after selecting a unit and lead.
+                Cost breakdown will be available after selecting a unit and
+                lead.
               </p>
             </div>
           ) : (
@@ -4157,7 +4281,10 @@ const CostSheetCreate = () => {
 
                 {/* Show Discount if applied */}
                 {discountAmount > 0 && (
-                  <div className="cost-breakdown-row" style={{ color: "#dc2626" }}>
+                  <div
+                    className="cost-breakdown-row"
+                    style={{ color: "#dc2626" }}
+                  >
                     <span>Discount Amount (-)</span>
                     <span>-{formatINR(discountAmount)}</span>
                   </div>
@@ -4204,9 +4331,7 @@ const CostSheetCreate = () => {
 
                 <div className="cost-breakdown-row cost-breakdown-total">
                   <span>Total Cost (1)</span>
-                  <span>
-                    {formatINR(mainCostTotal)}
-                  </span>
+                  <span>{formatINR(mainCostTotal)}</span>
                 </div>
               </div>
 
@@ -4219,22 +4344,17 @@ const CostSheetCreate = () => {
 
                   {membershipAmount > 0 && (
                     <div className="cost-breakdown-row">
-                      <span>
-                        Share Application Money & Membership Fees
-                      </span>
+                      <span>Share Application Money & Membership Fees</span>
                       <span>{formatINR(membershipAmount)}</span>
                     </div>
                   )}
 
-                  {legalFeeEnabled &&
-                    template.legal_fee_amount > 0 && (
-                      <div className="cost-breakdown-row">
-                        <span>Legal & Compliance Charges</span>
-                        <span>
-                          {formatINR(template.legal_fee_amount)}
-                        </span>
-                      </div>
-                    )}
+                  {legalFeeEnabled && template.legal_fee_amount > 0 && (
+                    <div className="cost-breakdown-row">
+                      <span>Legal & Compliance Charges</span>
+                      <span>{formatINR(template.legal_fee_amount)}</span>
+                    </div>
+                  )}
 
                   {developmentChargesAmount > 0 && (
                     <div className="cost-breakdown-row">
@@ -4242,7 +4362,11 @@ const CostSheetCreate = () => {
                         Development Charges @ Rs.{" "}
                         <input
                           type="number"
-                          value={developmentChargesPsf || template?.development_charges_psf || 500}
+                          value={
+                            developmentChargesPsf ||
+                            template?.development_charges_psf ||
+                            500
+                          }
                           onChange={(e) => {
                             const val = e.target.value;
                             // Allow empty temporarily while typing, but validate on blur
@@ -4275,13 +4399,9 @@ const CostSheetCreate = () => {
                           (selectedInventory && selectedInventory.carpet_sqft) || baseAreaSqft || 0
                         )}{" "}
                         sq. ft. */}
-
                         PSF × {formatINR(baseAreaSqft || 0)} sq. ft.
-
                       </span>
-                      <span>
-                        {formatINR(developmentChargesAmount)}
-                      </span>
+                      <span>{formatINR(developmentChargesAmount)}</span>
                     </div>
                   )}
 
@@ -4290,9 +4410,7 @@ const CostSheetCreate = () => {
                       <span>
                         Electrical, Water & Piped Gas Connection Charges
                       </span>
-                      <span>
-                        {formatINR(electricalChargesAmount)}
-                      </span>
+                      <span>{formatINR(electricalChargesAmount)}</span>
                     </div>
                   )}
 
@@ -4302,7 +4420,11 @@ const CostSheetCreate = () => {
                         Provisional Maintenance for{" "}
                         <input
                           type="number"
-                          value={provisionalMaintenanceMonths || template?.provisional_maintenance_months || 6}
+                          value={
+                            provisionalMaintenanceMonths ||
+                            template?.provisional_maintenance_months ||
+                            6
+                          }
                           onChange={(e) => {
                             const val = Number(e.target.value) || 6;
                             setProvisionalMaintenanceMonths(val);
@@ -4322,7 +4444,24 @@ const CostSheetCreate = () => {
                           }}
                         />{" "}
                         months @ Rs.{" "}
-                        {formatINR(template?.provisional_maintenance_psf || 0)}
+                        {/* {formatINR(template?.provisional_maintenance_psf || 0)} */}
+                        <input
+                                  type="number"
+                                  value={provisionalCharges}
+                                  onChange={(e) =>
+                                    setProvisionalCharges(
+                                      Number(e.target.value) || 0
+                                    )
+                                  }
+                                  style={{
+                                    width: "80px",
+                                    padding: "4px 8px",
+                                    border: "1px solid #d1d5db",
+                                    borderRadius: "4px",
+                                    fontSize: "14px",
+                                    marginLeft: "4px",
+                                  }}
+                                />             
                       </span>
                       <span>
                         {formatINR(provisionalMaintenanceAmount || 0)}
@@ -4333,33 +4472,28 @@ const CostSheetCreate = () => {
                   {possessionGstAmount > 0 && (
                     <div className="cost-breakdown-row">
                       <span>GST on Possession Charges (18%)</span>
-                      <span>
-                        {formatINR(possessionGstAmount)}
-                      </span>
+                      <span>{formatINR(possessionGstAmount)}</span>
                     </div>
                   )}
 
                   <div className="cost-breakdown-row cost-breakdown-subtotal">
                     <span>Total Possession Related Charges (2)</span>
-                    <span>
-                      {formatINR(possessionTotal)}
-                    </span>
+                    <span>{formatINR(possessionTotal)}</span>
                   </div>
                 </div>
               )}
 
               {/* ================== REGISTRATION ================== */}
-              {registrationEnabled &&
-                template.registration_amount > 0 && (
-                  <div className="cost-breakdown-section">
-                    <div className="cost-breakdown-row">
-                      <span>Registration Amount</span>
-                      <span>
-                        {formatINR(template.registration_amount)}
-                      </span>
-                    </div>
+              {registrationEnabled && template.registration_amount > 0 && (
+                <div className="cost-breakdown-section">
+                  <div className="cost-breakdown-row cost-breakdown-register">
+                    <span>
+                      Registration Fees & Scanning Charges (3)
+                    </span>
+                    <span>{formatINR(template.registration_amount)}</span>
                   </div>
-                )}
+                </div>
+              )}
 
               {/* ================== SUMMARY ================== */}
               <div className="cost-breakdown-section cost-breakdown-summary">
@@ -4368,15 +4502,12 @@ const CostSheetCreate = () => {
                   <span>{formatINR(finalAmount)}</span>
                 </div>
 
-                {isPossessionCharges &&
-                  possessionTotal > 0 && (
-                    <div className="cost-breakdown-row">
-                      <span>Total Possession Related Charges</span>
-                      <span>
-                        {formatINR(possessionTotal)}
-                      </span>
-                    </div>
-                  )}
+                {isPossessionCharges && possessionTotal > 0 && (
+                  <div className="cost-breakdown-row">
+                    <span>Total Possession Related Charges</span>
+                    <span>{formatINR(possessionTotal)}</span>
+                  </div>
+                )}
               </div>
 
               {/* ================== GRAND TOTAL ================== */}
@@ -4436,7 +4567,7 @@ const CostSheetCreate = () => {
         </SectionCard>
 
         {/* PAYMENT PLAN */}
-        {planRequired && (
+        {/* {planRequired && (
           <SectionCard title="Payment Plan">
             <div className="cs-radio-group" style={{ marginBottom: 16 }}>
               <label className="cs-radio">
@@ -4568,7 +4699,7 @@ const CostSheetCreate = () => {
               + Add Installment
             </button>
           </SectionCard>
-        )}
+        )} */}
 
         {/* ATTACHMENTS */}
         <SectionCard title="Attachments">

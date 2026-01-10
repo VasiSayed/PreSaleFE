@@ -1036,7 +1036,7 @@
     color: #102a54 !important;
 }
 .cost-breakdown-register span:last-child{
-        font-weight: 700 !important;
+  font-weight: 700 !important;
 }
 .cost-breakdown-register:hover{
   background-color: #d6e0f0 !important;

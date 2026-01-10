@@ -235,6 +235,7 @@
 .data-table td {
   padding: 16px;
   border-bottom: 1px solid #f3f4f6;
+  text-align: center !important;
   font-size: var(--theme-base-font-size, 14px);
   color: var(--theme-heading-color, #111827);
   font-family: var(--theme-font-family, 'Inter', system-ui, -apple-system, 'Segoe UI', 'Roboto', 'Open Sans', sans-serif);
@@ -253,7 +254,7 @@
 .action-btn {
   width: 32px;
   height: 32px;
-  border: 1px solid #e5e7eb;
+  /* border: 1px solid #e5e7eb; */
   background: white;
   border-radius: 4px;
   cursor: pointer;
@@ -264,6 +265,9 @@
   transition: all 0.2s;
 }
 
+.row-actions .icon-btn{
+  padding: 14px !important;
+}
 .action-btn:hover {
   transform: translateY(-2px);
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);

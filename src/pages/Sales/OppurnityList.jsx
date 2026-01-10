@@ -409,6 +409,22 @@ const downloadSampleExcel = () => {
     });
   };
 
+  const formatDMYTime = (v) => {
+    if (!v) return "-";
+    const d = new Date(v);
+    if (Number.isNaN(d.getTime())) return "-";
+
+    return d.toLocaleString("en-IN", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true,
+    });
+  };
+
+
   const getStatusColor = (st) => {
     switch (st) {
       case "NEW":
@@ -829,6 +845,7 @@ const downloadSampleExcel = () => {
                     <tr key={o.id}>
                       <td className="row-actions">
                         <button
+                          stye={{}}
                           className="icon-btn icon-btn-edit"
                           title="Edit opportunity"
                           onClick={() =>
@@ -852,7 +869,8 @@ const downloadSampleExcel = () => {
                       <td>{asTitle(o.full_name)}</td>
 
                       {/* mobile number same */}
-                      <td>📱 {contact}</td>
+                      {/* <td>📱 {contact}</td> */}
+                      <td>{contact}</td>
 
                       {/* ⚠️ email ko title-case mat karo; email always lowercase best */}
                       <td>{o.email ? String(o.email).toLowerCase() : "-"}</td>
@@ -885,10 +903,10 @@ const downloadSampleExcel = () => {
                         )}
                       </td>
 
-                      <td title={formatDT(o.created_at)}>
+                      {/* <td title={formatDT(o.created_at)}>
                         {formatDMY(o.created_at)}
-                      </td>
-                      
+                      </td> */}
+                      <td>{formatDMYTime(o.created_at)}</td>
                     </tr>
                   );
                 })

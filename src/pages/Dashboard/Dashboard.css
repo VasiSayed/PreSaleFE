@@ -524,7 +524,7 @@
   color: var(--text) !important;
   background: #ffffff !important;
   white-space: nowrap;
-  font-weight: 800;
+  /* font-weight: 800; */
 }
 
 /* zebra */

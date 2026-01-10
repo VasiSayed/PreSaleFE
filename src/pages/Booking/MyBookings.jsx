@@ -282,7 +282,7 @@ import axiosInstance from "../../api/axiosInstance";
 import SearchBar from "../../common/SearchBar";
 import PaymentLeadCreateModal from "../../components/Payments/PaymentLeadCreateModal";
 import "./MyBookings.css";
-import "../PreSalesCRM/Leads/LeadsList.css";
+// import "../PreSalesCRM/Leads/LeadsList.css";
 
 // Helper: Convert text to title case (first letter of every word capitalized)
 function toTitleCase(text) {
@@ -580,7 +580,7 @@ const MyBookings = () => {
                       return (
                         <tr key={b.id}>
                           <td className="booking-actions-cell">
-                            <button
+                            {/* <button
                               type="button"
                               className="booking-icon-btn"
                               title="Edit booking"
@@ -589,7 +589,7 @@ const MyBookings = () => {
                               }
                             >
                               ✏️
-                            </button>
+                            </button> */}
 
                             <button
                               type="button"
@@ -601,7 +601,10 @@ const MyBookings = () => {
                             </button>
 
                             {/* Payment button - only show if booking has a lead */}
-                            {(b.sales_id || b.sales_lead || b.lead_id || b.lead) && (
+                            {(b.sales_id ||
+                              b.sales_lead ||
+                              b.lead_id ||
+                              b.lead) && (
                               <button
                                 type="button"
                                 className="booking-icon-btn"

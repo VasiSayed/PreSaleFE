@@ -470,7 +470,7 @@ const QuotationPreview = () => {
           <div className="qp-cost-section">
             <div className="qp-cost-breakdown">
               <div className="qp-cost-line">
-                <span>Registration Amount</span>
+                <span>Registration Fees & Scanning Charges (3)</span>
                 <span className="qp-cost-amount">{fmt(registrationAmt)}</span>
               </div>
             </div>

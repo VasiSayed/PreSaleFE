@@ -1,5 +1,6 @@
 .page-title {
   margin-bottom: 16px;
+  margin-top: 10px;
 }
 
 .muted-text {
@@ -24,11 +25,12 @@
 .cp-table td {
   padding: 12px 14px;
   border: 1px solid #e5e7eb;
-  text-align: left;
+  text-align: center;
   font-size: 14px;
 }
 
 .cp-table th {
+  text-align: center;
   background-color: #f3f4f6;
   font-weight: 600;
 }

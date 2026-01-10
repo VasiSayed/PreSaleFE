@@ -286,7 +286,12 @@ const BookingDetail = () => {
   })();
 
   const gstLabel =
-    booking.gst_no || booking.gst_percent || booking.gst_percentage;
+    booking.gst_no || Number(booking.gst_percent) || booking.gst_percentage;
+
+  const stamp_duty = Number(booking.stamp_duty_percent) || 0;
+  const stamp_duty_amt = stamp_duty * booking.agreement_value;
+
+  const gstAmount = booking.gst_percent * booking.agreement_value;
 
   const paymentPlan = booking.payment_plan || null;
 
@@ -707,7 +712,22 @@ const BookingDetail = () => {
                 {gstLabel && (
                   <div className="booking-field">
                     <span className="booking-field-label">GST Details</span>
-                    <span className="booking-field-value">{gstLabel}</span>
+                    <span className="booking-field-value">
+                      <span className="rupee-symbol">₹</span>{" "}
+                      {formatAmount(gstAmount)}
+                    </span>
+                  </div>
+                )}
+
+                {stamp_duty && (
+                  <div className="booking-field">
+                    <span className="booking-field-label">
+                      Stamp Duty Details
+                    </span>
+                    <span className="booking-field-value">
+                      <span className="rupee-symbol">₹</span>{" "}
+                      {formatAmount(stamp_duty_amt)}
+                    </span>
                   </div>
                 )}
               </div>

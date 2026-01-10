@@ -235,6 +235,7 @@ const payload = {
           source_name: "",
           owner_id: "",
         }));
+        navigate("/sales/opportunities");
       }
     } catch (err) {
       console.error(err);

@@ -335,7 +335,8 @@ export default function SiteVisitList() {
                       </div>
                     </td>
                     <td>
-                      <div className="mobile-number">📱 {v.mobile}</div>
+                      {/* <div className="mobile-number">📱 {v.mobile}</div> */}
+                      <div className="mobile-number">{v.mobile}</div>
                     </td>
                     <td>
                       <div className="project-name">

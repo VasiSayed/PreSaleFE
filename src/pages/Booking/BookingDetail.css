@@ -178,9 +178,10 @@
 }
 
 .rupee-symbol {
-  font-size: 15px;
+  /* font-size: 15px; */
+  font-size: 11px;
   position: relative;
-  top: -1px;
+  /* top: -1px; */
 }
 
 .booking-header-meta {
@@ -783,8 +784,10 @@
 
 /* actual logo */
 .booking-brand-logo {
-  width: 88px;
-  height: 88px;
+  /* width: 88px;
+  height: 88px;  */
+  width: 95% !important;
+  height: 85% !important;
   object-fit: contain;
   border-radius: 50%;
   position: relative;

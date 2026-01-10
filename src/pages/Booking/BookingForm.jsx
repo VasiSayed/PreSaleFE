@@ -10813,6 +10813,7 @@ const handleCancelBooking = () => {
                           )}
                         </select>
                       </div>
+
                       <div className="bf-col">
                         <label className="bf-label">
                           Provisional Charges Per Sqft
@@ -11054,7 +11055,14 @@ const handleCancelBooking = () => {
                               </span>
                             </div>
                           )}
-
+                          {possessionCharges.possessionGst > 0 && (
+                          <div className="cost-breakdown-row">
+                            <span>GST on Possession Charges (18%)</span>
+                            <span>
+                              {formatINR(possessionCharges.possessionGst)}
+                            </span>
+                          </div>
+                        )}
                           <div className="cost-breakdown-row cost-breakdown-subtotal">
                             <span>Total Possession Related Charges (2)</span>
                             <span>
@@ -11763,19 +11771,16 @@ const handleCancelBooking = () => {
                             readOnly
                           />
 
-                          <input
-                            className="bf-input"
-                            type="date"
-                            value={row.days || ""}
-                            onChange={(e) =>
-                              handleUpdateCustomSlab(
-                                idx,
-                                "days",
-                                e.target.value
-                              )
-                            }
-                            onFocus={() => handleCustomDueDateFocus(idx)}
-                          />
+                          <DatePicker
+  className="bf-input"
+  selected={row.days ? new Date(row.days) : null}
+  onChange={(date) =>
+    handleUpdateCustomSlab(idx, "days", date)
+  }
+  dateFormat="dd/MM/yyyy"
+  placeholderText="dd/mm/yyyy"
+  onFocus={() => handleCustomDueDateFocus(idx)}
+/>
 
                           {customSlabs.length > 1 && (
                             <button
@@ -12126,6 +12131,7 @@ const handleCancelBooking = () => {
                   </ol>
                 </div>
               )} */}
+              
               <div className="bf-terms-card" style={{ marginTop: "24px" }}>
                 <div className="bf-terms-title">
                   <b>Terms & Conditions</b>

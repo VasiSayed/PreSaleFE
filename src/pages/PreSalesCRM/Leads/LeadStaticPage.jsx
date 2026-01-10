@@ -7,7 +7,8 @@
   import { toTitleCase } from "../../../utils/text";
   import SiteVisitStatusModal from "../../SiteVisit/SiteVisitStatusModal";
 import SiteVisitRescheduleModal from "../../../pages/SiteVisit/SiteVisitRescheduleModal";
-
+import "react-datepicker/dist/react-datepicker.css";
+import DatePicker from "react-datepicker";
   import "./LeadStaticPage.css";
 
   // helper for datetime-local default
@@ -909,6 +910,16 @@ const handleSvUnitChange = async (val) => {
       text: "",
       stage_at_time: "",
     });
+
+    const formatForAPISameAsBefore = (date) => {
+  if (!date) return "";
+  const yyyy = date.getFullYear();
+  const mm = String(date.getMonth() + 1).padStart(2, "0");
+  const dd = String(date.getDate()).padStart(2, "0");
+  const hh = String(date.getHours()).padStart(2, "0");
+  const min = String(date.getMinutes()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}T${hh}:${min}`;
+};
 
     useEffect(() => {
       if (activeTab !== "logs" || !leadId) return;
@@ -2259,7 +2270,15 @@ useEffect(() => {
       setLeadInfoEdit(false);
     };
 
-    const handleExtraSubmit = async () => {
+    const formatDOBForAPI = (date) => {
+      if (!date) return "";
+      const yyyy = date.getFullYear();
+      const mm = String(date.getMonth() + 1).padStart(2, "0");
+      const dd = String(date.getDate()).padStart(2, "0");
+      return `${yyyy}-${mm}-${dd}`;
+    };
+
+    const   handleExtraSubmit = async () => {
       if (!lead) return;
 
       setSavingExtra(true);
@@ -2289,8 +2308,8 @@ useEffect(() => {
             referral_code: cpInfoForm.referral_code || "",
           },
           personal_info: {
-            date_of_birth: personalForm.date_of_birth || null,
-            date_of_anniversary: personalForm.date_of_anniversary || null,
+            date_of_birth: formatDOBForAPI(personalForm.date_of_birth) || null,
+            date_of_anniversary: formatDOBForAPI(personalForm.date_of_anniversary) || null,
             already_part_of_family: personalForm.already_part_of_family,
             secondary_email: personalForm.secondary_email || "",
             alternate_mobile: personalForm.alternate_mobile || "",
@@ -3111,9 +3130,11 @@ useEffect(() => {
                       </div>
                     </div>
 
-                    <div className="field-full">
+                    <div
+                      className="field-full"
+                    >
                       <label>Scheduled At</label>
-                      <input
+                      {/* <input
                         type="datetime-local"
                         className="input-plain"
                         value={siteVisitForm.scheduled_at || ""}
@@ -3123,6 +3144,23 @@ useEffect(() => {
                             e.target.value
                           )
                         }
+                        disabled={isLeadLocked}
+                      /> */}
+                      <DatePicker
+                        selected={
+                          siteVisitForm.scheduled_at
+                            ? new Date(siteVisitForm.scheduled_at)
+                            : null
+                        }
+                        onChange={(date) =>
+                          handleSiteVisitFormChange("scheduled_at", date)
+                        }
+                        showTimeInput // let user type/select any time freely
+                        timeInputLabel="Time:" // optional label for input box
+                        timeFormat="hh:mm aa" // 12-hour format with AM/PM
+                        dateFormat="dd/MM/yyyy hh:mm aa" // full display format
+                        placeholderText="dd/MM/yyyy hh:mm AM/PM"
+                        className="input-plain"
                         disabled={isLeadLocked}
                       />
                     </div>
@@ -4294,28 +4332,44 @@ useEffect(() => {
               <div className="column">
                 <div className="field-full">
                   <label>Date of Birth</label>
-                  <input
-                    type="date"
-                    value={personalForm.date_of_birth}
-                    onChange={(e) =>
+                  <DatePicker
+                    selected={
+                      personalForm.date_of_birth
+                        ? new Date(personalForm.date_of_birth)
+                        : null
+                    }
+                    onChange={(date) =>
                       setPersonalForm((prev) => ({
                         ...prev,
-                        date_of_birth: e.target.value,
+                        date_of_birth: date,
                       }))
                     }
+                    dateFormat="dd/MM/yyyy"
+                    placeholderText="dd/mm/yyyy"
+                    showMonthDropdown
+                    showYearDropdown
+                    dropdownMode="select"
                   />
                 </div>
                 <div className="field-full">
                   <label>Date of Anniversary</label>
-                  <input
-                    type="date"
-                    value={personalForm.date_of_anniversary}
-                    onChange={(e) =>
+                  <DatePicker
+                    selected={
+                      personalForm.date_of_anniversary
+                        ? new Date(personalForm.date_of_anniversary)
+                        : null
+                    }
+                    onChange={(date) =>
                       setPersonalForm((prev) => ({
                         ...prev,
-                        date_of_anniversary: e.target.value,
+                        date_of_anniversary: date,
                       }))
                     }
+                    dateFormat="dd/MM/yyyy"
+                    placeholderText="dd/mm/yyyy"
+                    showMonthDropdown
+                    showYearDropdown
+                    dropdownMode="select"
                   />
                 </div>
                 <div className="field-full checkbox-inline">
