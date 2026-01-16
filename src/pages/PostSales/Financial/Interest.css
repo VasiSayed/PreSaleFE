@@ -1,0 +1,85 @@
+/* Interest.css */
+
+/* Top bar: Search (25%) | Right actions */
+.interest-topbar{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+/* Left search fixed ~25% width */
+.interest-search-col{
+  flex: 0 0 25%;
+  max-width: 25%;
+  min-width: 280px; /* so it doesn't get too tiny */
+}
+
+/* SearchBar height match */
+.interest-searchbar.search-wrap{
+  height: 40px;
+  display: flex;
+  align-items: center;
+}
+
+/* Right action group */
+.interest-actions{
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+}
+
+/* Make all buttons same height */
+.interest-actions .dn-btn,
+.interest-actions .filter-btn{
+  height: 40px;
+}
+
+/* Apply interest a little wider */
+.interest-apply-interest-btn{
+  min-width: 220px;
+  white-space: nowrap;
+}
+
+/* Selected text inline on right */
+.interest-selected-inline{
+  white-space: nowrap;
+  font-size: 13px;
+  color: #6b7280;
+  margin-left: 4px;
+}
+
+/* Pagination row */
+.interest-pagination{
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+/* Responsive */
+@media (max-width: 900px){
+  .interest-topbar{
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .interest-search-col{
+    flex: 0 0 auto;
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  .interest-actions{
+    justify-content: space-between;
+    flex-wrap: wrap;
+  }
+
+  .interest-apply-interest-btn{
+    width: 100%;
+    min-width: 0;
+  }
+}

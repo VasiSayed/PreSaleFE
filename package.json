@@ -10,12 +10,17 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.1",
     "@fortawesome/fontawesome-free": "^7.1.0",
+    "@mui/icons-material": "^7.3.7",
+    "@mui/material": "^7.3.7",
     "axios": "^1.13.2",
     "browser-image-compression": "^2.0.2",
     "date-fns": "^4.1.0",
     "html2canvas": "^1.4.1",
     "jspdf": "^3.0.4",
+    "lucide-react": "^0.562.0",
     "react": "^19.2.0",
     "react-datepicker": "^9.1.0",
     "react-dom": "^19.2.0",

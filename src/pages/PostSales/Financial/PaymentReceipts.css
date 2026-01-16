@@ -1,0 +1,162 @@
+/* keep everything same theme as DemandNotes/MyBookings */
+
+/* Filters grid a bit tighter for this page */
+.pr-filters-grid {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+@media (max-width: 1200px) {
+  .pr-filters-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+@media (max-width: 768px) {
+  .pr-filters-grid {
+    grid-template-columns: repeat(1, minmax(0, 1fr));
+  }
+}
+
+/* Filters actions align like DN */
+.pr-filters-actions {
+  justify-content: flex-end;
+}
+
+/* KPI row (same font + clean cards) */
+.dn-kpi-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin: 10px 0 14px;
+}
+@media (max-width: 900px) {
+  .dn-kpi-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+.dn-kpi-card {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 12px 14px;
+}
+
+.dn-kpi-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.dn-kpi-value {
+  margin-top: 6px;
+  font-size: 20px;
+  font-weight: 800;
+  color: #111827;
+}
+
+/* Table: force same look as booking-table but with better header */
+.pr-table-wrapper {
+  overflow-x: auto;
+}
+
+.pr-table {
+  min-width: 1200px;
+}
+
+/* make header look crisp */
+.pr-table thead th {
+  background: #f9fafb;
+  border-bottom: 1px solid #e5e7eb;
+  font-weight: 800;
+  color: #111827;
+  white-space: nowrap;
+}
+
+/* cells */
+.pr-table td {
+  vertical-align: middle;
+}
+
+/* wrap long text columns */
+.pr-table .dn-wrap {
+  max-width: 260px;
+}
+
+/* compact open button */
+.pr-open-btn {
+  height: 34px;
+  padding: 0 12px;
+  border-radius: 10px;
+}
+
+/* pagination row */
+.pr-pagination {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+/* modal header center helper (same issue you had earlier) */
+.dn-modal-header-left {
+  flex: 1;
+}
+.dn-modal-header-left-center {
+  text-align: center;
+}
+
+/* receipts modal grid: little tighter */
+.pr-modal-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+/* hint spacing */
+.pr-hint {
+  margin-top: 12px;
+}
+
+/* PaymentReceipts.css */
+/* DemandNotes.css reuse ho raha hai, yaha sirf receipts-specific polish */
+
+.payment-receipts-page .dn-kpi-row {
+  margin-top: 14px;
+}
+
+.payment-receipts-page .dn-kpi-card {
+  border-radius: 14px;
+}
+
+.pr-table-wrap {
+  margin-top: 14px;
+}
+
+.pr-pagination {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+
+/* PaymentReceipts.css */
+
+.pr-outside-bar {
+  margin-top: 8px;
+}
+
+.pr-outside-grid {
+  grid-template-columns: 2fr 1fr;
+}
+
+.pr-table-wrap {
+  margin-top: 14px;
+}
+
+.pr-pagination {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 10px;
+}
+

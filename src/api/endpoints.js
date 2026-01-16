@@ -291,6 +291,13 @@ export const BookingAPI = {
       .then((res) => res.data);
   },
 
+  // POST /api/booking/<id>/mark-shifted/
+  markShifted(id, body = {}) {
+    return api
+      .post(`book/bookings/${id}/mark-shifted/`, body)
+      .then((r) => r.data);
+  },
+
   // 🔹 Confirm booking
   confirm(id, body = {}) {
     return api
@@ -305,6 +312,24 @@ export const BookingAPI = {
       .then((res) => res.data);
   },
 };
+
+
+export const RegistrationAPI = {
+  // GET /api/registration/timeline/by-booking/<booking_id>/
+  timelineByBooking: (bookingId) =>
+    api
+      .get(`registration/timeline/by-booking/${bookingId}/`)
+      .then((r) => r.data),
+
+  // POST /api/registration/ensure/  (strict merged: booking_id + stage_id required)
+  ensureStage: (payload) =>
+    api.post(`registration/ensure/`, payload).then((r) => r.data),
+
+  // optional (if you need somewhere else)
+  stagesByProject: (projectId) =>
+    api.get(`registration/stages/by-project/${projectId}/`).then((r) => r.data),
+};
+
 
 
 export const AdditionalInfoAPI = {

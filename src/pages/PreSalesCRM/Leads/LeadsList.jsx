@@ -51,39 +51,44 @@ function getInputValue(val) {
 export default function LeadsList() {
   const navigate = useNavigate();
 
+  const userData = JSON.parse(localStorage.getItem("user") || "{}");
+  const userRole = (userData?.role || "").toUpperCase();
+
+  const canDelete = userRole === "ADMIN"; // ✅ only ADMIN
+
   const [rows, setRows] = useState([]);
   const [q, setQ] = useState("");
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
-const [count, setCount] = useState(0);
+  const [count, setCount] = useState(0);
 
-// ✅ Filters state FIRST
-const [filters, setFilters] = useState({
-  status: "",
-  source: "",
-  project: "",
-});
+  // ✅ Filters state FIRST
+  const [filters, setFilters] = useState({
+    status: "",
+    source: "",
+    project: "",
+  });
 
-// ✅ keep latest values for stable debounce + fetchList
-const qRef = useRef("");
-const pageRef = useRef(1);
-const filtersRef = useRef({
-  status: "",
-  source: "",
-  project: "",
-});
+  // ✅ keep latest values for stable debounce + fetchList
+  const qRef = useRef("");
+  const pageRef = useRef(1);
+  const filtersRef = useRef({
+    status: "",
+    source: "",
+    project: "",
+  });
 
-useEffect(() => {
-  qRef.current = q;
-}, [q]);
+  useEffect(() => {
+    qRef.current = q;
+  }, [q]);
 
-useEffect(() => {
-  pageRef.current = page;
-}, [page]);
+  useEffect(() => {
+    pageRef.current = page;
+  }, [page]);
 
-useEffect(() => {
-  filtersRef.current = filters;
-}, [filters]);
+  useEffect(() => {
+    filtersRef.current = filters;
+  }, [filters]);
 
   const [modalOpen, setModalOpen] = useState(false);
 
@@ -566,13 +571,15 @@ useEffect(() => {
                           >
                             ✏️
                           </button>
-                          <button
-                            title="Delete"
-                            className="action-btn delete-btn"
-                            onClick={() => handleDelete(lead.id)}
-                          >
-                            🗑️
-                          </button>
+                          {canDelete && (
+                            <button
+                              title="Delete"
+                              className="action-btn delete-btn"
+                              onClick={() => handleDelete(lead.id)}
+                            >
+                              🗑️
+                            </button>
+                          )}
                         </td>
                         <td>{leadId}</td>
                         <td className="lead-name">{leadName}</td>
