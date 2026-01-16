@@ -26,7 +26,7 @@
   color: #6b7280;
   cursor: pointer;
   transition: all 0.2s ease;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
 }
 
 .nav-section-btn:hover {
@@ -40,13 +40,14 @@
   box-shadow: 0 2px 8px rgba(16, 42, 84, 0.2);
 }
 
-/* Secondary Tabs Row */
+/* Secondary Tabs Row (Pre-sales tabs + Post-sales categories) */
 .sales-navigation__secondary {
   display: flex;
   gap: 4px;
   padding: 8px 24px;
   overflow-x: auto;
   scrollbar-width: thin;
+  background: #ffffff;
 }
 
 .sales-navigation__secondary::-webkit-scrollbar {
@@ -69,7 +70,7 @@
   white-space: nowrap;
   cursor: pointer;
   transition: all 0.2s ease;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
   position: relative;
 }
 
@@ -80,13 +81,13 @@
 
 .nav-tab-btn.active {
   color: #102a54;
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .nav-tab-btn.active::after {
-  content: '';
+  content: "";
   position: absolute;
-  bottom: 0;
+  bottom: -2px;
   left: 8px;
   right: 8px;
   height: 3px;
@@ -94,13 +95,42 @@
   border-radius: 2px 2px 0 0;
 }
 
-/* Responsive Design */
+/* ✅ Third row (Post-Sales sub navigation)
+   SAME LOOK as secondary: text + underline (no pill buttons) */
+.sales-navigation__tertiary {
+  display: flex;
+  gap: 4px;
+  padding: 8px 24px;
+  overflow-x: auto;
+  scrollbar-width: thin;
+  background: #ffffff;
+  border-top: 1px solid #e5e7eb;
+}
+
+.sales-navigation__tertiary::-webkit-scrollbar {
+  height: 4px;
+}
+
+.sales-navigation__tertiary::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 2px;
+}
+
+/* ✅ Subtabs: keep same as nav-tab-btn but slightly tighter (so “zoom” issue gone) */
+.nav-subtab-btn {
+  padding: 7px 14px;   /* smaller than main tabs */
+  font-size: 0.88rem;  /* close to pre-sales */
+  font-weight: 500;
+}
+
+/* Responsive */
 @media (max-width: 768px) {
   .sales-navigation__primary {
     padding: 10px 16px;
   }
 
-  .sales-navigation__secondary {
+  .sales-navigation__secondary,
+  .sales-navigation__tertiary {
     padding: 6px 16px;
   }
 
@@ -110,6 +140,11 @@
   }
 
   .nav-tab-btn {
+    padding: 6px 12px;
+    font-size: 0.85rem;
+  }
+
+  .nav-subtab-btn {
     padding: 6px 12px;
     font-size: 0.85rem;
   }

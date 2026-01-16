@@ -910,10 +910,10 @@ export default function SirDashboard() {
                 valueFormatter={(v) => `${toNum(v)}%`}
               />
 
-              <div className="note">
+              {/* <div className="note">
                 Note: Lead→Registration is sometimes N/A in API, shown as 0 for
                 visualization.
-              </div>
+              </div> */}
             </div>
           </section>
 

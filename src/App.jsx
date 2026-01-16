@@ -42,24 +42,45 @@ import DocumentBrowser from "./pages/Documents/DocumentBrowser";
 import OnsiteRegistration from "./pages/OnsiteRegistration";
 import BookingApprovals from "./pages/Booking/BookingApprovals";
 import LeadOpportunityCreate from "./pages/Sales/LeadOpportunityCreate";
+import RegisteredBookings from "./pages/PostSales/RegisteredBookings/RegisteredBookings";
+import PaymentReceipts from "./pages/PostSales/Financial/PaymentReceipts";
+import DemandNotes from "./pages/PostSales/Financial/DemandNotes";
+import Interest from "./pages/PostSales/Financial/Interest";
 import UpcommingEvent from "../src/pages/UpcomingActivities";
 import KycBlack from "./pages/Kycblack/Kycpage";
 import { Toaster } from "react-hot-toast";
 import ProfilePage from "./pages/Profile";
 import CreateUserWithProjectAccess from "./pages/CreateUserWithProjectAccess";
 import { ToastContainer } from "react-toastify";
+import ArchitectureCertificates from "./pages/PostSales/Architecture/ArchitectureCertificateHub";
 import "react-toastify/dist/ReactToastify.css";
 import SirDashboard from "./pages/SirDashboard";
 
+// ✅✅✅ NEW V2 imports (alag, existing untouched)
+import ProjectCustomersList from "./pages/PostSales/Financial/ProjectCustomersList";
+import CustomerDetail from "./pages/PostSales/Financial/CustomerDetail";
+import DemandNoteDetail from "./pages/PostSales/Financial/DemandNoteDetail";
 
 export default function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
-        {/* react-hot-toast Toaster - Position remains "center" for utility toasts */}
-        <Toaster position="center" reverseOrder={false} />
+        {/* ✅ react-hot-toast */}
+        <Toaster
+          position="top-right"
+          reverseOrder={false}
+          gutter={10}
+          containerStyle={{
+            top: 16,
+            right: 16,
+            zIndex: 999999,
+          }}
+          toastOptions={{
+            style: { zIndex: 999999 },
+          }}
+        />
 
-        {/* ✅ ToastContainer (react-toastify) - CHANGED POSITION to "top-center" */}
+        {/* ✅ react-toastify */}
         <ToastContainer
           position="top-center"
           autoClose={6000}
@@ -71,6 +92,7 @@ export default function App() {
           draggable
           pauseOnHover
           theme="light"
+          style={{ zIndex: 999999 }}
         />
 
         <Routes>
@@ -78,9 +100,10 @@ export default function App() {
           <Route path="/login" element={<Auth />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
 
+          {/* Public (you had these outside protected) */}
           <Route path="/booking/kyc-review" element={<KycReview />} />
           <Route path="/onsite-registration" element={<OnsiteRegistration />} />
-          {/* Protected Routes with MasterLayout */}
+
           <Route element={<ProtectedRoute />}>
             <Route element={<MasterLayout />}>
               {/* Dashboard */}
@@ -99,7 +122,6 @@ export default function App() {
 
               {/* Projects */}
               <Route path="/sales/projects" element={<ProjectsList />} />
-              {/* 🔹 NEW: Project setup detail with projectId in URL */}
               <Route
                 path="/sales/projects/:projectId"
                 element={<ProjectSetupDetail />}
@@ -141,7 +163,6 @@ export default function App() {
                 path="/inventory-planning"
                 element={<InventoryPlanning />}
               />
-
               <Route
                 path="/inventory/unit/:unitId"
                 element={<InventoryUnitDetail />}
@@ -152,9 +173,7 @@ export default function App() {
                 path="/channel-partner-setup"
                 element={<ChannelPartnerPage />}
               />
-
               <Route path="/documents" element={<DocumentBrowser />} />
-
               <Route
                 path="/channel-partners/chat"
                 element={<ChannelPartnerChat />}
@@ -163,29 +182,24 @@ export default function App() {
                 path="/channel-partners/:partnerId/profile"
                 element={<ChannelPartnerProfile />}
               />
-
               <Route
                 path="/channel-partner-add"
                 element={<ChannelPartnerRegistration />}
               />
+
               {/* Booking */}
               {/* <Route path="/booking/form" element={<BookingForm />} /> */}
               <Route path="/booking/list" element={<MyBookings />} />
               <Route path="/booking/:id" element={<BookingDetail />} />
-              <Route path="/booking/form" element={<BookingForm />} />
-              {/* 🔹 NEW: Pending approvals (admin) */}
               <Route path="/booking/approvals" element={<BookingApprovals />} />
 
               {/* Cost Sheet */}
-
               <Route path="costsheet" element={<CostSheetList />} />
               <Route path="/costsheet/:id" element={<QuotationPreview />} />
-
               <Route
                 path="/cost-sheets/new/:leadId"
                 element={<CostSheetCreate />}
               />
-
               <Route
                 path="/costsheet/templates/new"
                 element={<CostSheetTemplateCreate />}
@@ -228,6 +242,73 @@ export default function App() {
               <Route
                 path="/sales/lead/site-visit/:id/edit"
                 element={<SiteVisitEdit />}
+              />
+
+              {/* ✅✅✅ POST-SALES ROUTES (existing untouched) ✅✅✅ */}
+              <Route
+                path="/post-sales/registered-bookings"
+                element={<RegisteredBookings />}
+              />
+              <Route
+                path="/post-sales/financial/dashboard"
+                element={<div>Financial Dashboard</div>}
+              />
+              <Route
+                path="/post-sales/financial/demand-notes"
+                element={<DemandNotes />}
+              />
+              <Route
+                path="/post-sales/financial/payment-receipts"
+                element={<PaymentReceipts />}
+              />
+              <Route
+                path="/post-sales/financial/customer-ledger"
+                element={<div>Customer Ledger</div>}
+              />
+              <Route
+                path="/post-sales/financial/architecture-certificates"
+                element={<ArchitectureCertificates />}
+              />
+              <Route
+                path="/post-sales/financial/interest-ledger"
+                element={<Interest />}
+              />
+
+              <Route
+                path="/post-sales/financial/customer-demand-notes"
+                element={<ProjectCustomersList />}
+              />
+
+              <Route
+                path="/post-sales/financial/customer-demand-notes/customers/:customerId"
+                element={<CustomerDetail />}
+              />
+
+              <Route
+                path="/post-sales/financial/customer-demand-notes/dn/:dnId"
+                element={<DemandNoteDetail />}
+              />
+
+              <Route
+                path="/post-sales/communication/notices"
+                element={<div>Notices</div>}
+              />
+              <Route
+                path="/post-sales/communication/events"
+                element={<div>Events</div>}
+              />
+              <Route
+                path="/post-sales/communication/polls"
+                element={<div>Polls</div>}
+              />
+              <Route
+                path="/post-sales/communication/forums"
+                element={<div>Forums</div>}
+              />
+
+              <Route
+                path="/post-sales/helpdesk"
+                element={<div>Help Desk</div>}
               />
 
               {/* Fallback */}

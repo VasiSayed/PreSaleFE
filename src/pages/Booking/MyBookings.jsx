@@ -1,14 +1,58 @@
-// import React, { useEffect, useState, useMemo } from "react";
+// // export default MyBookings;
+
+// import React, { useEffect, useState, useMemo, useRef } from "react";
 // import { useNavigate } from "react-router-dom";
 // import axiosInstance from "../../api/axiosInstance";
+// import SearchBar from "../../common/SearchBar";
+// import PaymentLeadCreateModal from "../../components/Payments/PaymentLeadCreateModal";
 // import "./MyBookings.css";
+// import "../PreSalesCRM/Leads/LeadsList.css";
+// import toast from "react-hot-toast";
+// import RegistrationTimelineModal from "../../components/Registration/RegistrationTimelineModal";
+// import { RegistrationAPI, BookingAPI } from "../../api/endpoints";
+
+
+// // Helper: Convert text to title case (first letter of every word capitalized)
+// function toTitleCase(text) {
+//   if (!text || typeof text !== "string") return text;
+//   // Split by spaces and capitalize first letter of each word
+//   return text
+//     .trim()
+//     .split(/\s+/)
+//     .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+//     .join(" ");
+// }
+
+// function debounce(fn, delay) {
+//   let timeoutId;
+//   return (...args) => {
+//     if (timeoutId) clearTimeout(timeoutId);
+//     timeoutId = setTimeout(() => fn(...args), delay);
+//   };
+// }
 
 // const MyBookings = () => {
 //   const [bookings, setBookings] = useState([]);
 //   const [loading, setLoading] = useState(true);
 //   const [error, setError] = useState("");
 //   const [search, setSearch] = useState("");
-//   const [searchOpen, setSearchOpen] = useState(false);
+
+//   // 🔹 upload related
+//   const fileInputRef = useRef(null);
+//   const [uploadBookingId, setUploadBookingId] = useState(null);
+//   const [uploadingId, setUploadingId] = useState(null);
+
+
+//   const [regOpen, setRegOpen] = useState(false);
+//   const [regBooking, setRegBooking] = useState(null);
+//   const [regTimeline, setRegTimeline] = useState(null);
+//   const [regLoading, setRegLoading] = useState(false);
+
+
+//   // 🔹 payment related
+//   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
+//   const [selectedBookingLeadId, setSelectedBookingLeadId] = useState(null);
+//   const [selectedBookingId, setSelectedBookingId] = useState(null);
 
 //   const navigate = useNavigate();
 
@@ -19,7 +63,11 @@
 //     axiosInstance
 //       .get("/book/bookings/my-bookings/")
 //       .then((res) => {
-//         setBookings(res.data || []);
+//         // in case backend is paginated: { results: [...] }
+//         const data = Array.isArray(res.data)
+//           ? res.data
+//           : res.data.results || [];
+//         setBookings(data || []);
 //       })
 //       .catch((err) => {
 //         console.error("Failed to load bookings", err);
@@ -32,15 +80,72 @@
 //     navigate("/booking/form");
 //   };
 
-//   const handleSearchIconClick = () => {
-//     setSearchOpen((prev) => !prev);
+//   const debouncedSearch = useMemo(
+//     () =>
+//       debounce((val) => {
+//         // Search is handled by filtered useMemo, no API call needed
+//       }, 300),
+//     []
+//   );
+
+//   const handleSearchChange = (value) => {
+//     setSearch(value);
+//     debouncedSearch(value);
 //   };
 
-//   const handleSearchBlur = () => {
-//     if (!search.trim()) {
-//       setSearchOpen(false);
+//   const fetchRegTimeline = async (bookingObj) => {
+//     try {
+//       setRegLoading(true);
+//       const data = await RegistrationAPI.timelineByBooking(bookingObj.id);
+//       setRegTimeline(data);
+//     } catch (err) {
+//       console.error("Failed to load registration timeline", err);
+//       toast.error("Failed to load registration timeline");
+//       setRegTimeline(null);
+//     } finally {
+//       setRegLoading(false);
 //     }
 //   };
+
+//   const openRegModal = (bookingObj) => {
+//     setRegBooking(bookingObj);
+//     setRegOpen(true);
+//     fetchRegTimeline(bookingObj);
+//   };
+
+//   const closeRegModal = () => {
+//     setRegOpen(false);
+//     setRegBooking(null);
+//     setRegTimeline(null);
+//   };
+
+
+//   const handleShiftBooking = async (bookingObj) => {
+//     if (bookingObj.is_shifted) {
+//       toast("Already shifted");
+//       return;
+//     }
+//     const ok = window.confirm("Mark this booking as SHIFTED?");
+//     if (!ok) return;
+
+//     try {
+//       await BookingAPI.markShifted(bookingObj.id, {
+//         note: "Shifted from MyBookings list",
+//       });
+//       toast.success("Booking shifted");
+
+//       // update row locally
+//       setBookings((prev) =>
+//         prev.map((x) =>
+//           x.id === bookingObj.id ? { ...x, is_shifted: true } : x
+//         )
+//       );
+//     } catch (err) {
+//       const msg = err?.response?.data?.detail || "Failed to mark shifted";
+//       toast.error(msg);
+//     }
+//   };
+
 
 //   const formatAmount = (value) => {
 //     if (value === null || value === undefined) return "";
@@ -61,7 +166,7 @@
 //   const getStatusColor = (status) => {
 //     if (!status) return {};
 //     const statusLower = status.toString().toLowerCase().replace(/_/g, "");
-    
+
 //     if (statusLower === "booked" || statusLower === "confirmed") {
 //       return {
 //         backgroundColor: "#dcfce7", // green-100
@@ -72,13 +177,17 @@
 //         backgroundColor: "#fef3c7", // yellow-100
 //         color: "#92400e", // yellow-800
 //       };
-//     } else if (statusLower === "cancelled" || statusLower === "canceled" || statusLower === "rejected") {
+//     } else if (
+//       statusLower === "cancelled" ||
+//       statusLower === "canceled" ||
+//       statusLower === "rejected"
+//     ) {
 //       return {
 //         backgroundColor: "#fee2e2", // red-100
 //         color: "#991b1b", // red-800
 //       };
 //     }
-    
+
 //     // Default styling
 //     return {
 //       backgroundColor: "#f3f4f6", // gray-100
@@ -116,51 +225,98 @@
 //       ? "0 of 0"
 //       : `1-${filtered.length} of ${bookings.length}`;
 
+//   // 🔹 User clicked upload icon for a row
+//   const handleUploadClick = (bookingId) => {
+//     setUploadBookingId(bookingId);
+//     setError("");
+//     if (fileInputRef.current) {
+//       fileInputRef.current.value = ""; // reset old file
+//       fileInputRef.current.click();
+//     }
+//   };
+
+//   // 🔹 Handle payment click
+//   const handlePaymentClick = (booking) => {
+//     // Get lead_id from booking (sales_id is the field in booking object)
+//     const leadId = booking.sales_id || booking.sales_lead || booking.lead_id || booking.lead || null;
+//     if (leadId) {
+//       setSelectedBookingLeadId(leadId);
+//       setSelectedBookingId(booking.id); // Store booking ID
+//       setPaymentModalOpen(true);
+//     }
+//   };
+
+//   // 🔹 File selected
+//   const handleFileChange = async (e) => {
+//     const file = e.target.files && e.target.files[0];
+//     if (!file || !uploadBookingId) return;
+
+//     setUploadingId(uploadBookingId);
+
+//     const formData = new FormData();
+//     formData.append("signed_booking_file", file);
+
+//     try {
+//       const res = await axiosInstance.post(
+//         `/book/bookings/${uploadBookingId}/upload-signed-form/`,
+//         formData,
+//         {
+//           headers: {
+//             "Content-Type": "multipart/form-data",
+//           },
+//         }
+//       );
+
+//       const updated = res.data;
+//       // replace the row locally
+//       setBookings((prev) =>
+//         prev.map((b) => (b.id === updated.id ? updated : b))
+//       );
+//     } catch (err) {
+//       console.error("Failed to upload signed form", err);
+//       setError("Failed to upload signed form. Please try again.");
+//     } finally {
+//       setUploadingId(null);
+//       setUploadBookingId(null);
+//       if (fileInputRef.current) {
+//         fileInputRef.current.value = "";
+//       }
+//     }
+//   };
+
 //   return (
 //     <div className="my-bookings-page">
 //       <div className="my-bookings-container">
-//         {/* ---------- Header ---------- */}
-//         <div className="booking-list-header">
-//           <div className="booking-header-left">
-//             <button
-//               type="button"
-//               className="booking-search-icon-btn"
-//               onClick={handleSearchIconClick}
-//               title="Search"
-//             >
-//               🔍
-//             </button>
+//         {/* hidden file input for uploads */}
+//         <input
+//           type="file"
+//           ref={fileInputRef}
+//           style={{ display: "none" }}
+//           accept="application/pdf,image/*"
+//           onChange={handleFileChange}
+//         />
 
-//             {searchOpen && (
-//               <input
-//                 className="booking-search-input"
-//                 type="text"
-//                 placeholder="Search by customer, project, unit, status..."
-//                 value={search}
-//                 onChange={(e) => setSearch(e.target.value)}
-//                 onBlur={handleSearchBlur}
-//                 autoFocus
-//               />
-//             )}
+//         {/* ---------- Header ---------- */}
+//         <div className="list-header">
+//           {/* LEFT: Search */}
+//           <div className="list-header-left">
+//             <SearchBar
+//               value={search}
+//               onChange={handleSearchChange}
+//               placeholder="Search by customer, project, unit, status..."
+//               wrapperClassName="search-box"
+//             />
 //           </div>
 
-//           <div className="booking-header-right">
-//             <span className="booking-count-label">{rangeLabel}</span>
+//           {/* RIGHT: Buttons */}
+//           <div className="list-header-right">
 //             <button
 //               type="button"
-//               className="booking-page-btn"
-//               disabled
-//               aria-label="Previous page"
+//               className="filter-btn"
+//               onClick={handleAddClick}
 //             >
-//               ‹
-//             </button>
-//             <button
-//               type="button"
-//               className="booking-page-btn"
-//               disabled
-//               aria-label="Next page"
-//             >
-//               ›
+//               <i className="fa fa-plus" style={{ marginRight: "6px" }} />
+//               New Booking
 //             </button>
 //           </div>
 //         </div>
@@ -180,19 +336,20 @@
 //               <table className="booking-table">
 //                 <thead>
 //                   <tr>
-//                     <th style={{ width: 80 }}>Action</th>
+//                     <th style={{ width: 110 }}>Action</th>
 //                     <th>Booking ID</th>
 //                     <th>Customer Name</th>
 //                     <th>Project</th>
 //                     <th>Unit</th>
-//                     <th>Advance Amount</th> {/* 🔹 renamed */}
+//                     <th>Advance Amount</th>
+//                     <th>Signed Form</th>
 //                     <th>Status</th>
 //                   </tr>
 //                 </thead>
 //                 <tbody>
 //                   {filtered.length === 0 ? (
 //                     <tr>
-//                       <td colSpan={7} className="booking-empty-row">
+//                       <td colSpan={8} className="booking-empty-row">
 //                         No bookings found.
 //                       </td>
 //                     </tr>
@@ -200,13 +357,14 @@
 //                     filtered.map((b) => {
 //                       const bookingId = b.booking_code || b.form_ref_no || b.id;
 
-//                       // 🔹 unit label – supports string or object
 //                       const unitLabel =
 //                         b.unit_no ||
 //                         (b.unit && b.unit.unit_no) ||
 //                         (b.unit && b.unit.name) ||
 //                         b.unit ||
 //                         "-";
+
+//                       const isUploading = uploadingId === b.id;
 
 //                       return (
 //                         <tr key={b.id}>
@@ -230,16 +388,61 @@
 //                             >
 //                               👁
 //                             </button>
+
+//                             {/* Payment button - only show if booking has a lead */}
+//                             {(b.sales_id ||
+//                               b.sales_lead ||
+//                               b.lead_id ||
+//                               b.lead) && (
+//                               <button
+//                                 type="button"
+//                                 className="booking-icon-btn"
+//                                 title="Make payment"
+//                                 onClick={() => handlePaymentClick(b)}
+//                               >
+//                                 💳
+//                               </button>
+//                             )}
+
+//                             <button
+//                               type="button"
+//                               className="booking-icon-btn"
+//                               title="Registration stages & history"
+//                               onClick={() => openRegModal(b)}
+//                             >
+//                               🧭
+//                             </button>
+
+//                             <button
+//                               type="button"
+//                               className="booking-icon-btn"
+//                               title={
+//                                 b.is_shifted
+//                                   ? "Already shifted"
+//                                   : "Mark shifted"
+//                               }
+//                               onClick={() => handleShiftBooking(b)}
+//                               disabled={!!b.is_shifted}
+//                             >
+//                               🚚
+//                             </button>
 //                           </td>
 
 //                           <td>{bookingId}</td>
-//                           <td>{b.primary_full_name || "-"}</td>
-//                           <td>{b.project_name || b.project || "-"}</td>
+//                           <td>
+//                             {b.primary_full_name
+//                               ? toTitleCase(b.primary_full_name)
+//                               : "-"}
+//                           </td>
+//                           <td>
+//                             {b.project_name || b.project
+//                               ? toTitleCase(b.project_name || b.project)
+//                               : "-"}
+//                           </td>
+//                           <td>
+//                             {unitLabel !== "-" ? toTitleCase(unitLabel) : "-"}
+//                           </td>
 
-//                           {/* 🔹 show Unit */}
-//                           <td>{unitLabel}</td>
-
-//                           {/* 🔹 show Total Advance as Advance Amount */}
 //                           <td className="booking-amount-cell">
 //                             {b.total_advance != null &&
 //                             b.total_advance !== "" ? (
@@ -249,6 +452,37 @@
 //                               </>
 //                             ) : (
 //                               "-"
+//                             )}
+//                           </td>
+
+//                           {/* 🔹 Signed form column */}
+//                           <td className="booking-actions-cell">
+//                             {/* Upload button */}
+//                             <button
+//                               type="button"
+//                               className="booking-icon-btn"
+//                               title={
+//                                 isUploading
+//                                   ? "Uploading..."
+//                                   : "Upload signed booking form"
+//                               }
+//                               onClick={() => handleUploadClick(b.id)}
+//                               disabled={isUploading}
+//                             >
+//                               {isUploading ? "⏳" : "📤"}
+//                             </button>
+
+//                             {/* View/download if already uploaded */}
+//                             {b.signed_booking_file_url && (
+//                               <a
+//                                 href={b.signed_booking_file_url}
+//                                 target="_blank"
+//                                 rel="noopener noreferrer"
+//                                 className="booking-icon-btn booking-link-btn"
+//                                 title="View signed form"
+//                               >
+//                                 📄
+//                               </a>
 //                             )}
 //                           </td>
 
@@ -269,29 +503,64 @@
 //             </div>
 //           </div>
 //         )}
+
+//         {/* Pagination Info */}
+//         <div className="pagination-info">{rangeLabel}</div>
 //       </div>
+
+//       {/* Payment Modal */}
+//       {paymentModalOpen && selectedBookingLeadId && (
+//         <PaymentLeadCreateModal
+//           isOpen={paymentModalOpen}
+//           onClose={() => {
+//             setPaymentModalOpen(false);
+//             setSelectedBookingLeadId(null);
+//             setSelectedBookingId(null);
+//           }}
+//           leadId={parseInt(selectedBookingLeadId, 10)}
+//           bookingId={selectedBookingId ? parseInt(selectedBookingId, 10) : null}
+//           defaultPaymentType="BOOKING"
+//           onCreated={() => {
+//             // Payment created successfully
+//           }}
+//         />
+//       )}
+
+//       <RegistrationTimelineModal
+//         open={regOpen}
+//         onClose={closeRegModal}
+//         booking={regBooking}
+//         timeline={regTimeline}
+//         loading={regLoading}
+//         onRefresh={() => regBooking && fetchRegTimeline(regBooking)}
+//       />
+
 //     </div>
 //   );
 // };
 
 // export default MyBookings;
 
+
 import React, { useEffect, useState, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
+import toast from "react-hot-toast";
 import axiosInstance from "../../api/axiosInstance";
 import SearchBar from "../../common/SearchBar";
 import PaymentLeadCreateModal from "../../components/Payments/PaymentLeadCreateModal";
+import RegistrationTimelineModal from "../../components/Registration/RegistrationTimelineModal";
+import { RegistrationAPI, BookingAPI } from "../../api/endpoints";
+
 import "./MyBookings.css";
 // import "../PreSalesCRM/Leads/LeadsList.css";
 
 // Helper: Convert text to title case (first letter of every word capitalized)
 function toTitleCase(text) {
   if (!text || typeof text !== "string") return text;
-  // Split by spaces and capitalize first letter of each word
   return text
     .trim()
     .split(/\s+/)
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
     .join(" ");
 }
 
@@ -319,6 +588,12 @@ const MyBookings = () => {
   const [selectedBookingLeadId, setSelectedBookingLeadId] = useState(null);
   const [selectedBookingId, setSelectedBookingId] = useState(null);
 
+  // 🔹 registration modal
+  const [regOpen, setRegOpen] = useState(false);
+  const [regBooking, setRegBooking] = useState(null);
+  const [regTimeline, setRegTimeline] = useState(null);
+  const [regLoading, setRegLoading] = useState(false);
+
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -328,10 +603,7 @@ const MyBookings = () => {
     axiosInstance
       .get("/book/bookings/my-bookings/")
       .then((res) => {
-        // in case backend is paginated: { results: [...] }
-        const data = Array.isArray(res.data)
-          ? res.data
-          : res.data.results || [];
+        const data = Array.isArray(res.data) ? res.data : res.data.results || [];
         setBookings(data || []);
       })
       .catch((err) => {
@@ -379,31 +651,18 @@ const MyBookings = () => {
     const statusLower = status.toString().toLowerCase().replace(/_/g, "");
 
     if (statusLower === "booked" || statusLower === "confirmed") {
-      return {
-        backgroundColor: "#dcfce7", // green-100
-        color: "#166534", // green-800
-      };
+      return { backgroundColor: "#dcfce7", color: "#166534" };
     } else if (statusLower === "draft") {
-      return {
-        backgroundColor: "#fef3c7", // yellow-100
-        color: "#92400e", // yellow-800
-      };
+      return { backgroundColor: "#fef3c7", color: "#92400e" };
     } else if (
       statusLower === "cancelled" ||
       statusLower === "canceled" ||
       statusLower === "rejected"
     ) {
-      return {
-        backgroundColor: "#fee2e2", // red-100
-        color: "#991b1b", // red-800
-      };
+      return { backgroundColor: "#fee2e2", color: "#991b1b" };
     }
 
-    // Default styling
-    return {
-      backgroundColor: "#f3f4f6", // gray-100
-      color: "#374151", // gray-700
-    };
+    return { backgroundColor: "#f3f4f6", color: "#374151" };
   };
 
   const filtered = useMemo(() => {
@@ -432,27 +691,24 @@ const MyBookings = () => {
   }, [bookings, search]);
 
   const rangeLabel =
-    bookings.length === 0
-      ? "0 of 0"
-      : `1-${filtered.length} of ${bookings.length}`;
+    bookings.length === 0 ? "0 of 0" : `1-${filtered.length} of ${bookings.length}`;
 
   // 🔹 User clicked upload icon for a row
   const handleUploadClick = (bookingId) => {
     setUploadBookingId(bookingId);
     setError("");
     if (fileInputRef.current) {
-      fileInputRef.current.value = ""; // reset old file
+      fileInputRef.current.value = "";
       fileInputRef.current.click();
     }
   };
 
   // 🔹 Handle payment click
   const handlePaymentClick = (booking) => {
-    // Get lead_id from booking (sales_id is the field in booking object)
     const leadId = booking.sales_id || booking.sales_lead || booking.lead_id || booking.lead || null;
     if (leadId) {
       setSelectedBookingLeadId(leadId);
-      setSelectedBookingId(booking.id); // Store booking ID
+      setSelectedBookingId(booking.id);
       setPaymentModalOpen(true);
     }
   };
@@ -471,27 +727,76 @@ const MyBookings = () => {
       const res = await axiosInstance.post(
         `/book/bookings/${uploadBookingId}/upload-signed-form/`,
         formData,
-        {
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
-        }
+        { headers: { "Content-Type": "multipart/form-data" } }
       );
 
       const updated = res.data;
-      // replace the row locally
-      setBookings((prev) =>
-        prev.map((b) => (b.id === updated.id ? updated : b))
-      );
+      setBookings((prev) => prev.map((b) => (b.id === updated.id ? updated : b)));
     } catch (err) {
       console.error("Failed to upload signed form", err);
       setError("Failed to upload signed form. Please try again.");
     } finally {
       setUploadingId(null);
       setUploadBookingId(null);
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
+  // ✅ Registration timeline modal handlers
+  const fetchRegTimeline = async (bookingObj) => {
+    try {
+      setRegLoading(true);
+      const data = await RegistrationAPI.timelineByBooking(bookingObj.id);
+      setRegTimeline(data);
+    } catch (err) {
+      console.error("Failed to load registration timeline", err);
+      toast.error("Failed to load registration timeline");
+      setRegTimeline(null);
+    } finally {
+      setRegLoading(false);
+    }
+  };
+
+  const openRegModal = (bookingObj) => {
+    setRegBooking(bookingObj);
+    setRegOpen(true);
+    fetchRegTimeline(bookingObj);
+  };
+
+  const closeRegModal = () => {
+    setRegOpen(false);
+    setRegBooking(null);
+    setRegTimeline(null);
+  };
+
+  // ✅ Shift button only on list (as you asked)
+  const handleShiftBooking = async (bookingObj) => {
+    if (bookingObj.is_shifted) {
+      toast("Already shifted");
+      return;
+    }
+
+    try {
+      const res = await BookingAPI.markShifted(bookingObj.id, {
+        note: "Shifted from MyBookings list",
+      });
+
+      toast.success("Booking shifted");
+
+      // patch row locally
+      setBookings((prev) =>
+        prev.map((x) => (x.id === bookingObj.id ? { ...x, is_shifted: true } : x))
+      );
+
+      // if modal open for same booking, refresh timeline
+      if (regOpen && regBooking?.id === bookingObj.id) {
+        fetchRegTimeline(bookingObj);
       }
+
+      return res;
+    } catch (err) {
+      const msg = err?.response?.data?.detail || "Failed to mark shifted";
+      toast.error(msg);
     }
   };
 
@@ -521,11 +826,7 @@ const MyBookings = () => {
 
           {/* RIGHT: Buttons */}
           <div className="list-header-right">
-            <button
-              type="button"
-              className="filter-btn"
-              onClick={handleAddClick}
-            >
+            <button type="button" className="filter-btn" onClick={handleAddClick}>
               <i className="fa fa-plus" style={{ marginRight: "6px" }} />
               New Booking
             </button>
@@ -547,7 +848,7 @@ const MyBookings = () => {
               <table className="booking-table">
                 <thead>
                   <tr>
-                    <th style={{ width: 110 }}>Action</th>
+                    <th style={{ width: 130 }}>Action</th>
                     <th>Booking ID</th>
                     <th>Customer Name</th>
                     <th>Project</th>
@@ -557,6 +858,7 @@ const MyBookings = () => {
                     <th>Status</th>
                   </tr>
                 </thead>
+
                 <tbody>
                   {filtered.length === 0 ? (
                     <tr>
@@ -584,9 +886,7 @@ const MyBookings = () => {
                               type="button"
                               className="booking-icon-btn"
                               title="Edit booking"
-                              onClick={() =>
-                                navigate(`/booking/form?booking_id=${b.id}`)
-                              }
+                              onClick={() => navigate(`/booking/form?booking_id=${b.id}`)}
                             >
                               ✏️
                             </button> */}
@@ -598,6 +898,27 @@ const MyBookings = () => {
                               onClick={() => navigate(`/booking/${b.id}`)}
                             >
                               👁
+                            </button>
+
+                            {/* ✅ Registration stages + history modal */}
+                            <button
+                              type="button"
+                              className="booking-icon-btn"
+                              title="Registration stages & history"
+                              onClick={() => openRegModal(b)}
+                            >
+                              🧭
+                            </button>
+
+                            {/* ✅ Shift button ONLY on list */}
+                            <button
+                              type="button"
+                              className="booking-icon-btn"
+                              title={b.is_shifted ? "Already shifted" : "Mark shifted"}
+                              onClick={() => handleShiftBooking(b)}
+                              disabled={!!b.is_shifted}
+                            >
+                              🚚
                             </button>
 
                             {/* Payment button - only show if booking has a lead */}
@@ -617,23 +938,19 @@ const MyBookings = () => {
                           </td>
 
                           <td>{bookingId}</td>
-                          <td>
-                            {b.primary_full_name
-                              ? toTitleCase(b.primary_full_name)
-                              : "-"}
-                          </td>
+
+                          <td>{b.primary_full_name ? toTitleCase(b.primary_full_name) : "-"}</td>
+
                           <td>
                             {b.project_name || b.project
                               ? toTitleCase(b.project_name || b.project)
                               : "-"}
                           </td>
-                          <td>
-                            {unitLabel !== "-" ? toTitleCase(unitLabel) : "-"}
-                          </td>
+
+                          <td>{unitLabel !== "-" ? toTitleCase(unitLabel) : "-"}</td>
 
                           <td className="booking-amount-cell">
-                            {b.total_advance != null &&
-                            b.total_advance !== "" ? (
+                            {b.total_advance != null && b.total_advance !== "" ? (
                               <>
                                 <span className="rupee-symbol">₹</span>{" "}
                                 {formatAmount(b.total_advance)}
@@ -643,24 +960,18 @@ const MyBookings = () => {
                             )}
                           </td>
 
-                          {/* 🔹 Signed form column */}
+                          {/* Signed form column */}
                           <td className="booking-actions-cell">
-                            {/* Upload button */}
                             <button
                               type="button"
                               className="booking-icon-btn"
-                              title={
-                                isUploading
-                                  ? "Uploading..."
-                                  : "Upload signed booking form"
-                              }
+                              title={isUploading ? "Uploading..." : "Upload signed booking form"}
                               onClick={() => handleUploadClick(b.id)}
                               disabled={isUploading}
                             >
                               {isUploading ? "⏳" : "📤"}
                             </button>
 
-                            {/* View/download if already uploaded */}
                             {b.signed_booking_file_url && (
                               <a
                                 href={b.signed_booking_file_url}
@@ -675,10 +986,7 @@ const MyBookings = () => {
                           </td>
 
                           <td>
-                            <span
-                              className="booking-status-pill"
-                              style={getStatusColor(b.status)}
-                            >
+                            <span className="booking-status-pill" style={getStatusColor(b.status)}>
                               {getStatusLabel(b.status)}
                             </span>
                           </td>
@@ -708,13 +1016,23 @@ const MyBookings = () => {
           leadId={parseInt(selectedBookingLeadId, 10)}
           bookingId={selectedBookingId ? parseInt(selectedBookingId, 10) : null}
           defaultPaymentType="BOOKING"
-          onCreated={() => {
-            // Payment created successfully
-          }}
+          onCreated={() => {}}
         />
       )}
+
+      {/* ✅ Registration Timeline Modal */}
+      <RegistrationTimelineModal
+        open={regOpen}
+        onClose={closeRegModal}
+        booking={regBooking}
+        timeline={regTimeline}
+        loading={regLoading}
+        onRefresh={() => regBooking && fetchRegTimeline(regBooking)}
+      />
     </div>
   );
 };
 
 export default MyBookings;
+
+

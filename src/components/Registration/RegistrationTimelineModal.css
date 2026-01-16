@@ -1,0 +1,288 @@
+.reg-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+  z-index: 9999;
+}
+
+.reg-modal {
+  width: min(1100px, 98vw);
+  background: #fff;
+  border-radius: 10px;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+  overflow: hidden;
+}
+
+.reg-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 14px 16px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.reg-title {
+  font-size: 16px;
+  font-weight: 800;
+  color: #111827;
+}
+
+.reg-subtitle {
+  margin-top: 2px;
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.reg-header-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.reg-btn {
+  padding: 8px 10px;
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.reg-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.reg-btn-shift {
+  border-color: #d1d5db;
+}
+
+.reg-modal-body {
+  padding: 14px 16px 18px;
+}
+
+.reg-loading {
+  padding: 30px 8px;
+  color: #6b7280;
+}
+
+/* ---------- Stage bar ---------- */
+
+.stage-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  overflow-x: auto;
+  padding: 10px 6px 14px;
+}
+
+.stage {
+  min-width: 170px;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 10px 10px;
+  background: #fff;
+  user-select: none;
+}
+
+.stage-clickable {
+  cursor: pointer;
+}
+
+.stage-disabled {
+  opacity: 0.65;
+}
+
+.stage-dot {
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 12px;
+  margin-bottom: 8px;
+  border: 2px solid #d1d5db;
+  color: #374151;
+}
+
+/* pending */
+.stage-pending {
+  background: #ffffff;
+}
+.stage-pending .stage-dot {
+  background: #f3f4f6;
+}
+
+/* done => blue */
+.stage-done {
+  border-color: #bfdbfe;
+  background: #eff6ff;
+}
+.stage-done .stage-dot {
+  border-color: #2563eb;
+  background: #2563eb;
+  color: #fff;
+}
+
+/* current => green */
+.stage-current {
+  border-color: #bbf7d0;
+  background: #f0fdf4;
+}
+.stage-current .stage-dot {
+  border-color: #16a34a;
+  background: #16a34a;
+  color: #fff;
+}
+
+.stage-name {
+  font-size: 13px;
+  font-weight: 800;
+  color: #111827;
+}
+
+.stage-small {
+  margin-top: 4px;
+  font-size: 11px;
+  color: #6b7280;
+}
+
+.stage-line {
+  width: 40px;
+  height: 2px;
+  background: #e5e7eb;
+  flex: 0 0 auto;
+}
+
+/* ---------- history ---------- */
+.reg-hint {
+  margin: 6px 2px 14px;
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.reg-history-title {
+  font-size: 13px;
+  font-weight: 900;
+  margin-bottom: 10px;
+}
+
+.reg-empty {
+  padding: 14px 6px;
+  color: #6b7280;
+  font-size: 13px;
+}
+
+.reg-history-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.reg-history-table th {
+  text-align: left;
+  font-size: 12px;
+  color: #374151;
+  padding: 10px 10px;
+  background: #f9fafb;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.reg-history-table td {
+  padding: 10px 10px;
+  border-bottom: 1px solid #f3f4f6;
+  font-size: 13px;
+  color: #111827;
+}
+
+/* ---------- confirm popup ---------- */
+.reg-confirm-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.35);
+  z-index: 10050; /* above modal overlay */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.reg-confirm-box {
+  width: min(520px, 96vw);
+  background: #fff;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 12px 30px rgba(0,0,0,0.25);
+  padding: 14px;
+}
+
+.reg-confirm-title {
+  font-size: 15px;
+  font-weight: 900;
+  color: #111827;
+}
+
+.reg-confirm-sub {
+  margin-top: 4px;
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.reg-confirm-label {
+  display: block;
+  margin-top: 12px;
+  font-size: 12px;
+  font-weight: 800;
+  color: #374151;
+}
+
+.reg-confirm-textarea {
+  width: 100%;
+  margin-top: 6px;
+  border: 1px solid #d1d5db;
+  border-radius: 10px;
+  padding: 10px;
+  font-size: 13px;
+  outline: none;
+}
+
+.reg-confirm-textarea:focus {
+  border-color: #102a54;
+}
+
+.reg-confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.reg-confirm-btn {
+  padding: 8px 12px;
+  border-radius: 10px;
+  font-weight: 900;
+  cursor: pointer;
+  border: 1px solid #e5e7eb;
+  background: #fff;
+}
+
+.reg-confirm-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.reg-confirm-ok {
+  border-color: #bfdbfe;
+  background: #eff6ff;
+}
+
+.reg-confirm-cancel {
+  background: #fff;
+}

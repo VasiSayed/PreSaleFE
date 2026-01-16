@@ -1,10 +1,11 @@
+import { useNavigate } from "react-router-dom";
 import React, { useState, useEffect, useMemo } from "react";
 import { Navigate, useParams, useSearchParams } from "react-router-dom";
-
 import { SetupAPI, URLS } from "../../../api/endpoints";
 import api from "../../../api/axiosInstance";
 import { showToast } from "../../../utils/toast";
 import "./SaleAddLead.css";
+
 
 function extractCityAndLocalityFromPostOffices(postOffices = []) {
   if (!Array.isArray(postOffices) || postOffices.length === 0) {
@@ -536,7 +537,7 @@ const SaleAddLead = ({ handleLeadSubmit, leadId: propLeadId }) => {
   const [searchParams] = useSearchParams(); // ⭐ NEW
   const { leadId: paramLeadId } = useParams();
   const [form, setForm] = useState(buildInitialFormState);
-
+const navigate = useNavigate();
   // Email OTP
   const [emailOtpSending, setEmailOtpSending] = useState(false);
   const [emailOtpVerifying, setEmailOtpVerifying] = useState(false);
@@ -1288,6 +1289,7 @@ useEffect(() => {
       setNormalCpSearch("");
       setNormalSelectedCpId("");
       setNormalCpType(CP_MODE.REGISTERED);
+      navigate("/leads", { replace: true });
     } catch (err) {
       console.error("Failed to save lead", err);
 
@@ -1315,10 +1317,11 @@ useEffect(() => {
       await api.patch(`/sales/sales-leads/${id}/address/`, addressPayload);
 
       showToast("Lead updated successfully", "success");
-      // Navigate("/leads");
+     
       if (typeof handleLeadSubmit === "function") {
         handleLeadSubmit({ id });
       }
+      navigate("/leads", { replace: true });
     } catch (err) {
       console.error("Failed to update lead", err);
       let msg = "Failed to update lead. Please check the data.";
