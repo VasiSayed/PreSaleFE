@@ -9175,8 +9175,8 @@ const handleCancelBooking = () => {
                         onClick={() => handleRemoveAdditionalApplicant(idx)}
                         style={{
                           position: "absolute",
-                          top: 0,
-                          right: 0,
+                          top: "-12px",
+                          right: "3px",
                           background: "transparent",
                           border: "none",
                           color: "#ef4444", // red color

@@ -150,12 +150,30 @@ const username = currentUser?.username || currentUser?.email || "";
     >
       {/* LEFT SECTION */}
       <div className="d-flex align-items-center">
-        <img
-          src={brandLogo || profileImg}
-          alt={headingText || "Company Logo"}
-          className="rounded-circle me-2"
-          style={{ width: "60px", height: "60px", marginLeft: 0 }}
-        />
+        <div
+          style={{
+            width: "60px",
+            height: "54px",
+            borderRadius: "50%",
+            backgroundColor: "white",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            overflow: "hidden",
+            marginLeft: 0,
+          }}
+          className="me-2"
+        >
+          <img
+            src={brandLogo || profileImg}
+            alt={headingText || "Company Logo"}
+            style={{
+              width: "88%",
+              height: "100%",
+              objectFit: "contain", // ensures full image fits inside
+            }}
+          />
+        </div>
         <span
           className="text-white"
           style={{
