@@ -188,7 +188,7 @@ export default function App() {
               />
 
               {/* Booking */}
-              {/* <Route path="/booking/form" element={<BookingForm />} /> */}
+              <Route path="/booking/form" element={<BookingForm />} />
               <Route path="/booking/list" element={<MyBookings />} />
               <Route path="/booking/:id" element={<BookingDetail />} />
               <Route path="/booking/approvals" element={<BookingApprovals />} />
