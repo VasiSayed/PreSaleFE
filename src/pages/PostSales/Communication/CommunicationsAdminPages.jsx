@@ -1,3 +1,4 @@
+// src/pages/PostSales/Communication/CommunicationsAdminPages.jsx
 import React, { useEffect, useMemo, useState } from "react";
 import axiosInstance from "../../../api/axiosInstance";
 
@@ -5,9 +6,9 @@ import "../Financial/DemandNotes.css";
 import "../../Booking/MyBookings.css";
 import "../../PreSalesCRM/Leads/LeadsList.css";
 import "../Financial/PaymentReceipts.css";
-
 /* ---------------- constants ---------------- */
 const DEFAULT_PAGE_SIZE = 30;
+
 const API_SCOPE = "/client/my-scope/";
 const SCOPE_PARAMS = { include_units: true };
 
@@ -22,7 +23,7 @@ const EP = {
   forumPosts: "/communications/forum-posts/",
 };
 
-/* ---------------- small utils ---------------- */
+/* ---------------- utils ---------------- */
 const safeList = (data) => {
   if (Array.isArray(data)) return data;
   if (Array.isArray(data?.results)) return data.results;
@@ -154,7 +155,9 @@ function flattenAllUnitsForProject(scope, projectId) {
       (f?.units || []).forEach((u) => {
         out.push({
           ...u,
-          __label: `${t.name} • Floor ${f.number} • Unit ${u.unit_no} (${u.status || "-"})`,
+          __label: `${t.name} • Floor ${f.number} • Unit ${u.unit_no} (${
+            u.status || "-"
+          })`,
         });
       });
     });
@@ -162,7 +165,7 @@ function flattenAllUnitsForProject(scope, projectId) {
   return out;
 }
 
-/* ---------------- shared UI: MultiSelect ---------------- */
+/* ---------------- MultiSelect ---------------- */
 function MultiSelect({
   value,
   onChange,
@@ -171,7 +174,6 @@ function MultiSelect({
   size = 6,
   disabled,
 }) {
-  const valSet = new Set((value || []).map((x) => String(x)));
   return (
     <select
       className="dn-select"
@@ -199,7 +201,7 @@ function MultiSelect({
   );
 }
 
-/* ---------------- shared UI: Audience Editor ---------------- */
+/* ---------------- Audience Editor ---------------- */
 function AudienceEditor({
   scope,
   formProjectId,
@@ -251,7 +253,7 @@ function AudienceEditor({
       className="dn-field dn-span-3"
       style={{ borderTop: "1px solid #eee", paddingTop: 10 }}
     >
-      <div style={{ fontWeight: 700, marginBottom: 8 }}>Audience</div>
+      <div style={{ fontWeight: 800, marginBottom: 8 }}>Audience</div>
 
       <div className="dn-grid">
         <div className="dn-field">
@@ -264,8 +266,8 @@ function AudienceEditor({
             />
             All (broadcast)
           </label>
-          <div className="dn-help" style={{ fontSize: 12, opacity: 0.8 }}>
-            If All is ON, you can still exclude units below.
+          <div style={{ fontSize: 12, opacity: 0.7 }}>
+            All ON ho to bhi unit exclude kar sakte ho.
           </div>
         </div>
 
@@ -368,9 +370,7 @@ function buildAudiencePayload(aud) {
   const pickNums = (arr) =>
     (arr || []).map((x) => Number(x)).filter((n) => Number.isFinite(n));
 
-  const out = {
-    all: !!aud.all,
-  };
+  const out = { all: !!aud.all };
 
   const userIds = parseIds(aud.user_ids_text);
   const groupIds = pickNums(aud.group_ids);
@@ -397,14 +397,21 @@ function CommsCrudPage({
   buildCreatePayload,
   buildUpdatePayload,
   formFields = [],
-  extraTopFilters = null, // optional JSX inside filter modal
-  onFormOpen = null, // optional callback (e.g. load event types)
+  extraTopFilters = null,
+  onFormOpen = null,
 }) {
   const { scope, scopeLoading, scopeError } = useMyScope();
+
   const me = useMemo(() => getStoredUser(), []);
   const canManage = isAdminUser(me);
 
-  // list filters
+  // auto select if only 1 project
+  const autoProjectId = useMemo(() => {
+    const ps = scope?.projects || [];
+    return ps.length === 1 ? String(ps[0].id) : "";
+  }, [scope]);
+
+  // list filters (list ke liye alag)
   const [openFilter, setOpenFilter] = useState(false);
   const [projectId, setProjectId] = useState("");
   const [towerId, setTowerId] = useState("");
@@ -421,16 +428,18 @@ function CommsCrudPage({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  // form
+  // form modal (add/edit ke liye alag)
   const [openForm, setOpenForm] = useState(false);
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState({});
   const [saving, setSaving] = useState(false);
 
-  // audience form state
+  // form scope (add/edit)
   const [formProjectId, setFormProjectId] = useState("");
   const [formTowerId, setFormTowerId] = useState("");
   const [formFloorId, setFormFloorId] = useState("");
+
+  // audience form state
   const [audience, setAudience] = useState({
     all: true,
     user_ids_text: "",
@@ -445,37 +454,60 @@ function CommsCrudPage({
   const [groupsForProject, setGroupsForProject] = useState([]);
 
   const towers = useMemo(
-    () => flattenTowers(scope, projectId),
-    [scope, projectId],
+    () => flattenTowers(scope, projectId || autoProjectId),
+    [scope, projectId, autoProjectId],
   );
   const floors = useMemo(
-    () => flattenFloors(scope, projectId, towerId),
-    [scope, projectId, towerId],
+    () => flattenFloors(scope, projectId || autoProjectId, towerId),
+    [scope, projectId, autoProjectId, towerId],
   );
   const units = useMemo(
-    () => flattenUnits(scope, projectId, towerId, floorId),
-    [scope, projectId, towerId, floorId],
+    () => flattenUnits(scope, projectId || autoProjectId, towerId, floorId),
+    [scope, projectId, autoProjectId, towerId, floorId],
   );
 
   const buildParams = () => {
     const p = { page_size: DEFAULT_PAGE_SIZE };
-    if (projectId) p.project_id = projectId;
+    const pid = projectId || autoProjectId;
+
+    if (pid) p.project_id = pid;
     if (towerId) p.tower_id = towerId;
     if (floorId) p.floor_id = floorId;
     if (unitId) p.unit_id = unitId;
+
     if (search.trim()) p.search = search.trim();
     if (ordering) p.ordering = ordering;
+
     return p;
   };
 
-  const fetchList = async (urlOrNull = null) => {
+  const fetchList = async (urlOrNull = null, paramsOverride = null) => {
     setLoading(true);
     setError("");
-    try {
-      const res = urlOrNull
-        ? await axiosInstance.get(urlOrNull)
-        : await axiosInstance.get(endpoint, { params: buildParams() });
 
+    try {
+      // pagination url already has params -> no need guard
+      if (!urlOrNull) {
+        const params = paramsOverride || buildParams();
+        if (!params.project_id) {
+          setRows([]);
+          setCount(0);
+          setNextUrl(null);
+          setPrevUrl(null);
+          setError("Select Project from Filters (project_id is required).");
+          setLoading(false);
+          return;
+        }
+        const res = await axiosInstance.get(endpoint, { params });
+        const norm = normalizePaginated(res.data);
+        setRows(norm.results || []);
+        setCount(norm.count || 0);
+        setNextUrl(norm.next || null);
+        setPrevUrl(norm.previous || null);
+        return;
+      }
+
+      const res = await axiosInstance.get(urlOrNull);
       const norm = normalizePaginated(res.data);
       setRows(norm.results || []);
       setCount(norm.count || 0);
@@ -493,11 +525,18 @@ function CommsCrudPage({
     }
   };
 
-  // mount
+  // auto select project & auto fetch if single project
   useEffect(() => {
-    fetchList();
+    if (!scope || scopeLoading) return;
+    if (!projectId && autoProjectId) {
+      setProjectId(autoProjectId);
+      fetchList(null, {
+        page_size: DEFAULT_PAGE_SIZE,
+        project_id: autoProjectId,
+      });
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [scope, scopeLoading, autoProjectId]);
 
   // reset dependent filters
   useEffect(() => {
@@ -516,14 +555,23 @@ function CommsCrudPage({
   }, [floorId]);
 
   const resetAll = () => {
-    setProjectId("");
+    const pid = autoProjectId || "";
+    setProjectId(pid);
     setTowerId("");
     setFloorId("");
     setUnitId("");
     setSearch("");
     setOrdering("");
-    // safe fetch without depending on async state:
-    fetchList(endpoint);
+
+    if (pid) {
+      fetchList(null, { page_size: DEFAULT_PAGE_SIZE, project_id: pid });
+    } else {
+      setRows([]);
+      setCount(0);
+      setNextUrl(null);
+      setPrevUrl(null);
+      setError("Select Project from Filters (project_id is required).");
+    }
   };
 
   const closeFilter = () => setOpenFilter(false);
@@ -547,11 +595,12 @@ function CommsCrudPage({
   };
 
   const openCreate = () => {
+    const pid = projectId || autoProjectId || "";
     setEditing(null);
     setForm({});
-    setFormProjectId(projectId || "");
-    setFormTowerId(towerId || "");
-    setFormFloorId(floorId || "");
+    setFormProjectId(pid);
+    setFormTowerId("");
+    setFormFloorId("");
     setAudience({
       all: true,
       user_ids_text: "",
@@ -561,15 +610,17 @@ function CommsCrudPage({
       exclude_unit_ids: [],
     });
     setOpenForm(true);
-    if (withAudience) loadGroupsForProject(projectId || "");
-    if (onFormOpen) onFormOpen({ projectId: projectId || "" });
+    if (withAudience) loadGroupsForProject(pid);
+    if (onFormOpen) onFormOpen({ projectId: pid });
   };
 
   const openEdit = (item) => {
     setEditing(item);
-    const pid = String(item?.project || item?.project_id || projectId || "");
+    const pid = String(
+      item?.project || item?.project_id || projectId || autoProjectId || "",
+    );
     setFormProjectId(pid);
-    setFormTowerId(""); // only for floor picker in audience editor
+    setFormTowerId("");
     setFormFloorId("");
     setForm(item || {});
     setAudience({
@@ -636,10 +687,10 @@ function CommsCrudPage({
         {/* Header */}
         <div className="list-header">
           <div className="list-header-left">
-            <div style={{ fontWeight: 800, fontSize: 16 }}>{pageTitle}</div>
-            <div style={{ fontSize: 12, opacity: 0.7 }}>
+            <div style={{ fontWeight: 900, fontSize: 16 }}>{pageTitle}</div>
+            <div style={{ fontSize: 12, opacity: 0.75 }}>
               Role: {me?.role || "-"}{" "}
-              {scope?.admin_id ? ` • scope admin_id: ${scope.admin_id}` : ""}
+              {scope?.admin_id ? `• scope admin_id: ${scope.admin_id}` : ""}
             </div>
           </div>
 
@@ -798,7 +849,11 @@ function CommsCrudPage({
 
         {/* Filter Modal */}
         {openFilter ? (
-          <div className="dn-modal-overlay" onMouseDown={closeFilter}>
+          <div
+            className="dn-modal-overlay"
+            onMouseDown={closeFilter}
+            style={{ zIndex: 99999 }}
+          >
             <div
               className="dn-modal dn-modal-wide"
               onMouseDown={(e) => e.stopPropagation()}
@@ -815,15 +870,18 @@ function CommsCrudPage({
               <div className="dn-modal-body">
                 <div className="dn-grid">
                   <div className="dn-field">
-                    <label>Project</label>
+                    <label>Project *</label>
                     <select
                       className="dn-select"
-                      value={projectId}
+                      value={projectId || autoProjectId}
                       onChange={(e) => setProjectId(e.target.value)}
-                      disabled={scopeLoading}
+                      disabled={scopeLoading || !!autoProjectId}
+                      title={
+                        autoProjectId ? "Auto selected (single project)" : ""
+                      }
                     >
                       <option value="">
-                        {scopeLoading ? "Loading..." : "All Projects"}
+                        {scopeLoading ? "Loading..." : "Select Project"}
                       </option>
                       {(scope?.projects || []).map((p) => (
                         <option key={p.id} value={p.id}>
@@ -842,10 +900,12 @@ function CommsCrudPage({
                       className="dn-select"
                       value={towerId}
                       onChange={(e) => setTowerId(e.target.value)}
-                      disabled={!projectId}
+                      disabled={!(projectId || autoProjectId)}
                     >
                       <option value="">
-                        {!projectId ? "Select project first" : "All Towers"}
+                        {!(projectId || autoProjectId)
+                          ? "Select project first"
+                          : "All Towers"}
                       </option>
                       {towers.map((t) => (
                         <option key={t.id} value={t.id}>
@@ -919,7 +979,11 @@ function CommsCrudPage({
 
         {/* Form Modal (Add/Edit) */}
         {openForm ? (
-          <div className="dn-modal-overlay" onMouseDown={closeForm}>
+          <div
+            className="dn-modal-overlay"
+            onMouseDown={closeForm}
+            style={{ zIndex: 99999 }}
+          >
             <div
               className="dn-modal dn-modal-wide"
               onMouseDown={(e) => e.stopPropagation()}
@@ -927,7 +991,7 @@ function CommsCrudPage({
               <div className="dn-modal-header">
                 <div className="dn-modal-header-left dn-modal-header-left-center">
                   <div className="dn-modal-title">
-                    {editing ? `Edit` : `Add`} {pageTitle}
+                    {editing ? "Edit" : "Add"} {pageTitle}
                   </div>
                 </div>
                 <button className="dn-close-btn" onClick={closeForm}>
@@ -943,7 +1007,7 @@ function CommsCrudPage({
                       className="dn-select"
                       value={formProjectId}
                       onChange={(e) => setFormProjectId(e.target.value)}
-                      disabled={scopeLoading}
+                      disabled={scopeLoading || !!autoProjectId}
                     >
                       <option value="">
                         {scopeLoading ? "Loading..." : "Select Project"}
@@ -1069,7 +1133,9 @@ function CommsCrudPage({
   );
 }
 
-/* ---------------- PAGES ---------------- */
+/* =========================
+   PAGES
+========================= */
 
 /** 1) Groups */
 export function CommsGroupsPage() {
@@ -1271,7 +1337,7 @@ export function CommsNoticesPage() {
   );
 }
 
-/** 4) Events (needs Event Types list for select) */
+/** 4) Events */
 export function CommsEventsPage() {
   const [eventTypes, setEventTypes] = useState([]);
   const [etLoading, setEtLoading] = useState(false);
@@ -1331,9 +1397,7 @@ export function CommsEventsPage() {
         },
       ]}
       withAudience={true}
-      onFormOpen={({ projectId }) => {
-        loadEventTypes(projectId);
-      }}
+      onFormOpen={({ projectId }) => loadEventTypes(projectId)}
       formFields={[
         {
           name: "event_type",
@@ -1370,8 +1434,6 @@ export function CommsEventsPage() {
         event_type: Number(form.event_type),
         title: form.title || "",
         description: form.description || "",
-        // backend expects ISO with timezone usually; datetime-local gives "YYYY-MM-DDTHH:mm"
-        // if your backend needs +05:30, you already send local string; adjust if needed
         start_at: form.start_at || null,
         end_at: form.end_at || null,
         location_text: form.location_text || "",
@@ -1395,7 +1457,7 @@ export function CommsEventsPage() {
   );
 }
 
-/** 5) Polls (NOTE: options missing in your spec – adjust payload once you confirm key) */
+/** 5) Polls */
 export function CommsPollsPage() {
   return (
     <CommsCrudPage
@@ -1438,7 +1500,7 @@ export function CommsPollsPage() {
         },
         {
           name: "options_text",
-          label: "Options (one per line)  ⚠️ confirm backend key",
+          label: "Options (one per line)",
           type: "textarea",
           rows: 6,
           span3: true,
@@ -1454,8 +1516,7 @@ export function CommsPollsPage() {
           question: form.question || "",
           allow_multi_select: !!form.allow_multi_select,
           audience: audPayload || { all: true },
-          // ⚠️ Change this key if your backend uses something else
-          ...(options.length ? { options } : {}),
+          ...(options.length ? { options } : {}), // change key if backend differs
         };
       }}
       buildUpdatePayload={({ form, formProjectId, audPayload }) => ({
@@ -1468,7 +1529,7 @@ export function CommsPollsPage() {
   );
 }
 
-/** 6) Surveys (NOTE: sections/questions endpoints missing – this creates only the survey container) */
+/** 6) Surveys */
 export function CommsSurveysPage() {
   return (
     <CommsCrudPage
@@ -1527,7 +1588,7 @@ export function CommsSurveysPage() {
   );
 }
 
-/** 7) Forums (Categories + Posts in one page) */
+/** 7) Forums (Categories + Posts) */
 export function CommsForumsPage() {
   const [tab, setTab] = useState("categories"); // categories | posts
 
