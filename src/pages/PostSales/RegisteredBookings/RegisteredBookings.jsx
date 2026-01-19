@@ -28,6 +28,17 @@ function debounce(fn, delay) {
   };
 }
 
+// ✅ small helper: copy to clipboard
+async function copyText(text) {
+  try {
+    if (!text) return;
+    await navigator.clipboard.writeText(String(text));
+    toast.success("Copied");
+  } catch {
+    toast.error("Copy failed");
+  }
+}
+
 const RegisteredBookings = () => {
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -49,6 +60,11 @@ const RegisteredBookings = () => {
   const [regBooking, setRegBooking] = useState(null);
   const [regTimeline, setRegTimeline] = useState(null);
   const [regLoading, setRegLoading] = useState(false);
+
+  // ✅ CRM credentials modal
+  const [crmOpen, setCrmOpen] = useState(false);
+  const [crmInfo, setCrmInfo] = useState(null); // { bookingId, customerId, username, email, tempPassword, note }
+  const [crmResetLoading, setCrmResetLoading] = useState(false);
 
   const navigate = useNavigate();
 
@@ -167,6 +183,97 @@ const RegisteredBookings = () => {
     bookings.length === 0
       ? "0 of 0"
       : `1-${filtered.length} of ${bookings.length}`;
+
+  // ✅ Open CRM modal from API payload
+  const openCrmModal = (bookingId, payload) => {
+    const p = payload || {};
+    setCrmInfo({
+      bookingId,
+      customerId: p.customer_id ?? null,
+      username: p.customer_username ?? "",
+      email: p.customer_email ?? "",
+      tempPassword: p.customer_temp_password ?? null,
+      note: p.note ?? "",
+    });
+    setCrmOpen(true);
+  };
+
+  // ✅ Enable CRM -> then show popup modal
+  const handleEnableCRM = async (booking) => {
+    const bookingId = booking?.id;
+    if (!bookingId) return;
+
+    try {
+      toast.loading("Enabling CRM...", { id: `crm-${bookingId}` });
+
+      const res = await axiosInstance.post(
+        `/book/bookings/${bookingId}/create-customer/`
+      );
+      const payload = res?.data || {};
+      const customerId = payload?.customer_id ?? null;
+
+      // ✅ update list row locally (no need refetch)
+      setBookings((prev) =>
+        prev.map((b) =>
+          b.id === bookingId
+            ? { ...b, lead_customer_linked: true, lead_customer_id: customerId }
+            : b
+        )
+      );
+
+      toast.success("CRM Enabled", { id: `crm-${bookingId}` });
+
+      // ✅ show modal with credentials
+      openCrmModal(bookingId, payload);
+    } catch (err) {
+      console.error("Enable CRM failed", err);
+      const msg =
+        err?.response?.data?.detail ||
+        err?.response?.data?.message ||
+        "Failed to enable CRM";
+      toast.error(msg, { id: `crm-${bookingId}` });
+    }
+  };
+
+  // ✅ Reset password from modal
+  const handleResetCustomerPassword = async () => {
+    const bookingId = crmInfo?.bookingId;
+    if (!bookingId) return;
+
+    try {
+      setCrmResetLoading(true);
+      toast.loading("Resetting password...", { id: `crmreset-${bookingId}` });
+
+      const res = await axiosInstance.post(
+        `/book/bookings/${bookingId}/reset-customer-password/`
+      );
+      const payload = res?.data || {};
+
+      setCrmInfo((prev) => ({
+        ...(prev || {}),
+        tempPassword: payload.customer_temp_password ?? null,
+        username: payload.customer_username ?? prev?.username ?? "",
+        email: payload.customer_email ?? prev?.email ?? "",
+        note: payload.note ?? prev?.note ?? "",
+      }));
+
+      toast.success("Password reset done", { id: `crmreset-${bookingId}` });
+    } catch (err) {
+      console.error("Reset password failed", err);
+      const msg =
+        err?.response?.data?.detail ||
+        err?.response?.data?.message ||
+        "Failed to reset password";
+      toast.error(msg);
+    } finally {
+      setCrmResetLoading(false);
+    }
+  };
+
+  const closeCrmModal = () => {
+    setCrmOpen(false);
+    setCrmInfo(null);
+  };
 
   // upload icon click
   const handleUploadClick = (bookingId) => {
@@ -309,10 +416,8 @@ const RegisteredBookings = () => {
                     <th>Unit</th>
                     <th>Advance Amount</th>
                     <th>Signed Form</th>
-
-                    {/* ✅ NEW COLUMN */}
+                    <th>CRM</th>
                     <th>Registration</th>
-
                     <th>Status</th>
                   </tr>
                 </thead>
@@ -320,7 +425,7 @@ const RegisteredBookings = () => {
                 <tbody>
                   {filtered.length === 0 ? (
                     <tr>
-                      <td colSpan={9} className="booking-empty-row">
+                      <td colSpan={10} className="booking-empty-row">
                         No bookings found.
                       </td>
                     </tr>
@@ -336,7 +441,6 @@ const RegisteredBookings = () => {
                         "-";
 
                       const isUploading = uploadingId === b.id;
-
                       const regDone = !!b.is_registration_done;
 
                       return (
@@ -372,7 +476,6 @@ const RegisteredBookings = () => {
                               🧭
                             </button>
 
-                            {/* ✅ Shift button REMOVED */}
                             {/* ✅ Payment button */}
                             {(b.sales_id ||
                               b.sales_lead ||
@@ -448,7 +551,35 @@ const RegisteredBookings = () => {
                             )}
                           </td>
 
-                          {/* ✅ NEW: Registration Done / Not Done */}
+                          {/* ✅ CRM column */}
+                          <td>
+                            {b.lead_customer_linked ? (
+                              <span
+                                className="booking-status-pill"
+                                style={{
+                                  backgroundColor: "#dcfce7",
+                                  color: "#166534",
+                                }}
+                                title={`Customer ID: ${
+                                  b.lead_customer_id || "-"
+                                }`}
+                              >
+                                CRM Enabled
+                              </span>
+                            ) : (
+                              <button
+                                type="button"
+                                className="filter-btn"
+                                style={{ padding: "6px 10px" }}
+                                onClick={() => handleEnableCRM(b)}
+                                title="Create/Link customer for this booking lead"
+                              >
+                                Enable CRM
+                              </button>
+                            )}
+                          </td>
+
+                          {/* ✅ Registration Done / Not Done */}
                           <td>
                             <span
                               className="booking-status-pill"
@@ -506,6 +637,215 @@ const RegisteredBookings = () => {
         loading={regLoading}
         onRefresh={() => regBooking && fetchRegTimeline(regBooking)}
       />
+
+      {/* ✅ CRM Credentials Modal */}
+      {crmOpen && crmInfo && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.45)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 9999,
+            padding: 16,
+          }}
+          onClick={closeCrmModal}
+        >
+          <div
+            style={{
+              width: "100%",
+              maxWidth: 520,
+              background: "#fff",
+              borderRadius: 12,
+              boxShadow: "0 18px 50px rgba(0,0,0,0.20)",
+              padding: 18,
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                gap: 12,
+              }}
+            >
+              <div>
+                <div style={{ fontSize: 18, fontWeight: 700 }}>Linked CRM</div>
+                <div style={{ fontSize: 12, color: "#6b7280", marginTop: 2 }}>
+                  Booking #{crmInfo.bookingId} • Customer #
+                  {crmInfo.customerId || "-"}
+                </div>
+              </div>
+              <button
+                type="button"
+                className="booking-icon-btn"
+                title="Close"
+                onClick={closeCrmModal}
+              >
+                ✖
+              </button>
+            </div>
+
+            <div style={{ marginTop: 14, display: "grid", gap: 10 }}>
+              {/* Username */}
+              <div
+                style={{
+                  border: "1px solid #e5e7eb",
+                  borderRadius: 10,
+                  padding: 10,
+                }}
+              >
+                <div style={{ fontSize: 12, color: "#6b7280" }}>Username</div>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    gap: 10,
+                  }}
+                >
+                  <div style={{ fontWeight: 700 }}>
+                    {crmInfo.username || "-"}
+                  </div>
+                  <button
+                    type="button"
+                    className="filter-btn"
+                    style={{ padding: "6px 10px" }}
+                    onClick={() => copyText(crmInfo.username)}
+                    disabled={!crmInfo.username}
+                  >
+                    Copy
+                  </button>
+                </div>
+              </div>
+
+              {/* Email */}
+              <div
+                style={{
+                  border: "1px solid #e5e7eb",
+                  borderRadius: 10,
+                  padding: 10,
+                }}
+              >
+                <div style={{ fontSize: 12, color: "#6b7280" }}>Email</div>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    gap: 10,
+                  }}
+                >
+                  <div style={{ fontWeight: 600 }}>{crmInfo.email || "-"}</div>
+                  <button
+                    type="button"
+                    className="filter-btn"
+                    style={{ padding: "6px 10px" }}
+                    onClick={() => copyText(crmInfo.email)}
+                    disabled={!crmInfo.email}
+                  >
+                    Copy
+                  </button>
+                </div>
+              </div>
+
+              {/* Password / Reset */}
+              {crmInfo.tempPassword ? (
+                <div
+                  style={{
+                    border: "1px solid #e5e7eb",
+                    borderRadius: 10,
+                    padding: 10,
+                  }}
+                >
+                  <div style={{ fontSize: 12, color: "#6b7280" }}>
+                    Temp Password (one-time)
+                  </div>
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      gap: 10,
+                    }}
+                  >
+                    <div style={{ fontWeight: 800 }}>
+                      {crmInfo.tempPassword}
+                    </div>
+                    <button
+                      type="button"
+                      className="filter-btn"
+                      style={{ padding: "6px 10px" }}
+                      onClick={() => copyText(crmInfo.tempPassword)}
+                    >
+                      Copy
+                    </button>
+                  </div>
+                  <div style={{ marginTop: 6, fontSize: 12, color: "#b45309" }}>
+                    Ask customer to change password after login.
+                  </div>
+                </div>
+              ) : (
+                <div
+                  style={{
+                    border: "1px dashed #e5e7eb",
+                    borderRadius: 10,
+                    padding: 10,
+                    background: "#fafafa",
+                  }}
+                >
+                  <div style={{ fontSize: 12, color: "#6b7280" }}>
+                    Password not available (existing customer)
+                  </div>
+                  <div style={{ marginTop: 10, display: "flex", gap: 10 }}>
+                    <button
+                      type="button"
+                      className="filter-btn"
+                      onClick={handleResetCustomerPassword}
+                      disabled={crmResetLoading}
+                      style={{ padding: "8px 12px" }}
+                    >
+                      {crmResetLoading ? "Resetting..." : "Reset Password"}
+                    </button>
+
+                    <button
+                      type="button"
+                      className="filter-btn"
+                      onClick={closeCrmModal}
+                      style={{ padding: "8px 12px", background: "#f3f4f6" }}
+                    >
+                      Close
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {crmInfo.note ? (
+                <div style={{ fontSize: 12, color: "#6b7280" }}>
+                  {crmInfo.note}
+                </div>
+              ) : null}
+            </div>
+
+            <div
+              style={{
+                marginTop: 14,
+                display: "flex",
+                justifyContent: "flex-end",
+                gap: 10,
+              }}
+            >
+              <button
+                type="button"
+                className="filter-btn"
+                style={{ padding: "8px 12px", background: "#f3f4f6" }}
+                onClick={closeCrmModal}
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

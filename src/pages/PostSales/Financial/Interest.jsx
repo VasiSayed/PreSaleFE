@@ -17,6 +17,16 @@ const API_APPLY_INTEREST = "financial/demand-notes/manual-interest/";
 
 const DEFAULT_PAGE_SIZE = 30;
 
+const REASON_CODES = [
+  { value: "MANUAL_INTEREST", label: "Manual Interest" },
+  { value: "MANUAL_INTEREST_AMOUNT", label: "Manual Interest (Amount)" },
+  { value: "OVERDUE_INTEREST", label: "Overdue Interest" },
+  { value: "MANUAL_WAIVE_OFF", label: "Manual Waive Off" },
+  { value: "SETTLEMENT", label: "Settlement" },
+  { value: "DISCOUNT_ADJUSTMENT", label: "Discount / Adjustment" },
+  { value: "OTHER", label: "Other (Custom)" },
+];
+
 const INR = new Intl.NumberFormat("en-IN", {
   maximumFractionDigits: 2,
   minimumFractionDigits: 2,
@@ -60,6 +70,12 @@ function absApiUrl(path, axiosInstance) {
 }
 
 function normalizePercent(v) {
+  const n = Number(v);
+  if (!Number.isFinite(n)) return "";
+  return n.toFixed(2);
+}
+
+function normalizeAmount(v) {
   const n = Number(v);
   if (!Number.isFinite(n)) return "";
   return n.toFixed(2);
@@ -129,17 +145,38 @@ export default function Interest() {
   // Apply Interest Modal
   // -------------------------
   const [openInterest, setOpenInterest] = useState(false);
+
+  // ✅ apply mode
+  const [applyMode, setApplyMode] = useState("PERCENT"); // PERCENT | AMOUNT
+
+  // percent inputs
   const [quickPercent, setQuickPercent] = useState("");
   const [customPercent, setCustomPercent] = useState("");
+
+  // amount input
+  const [amount, setAmount] = useState("");
+
+  // waive toggle
   const [waiveoff, setWaiveoff] = useState(false);
+
+  // reason_code
+  const [reasonPreset, setReasonPreset] = useState("MANUAL_INTEREST");
+  const [reasonCustom, setReasonCustom] = useState("");
+
   const [note, setNote] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   const effectivePercent = useMemo(() => {
-    if (waiveoff) return "0.00";
     const base = quickPercent !== "" ? quickPercent : customPercent;
     return normalizePercent(base);
-  }, [waiveoff, quickPercent, customPercent]);
+  }, [quickPercent, customPercent]);
+
+  const effectiveAmount = useMemo(() => normalizeAmount(amount), [amount]);
+
+  const effectiveReasonCode = useMemo(() => {
+    if (reasonPreset === "OTHER") return (reasonCustom || "").trim();
+    return reasonPreset;
+  }, [reasonPreset, reasonCustom]);
 
   // -------------------------
   // Build params
@@ -252,9 +289,17 @@ export default function Interest() {
   // -------------------------
   const openInterestModal = () => {
     if (!selectedCount) return;
+
+    setApplyMode("PERCENT");
     setQuickPercent("");
     setCustomPercent("");
+    setAmount("");
+
     setWaiveoff(false);
+
+    setReasonPreset("MANUAL_INTEREST");
+    setReasonCustom("");
+
     setNote("");
     setOpenInterest(true);
   };
@@ -264,41 +309,61 @@ export default function Interest() {
     setOpenInterest(false);
   };
 
+  const validateBeforeSubmit = () => {
+    if (!projectId) return "Project not selected.";
+    if (!selectedCount) return "Select at least 1 demand note.";
+
+    if (!effectiveReasonCode) return "Select a reason code (or enter custom).";
+
+    if (applyMode === "PERCENT") {
+      if (!effectivePercent || Number(effectivePercent) <= 0) {
+        return "Enter a valid percent (>0).";
+      }
+    } else {
+      if (!effectiveAmount || Number(effectiveAmount) <= 0) {
+        return "Enter a valid amount (>0).";
+      }
+    }
+    return "";
+  };
+
   const submitManualInterest = async () => {
     setError("");
     setSuccessMsg("");
 
-    if (!projectId) {
-      setError("Project not selected.");
-      return;
-    }
-    if (!selectedCount) {
-      setError("Select at least 1 demand note.");
-      return;
-    }
-    if (!waiveoff && (!effectivePercent || Number(effectivePercent) <= 0)) {
-      setError("Enter a valid interest %.");
+    const v = validateBeforeSubmit();
+    if (v) {
+      setError(v);
       return;
     }
 
     const payload = {
       demand_note_ids: selectedIds,
-      interest_percent: effectivePercent,
       waiveoff: Boolean(waiveoff),
       note: String(note || ""),
-      reason_code: "MANUAL_INTEREST",
+      reason_code: effectiveReasonCode,
     };
+
+    // ✅ only one of them
+    if (applyMode === "PERCENT") {
+      payload.interest_percent = effectivePercent;
+    } else {
+      payload.amount = effectiveAmount;
+    }
 
     setSubmitting(true);
     try {
-      await axiosInstance.post(API_APPLY_INTEREST, payload);
+      const res = await axiosInstance.post(API_APPLY_INTEREST, payload);
+
+      const applied = Number(res?.data?.applied_count ?? 0);
+      const skipped = Number(res?.data?.skipped_count ?? 0);
 
       setOpenInterest(false);
       setSelected(new Set());
       setSuccessMsg(
-        waiveoff
-          ? "Waive-off applied successfully."
-          : "Interest applied successfully."
+        `${waiveoff ? "Waive-off" : "Interest"} applied. Applied: ${applied}${
+          skipped ? `, Skipped: ${skipped}` : ""
+        }.`
       );
 
       fetchList();
@@ -315,6 +380,12 @@ export default function Interest() {
       setSubmitting(false);
     }
   };
+
+  // keep reason default in sync when toggle waiveoff
+  useEffect(() => {
+    setReasonPreset(waiveoff ? "MANUAL_WAIVE_OFF" : "MANUAL_INTEREST");
+    setReasonCustom("");
+  }, [waiveoff]);
 
   // -------------------------
   // Render
@@ -343,7 +414,7 @@ export default function Interest() {
               disabled={!selectedCount || loading}
               title={!selectedCount ? "Select at least 1 DN" : "Apply interest"}
             >
-              APPLY INTEREST
+              APPLY
             </button>
 
             <button
@@ -563,7 +634,6 @@ export default function Interest() {
                       <option value="Overdue">Overdue</option>
                       <option value="Paid">Paid</option>
                       <option value="Draft">Draft</option>
-                      <option value="Waived Off">Waived Off</option>
                     </select>
                   </div>
 
@@ -671,55 +741,9 @@ export default function Interest() {
               </div>
 
               <div className="dn-modal-body">
-                <div
-                  style={{
-                    display: "flex",
-                    gap: 12,
-                    marginBottom: 12,
-                    flexWrap: "wrap",
-                  }}
-                >
-                  {["2", "5", "10"].map((p) => (
-                    <button
-                      key={p}
-                      className="dn-btn dn-btn-light"
-                      disabled={waiveoff}
-                      onClick={() => {
-                        setWaiveoff(false);
-                        setQuickPercent(p);
-                        setCustomPercent("");
-                      }}
-                      style={{
-                        border:
-                          quickPercent === p ? "2px solid #102a54" : undefined,
-                      }}
-                    >
-                      {p}%
-                    </button>
-                  ))}
-                </div>
-
+                {/* action */}
                 <div className="dn-field dn-mb">
-                  <label>Interest % (custom)</label>
-                  <input
-                    className="dn-input"
-                    placeholder="e.g. 2.50"
-                    value={customPercent}
-                    disabled={waiveoff}
-                    onChange={(e) => {
-                      setWaiveoff(false);
-                      setQuickPercent("");
-                      setCustomPercent(e.target.value);
-                    }}
-                  />
-                  <div className="dn-help">
-                    interest_percent: <b>{effectivePercent || "-"}</b> |
-                    reason_code: <b>MANUAL_INTEREST</b>
-                  </div>
-                </div>
-
-                <div className="dn-field dn-mb">
-                  <label>Waive Off</label>
+                  <label>Action</label>
                   <div
                     style={{ display: "flex", alignItems: "center", gap: 12 }}
                   >
@@ -731,18 +755,150 @@ export default function Interest() {
                       />
                       <span className="dn-slider" />
                     </label>
-
                     <div className="dn-help" style={{ marginTop: 0 }}>
-                      If ON → interest_percent becomes <b>0.00</b>
+                      {waiveoff ? <b>Waive Off</b> : <b>Charge</b>}
                     </div>
                   </div>
                 </div>
 
+                {/* mode */}
+                <div className="dn-field dn-mb">
+                  <label>Apply Mode</label>
+                  <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                    <button
+                      type="button"
+                      className="dn-btn dn-btn-light"
+                      onClick={() => setApplyMode("PERCENT")}
+                      style={{
+                        border:
+                          applyMode === "PERCENT"
+                            ? "2px solid #102a54"
+                            : undefined,
+                      }}
+                    >
+                      Percent
+                    </button>
+                    <button
+                      type="button"
+                      className="dn-btn dn-btn-light"
+                      onClick={() => setApplyMode("AMOUNT")}
+                      style={{
+                        border:
+                          applyMode === "AMOUNT"
+                            ? "2px solid #102a54"
+                            : undefined,
+                      }}
+                    >
+                      Amount
+                    </button>
+                  </div>
+                  <div className="dn-help">
+                    Send only one: <b>interest_percent</b> OR <b>amount</b>
+                  </div>
+                </div>
+
+                {/* percent */}
+                {applyMode === "PERCENT" ? (
+                  <>
+                    <div
+                      style={{
+                        display: "flex",
+                        gap: 12,
+                        marginBottom: 12,
+                        flexWrap: "wrap",
+                      }}
+                    >
+                      {["2", "5", "10"].map((p) => (
+                        <button
+                          key={p}
+                          className="dn-btn dn-btn-light"
+                          onClick={() => {
+                            setQuickPercent(p);
+                            setCustomPercent("");
+                          }}
+                          style={{
+                            border:
+                              quickPercent === p
+                                ? "2px solid #102a54"
+                                : undefined,
+                          }}
+                        >
+                          {p}%
+                        </button>
+                      ))}
+                    </div>
+
+                    <div className="dn-field dn-mb">
+                      <label>Percent (custom)</label>
+                      <input
+                        className="dn-input"
+                        placeholder="e.g. 2.50"
+                        value={customPercent}
+                        onChange={(e) => {
+                          setQuickPercent("");
+                          setCustomPercent(e.target.value);
+                        }}
+                      />
+                      <div className="dn-help">
+                        interest_percent: <b>{effectivePercent || "-"}</b>
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <div className="dn-field dn-mb">
+                    <label>Amount (₹)</label>
+                    <input
+                      className="dn-input"
+                      placeholder="e.g. 5000.00"
+                      value={amount}
+                      onChange={(e) => setAmount(e.target.value)}
+                    />
+                    <div className="dn-help">
+                      amount: <b>{effectiveAmount || "-"}</b>
+                    </div>
+                  </div>
+                )}
+
+                {/* reason_code */}
+                <div className="dn-field dn-mb">
+                  <label>Reason Code</label>
+                  <select
+                    className="dn-select"
+                    value={reasonPreset}
+                    onChange={(e) => setReasonPreset(e.target.value)}
+                  >
+                    {REASON_CODES.map((x) => (
+                      <option key={x.value} value={x.value}>
+                        {x.label}
+                      </option>
+                    ))}
+                  </select>
+
+                  {reasonPreset === "OTHER" ? (
+                    <div style={{ marginTop: 8 }}>
+                      <input
+                        className="dn-input"
+                        placeholder="Enter custom reason_code (e.g. CUSTOMER_DISCOUNT)"
+                        value={reasonCustom}
+                        onChange={(e) => setReasonCustom(e.target.value)}
+                      />
+                      <div className="dn-help">
+                        reason_code: <b>{effectiveReasonCode || "-"}</b>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="dn-help">
+                      reason_code: <b>{effectiveReasonCode}</b>
+                    </div>
+                  )}
+                </div>
+
+                {/* note */}
                 <div className="dn-field">
                   <label>Note (optional)</label>
                   <input
                     className="dn-input"
-                    placeholder="manual interest"
+                    placeholder="manual interest / waive off note"
                     value={note}
                     onChange={(e) => setNote(e.target.value)}
                   />

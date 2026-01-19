@@ -282,11 +282,6 @@ const sections = useMemo(() => {
             label: "Demand Note",
             route: "/post-sales/financial/demand-notes",
           },
-          {
-            id: "fin-customer-demand-notes",
-            label: "Customer-wise Demand Notes",
-            route: "/post-sales/financial/customer-demand-notes",
-          },
 
           {
             id: "fin-payment-receipts",
@@ -299,10 +294,16 @@ const sections = useMemo(() => {
             route: "/post-sales/financial/architecture-certificates",
           },
           {
-            id: "fin-customer-ledger",
+            id: "fin-customer-demand-notes",
             label: "Customer Ledger",
-            route: "/post-sales/financial/customer-ledger",
+            route: "/post-sales/financial/customer-demand-notes",
           },
+
+          // {
+          //   id: "fin-customer-ledger",
+          //   label: "Customer Ledger",
+          //   route: "/post-sales/financial/customer-ledger",
+          // },
           {
             id: "fin-interest-ledger",
             label: "Interest Ledger",
@@ -310,33 +311,20 @@ const sections = useMemo(() => {
           },
         ],
       },
-      {
-        id: "communication",
-        label: "Communication",
-        route: "/post-sales/communication/notices",
-        subTabs: [
-          {
-            id: "com-notice",
-            label: "Notice",
-            route: "/post-sales/communication/notices",
-          },
-          {
-            id: "com-events",
-            label: "Events",
-            route: "/post-sales/communication/events",
-          },
-          {
-            id: "com-polls",
-            label: "Polls",
-            route: "/post-sales/communication/polls",
-          },
-          {
-            id: "com-forums",
-            label: "Forums",
-            route: "/post-sales/communication/forums",
-          },
-        ],
-      },
+{
+  id: "communication",
+  label: "Communication",
+  route: "/post-sales/communication/admin/notices",
+  subTabs: [
+    { id: "com-notice", label: "Notices", route: "/post-sales/communication/admin/notices" },
+    { id: "com-events", label: "Events", route: "/post-sales/communication/admin/events" },
+    { id: "com-polls", label: "Polls", route: "/post-sales/communication/admin/polls" },
+    { id: "com-forums", label: "Forums", route: "/post-sales/communication/admin/forums" },
+    { id: "com-surveys", label: "Surveys", route: "/post-sales/communication/admin/surveys" },
+    { id: "com-groups", label: "Groups", route: "/post-sales/communication/admin/groups" },
+    { id: "com-event-types", label: "Event Types", route: "/post-sales/communication/admin/event-types" },
+  ],
+},
       {
         id: "helpdesk",
         label: "Help Desk",
