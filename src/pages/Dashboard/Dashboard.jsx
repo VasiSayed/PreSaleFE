@@ -216,7 +216,7 @@ const PieValueLabel = ({
   );
 };
 
-/* ---------------- UI components ---------------- */
+/* ---------------- KPI Card ---------------- */
 const KPICard = ({ title, value, sub }) => (
   <div className="kpi-card">
     <div className="kpi-title">{title}</div>
@@ -224,6 +224,9 @@ const KPICard = ({ title, value, sub }) => (
     {sub ? <div className="kpi-sub">{sub}</div> : null}
   </div>
 );
+
+
+
 
 const ChartCard = ({
   title,
@@ -1205,16 +1208,6 @@ export default function SirDashboard() {
     [],
   );
 
-  const sites = safeArr(
-    fo?.sites || scope?.projects || meta?.project_debug?.projects || [],
-  );
-  const towers = uniq(safeArr(fo?.towers || []));
-  const configs = uniq(safeArr(fo?.configurations || []));
-  const leadSources = uniq(safeArr(fo?.lead_sources || []));
-  const cps = safeArr(fo?.channel_partners || []);
-  const salesPeople = safeArr(fo?.sales_people || []);
-  const campaigns = safeArr(fo?.campaigns || []);
-
   // KPIs
   const kpis = useMemo(() => {
     return safeArr(dash?.kpis).map((k) => {
@@ -1247,7 +1240,6 @@ export default function SirDashboard() {
             ? `Diff: ${toNum(k?.diff) >= 0 ? "+" : ""}${toNum(k?.diff).toFixed(1)}%`
             : `Diff: ${signedCompact(k?.diff)}`;
 
-      // ✅ safe pct: if prev=0 and cur>0 then show N/A (avoid infinite)
       const rawPct = k?.pct;
       const safePct = toNum(prevVal) === 0 && toNum(curVal) > 0 ? null : rawPct;
 
@@ -1264,6 +1256,16 @@ export default function SirDashboard() {
       };
     });
   }, [dash]);
+
+  const sites = safeArr(
+    fo?.sites || scope?.projects || meta?.project_debug?.projects || [],
+  );
+  const towers = uniq(safeArr(fo?.towers || []));
+  const configs = uniq(safeArr(fo?.configurations || []));
+  const leadSources = uniq(safeArr(fo?.lead_sources || []));
+  const cps = safeArr(fo?.channel_partners || []);
+  const salesPeople = safeArr(fo?.sales_people || []);
+  const campaigns = safeArr(fo?.campaigns || []);
 
   const charts = dash?.charts || {};
 
@@ -1381,40 +1383,37 @@ export default function SirDashboard() {
       series: null,
     });
 
+    // inventory tile (snapshot + optional activity series)
+    const snap = inventoryStatus?.snapshot || dash?.inventory_snapshot || {};
+    const soldSeries = inventoryStatus?.activity_sold_units_series;
 
+    // ✅ snapshot sold% (same as widgets)
+    const snapSoldPct =
+      snap?.sold_pct !== null && snap?.sold_pct !== undefined
+        ? toNum(snap.sold_pct)
+        : toNum(snap?.total) > 0 && toNum(snap?.sold) > 0
+          ? (toNum(snap.sold) / toNum(snap.total)) * 100
+          : null;
 
-// inventory tile (snapshot + optional activity series)
-const snap = inventoryStatus?.snapshot || dash?.inventory_snapshot || {};
-const soldSeries = inventoryStatus?.activity_sold_units_series;
-
-// ✅ snapshot sold% (same as widgets)
-const snapSoldPct =
-  snap?.sold_pct !== null && snap?.sold_pct !== undefined
-    ? toNum(snap.sold_pct)
-    : toNum(snap?.total) > 0 && toNum(snap?.sold) > 0
-      ? (toNum(snap.sold) / toNum(snap.total)) * 100
-      : null;
-
-tiles.push({
-  id: "inventory_status",
-  title: "Inventory Track",
-  value: formatCompact(snap?.total ?? 0),
-  // ✅ show SOLD % here (matches widgets)
-  delta_pct: snapSoldPct,
-  compare_label: "sold %",
-  kind: "bar_compare",
-  // back side can still show trend chart if series exists
-  series: soldSeries
-    ? {
-        labels: safeArr(soldSeries?.labels),
-        current: safeArr(soldSeries?.series?.[0]?.data),
-        previous: safeArr(soldSeries?.series?.[1]?.data),
-        current_label: soldSeries?.series?.[0]?.name || "Current",
-        previous_label: soldSeries?.series?.[1]?.name || "Previous",
-      }
-    : null,
-});
-
+    tiles.push({
+      id: "inventory_status",
+      title: "Inventory Track",
+      value: formatCompact(snap?.total ?? 0),
+      // ✅ show SOLD % here (matches widgets)
+      delta_pct: snapSoldPct,
+      compare_label: "sold %",
+      kind: "bar_compare",
+      // back side can still show trend chart if series exists
+      series: soldSeries
+        ? {
+            labels: safeArr(soldSeries?.labels),
+            current: safeArr(soldSeries?.series?.[0]?.data),
+            previous: safeArr(soldSeries?.series?.[1]?.data),
+            current_label: soldSeries?.series?.[0]?.name || "Current",
+            previous_label: soldSeries?.series?.[1]?.name || "Previous",
+          }
+        : null,
+    });
 
     const top = charts?.top_channel_partners;
     const topRows = safeArr(top?.rows).map((r) => ({
@@ -1481,26 +1480,11 @@ tiles.push({
       <div className="app-root">
         {/* HEADER */}
         <header className="app-header">
-          <div
-            className="filters-row"
-            style={{
-              flexWrap: "nowrap", // ✅ one line
-              overflowX: "auto", // if screen smaller, still one line
-              whiteSpace: "nowrap",
-              gap: 12,
-            }}
-          >
-            <span
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 10,
-                color: "var(--muted)",
-                fontWeight: 800,
-              }}
-            >
-              <span style={{ fontSize: 16 }}>⎇</span>
-            </span>
+          <div className="filters-row">
+            <div className="filters-label" aria-hidden="true">
+              <span className="filters-funnel">⏷</span>
+              <span>Filters:</span>
+            </div>
 
             <select
               value={dateRange}
@@ -1643,6 +1627,7 @@ tiles.push({
           {isLoading ? <div className="alert">Loading analytics…</div> : null}
 
           {/* Overview KPIs */}
+          {/* Overview KPIs */}
           <section className="band" ref={secOverviewRef}>
             <div className="band-title">Overview KPIs</div>
             <div className="band-subtitle">Real-time performance metrics</div>
@@ -1652,22 +1637,24 @@ tiles.push({
               className="kpi-grid"
               style={{ gridTemplateColumns: "repeat(7, minmax(0, 1fr))" }}
             >
-              {kpiTop.length ? (
-                kpiTop.map((k) => (
-                  <KPICard
-                    key={k.id || k.title}
-                    title={k.title}
-                    value={k.value}
-                    sub={k.sub}
-                  />
-                ))
+              {kpis?.length ? (
+                kpis
+                  .slice(0, 7)
+                  .map((k) => (
+                    <KPICard
+                      key={k.id || k.title}
+                      title={k.title}
+                      value={k.value}
+                      sub={k.sub}
+                    />
+                  ))
               ) : (
                 <KPICard title="No KPIs" value="N/A" sub="API returned empty" />
               )}
             </div>
 
             {/* Row 2: 6 */}
-            {kpiBottom.length ? (
+            {kpis?.length > 7 ? (
               <div
                 className="kpi-grid"
                 style={{
@@ -1675,7 +1662,7 @@ tiles.push({
                   marginTop: 16,
                 }}
               >
-                {kpiBottom.map((k) => (
+                {kpis.slice(7, 13).map((k) => (
                   <KPICard
                     key={k.id || k.title}
                     title={k.title}
@@ -1850,3 +1837,4 @@ tiles.push({
     </div>
   );
 }
+
