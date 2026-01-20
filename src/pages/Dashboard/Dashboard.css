@@ -62,17 +62,62 @@ body {
 /* ------------------------
   HEADER (keep minimal like SS)
 ------------------------ */
+/* ------------------------
+  HEADER (NOT sticky / NOT fixed)
+------------------------ */
 .app-header{
-  position: sticky;
-  top: 0;
-  z-index: 50;
-  padding: 10px 0 14px;
-
-  /* keeps it visible while scrolling */
-  background: rgba(246, 247, 251, 0.92);
-  backdrop-filter: blur(10px);
-  border-bottom: 1px solid rgba(234, 236, 240, 0.9);
+  position: static;   /* ✅ scroll pe upar chala jayega */
+  top: auto;
+  z-index: auto;
+  padding: 12px 0 18px;
+  background: transparent;
+  border-bottom: 0;
+  backdrop-filter: none;
 }
+
+
+.filters-row{
+  display:flex;
+  flex-wrap: nowrap;
+  align-items:center;
+  gap: 12px;
+
+  padding: 12px 14px;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  box-shadow: var(--shadow);
+
+  overflow-x: auto;       /* small screens pe scroll */
+  white-space: nowrap;
+}
+
+/* hide horizontal scrollbar (clean look) */
+.filters-row::-webkit-scrollbar{ height: 0; }
+.filters-row{ scrollbar-width: none; }
+.filters-row{ -ms-overflow-style: none; }
+
+.filters-label{
+  display:inline-flex;
+  align-items:center;
+  gap:10px;
+  padding: 0 6px 0 6px;
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.filters-funnel{
+  width: 34px;
+  height: 34px;
+  display:grid;
+  place-items:center;
+  border-radius: 12px;
+  background: #f2f4f7;
+  border: 1px solid var(--border);
+  color: #475467;
+}
+
+
 
 
 /* Hide extra header/pills (SS shows only filter bar) */
@@ -1536,4 +1581,94 @@ body {
 
 
 
+
+
+/* ✅ single line, horizontal scroll if needed, but no visible scrollbar */
+.filters-row{
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  white-space: nowrap;
+  scrollbar-width: none;
+}
+.filters-row::-webkit-scrollbar{
+  display: none;
+}
+
+
+.filters-row select,
+.filters-row input[type="date"]{
+  height: 44px;
+  padding: 0 14px;
+  border-radius: 14px;
+
+  border: 1px solid var(--border);
+  background: #fff;
+  color: var(--text);
+
+  font-size: 14px;
+  outline: none;
+
+  box-shadow: 0 1px 0 rgba(16,24,40,.02);
+}
+
+
+/* ================================
+   FIX 1: Remove black line/divider under header
+================================ */
+.sir-dashboard .app-header{
+  border-bottom: 0 !important;
+  box-shadow: none !important;
+}
+
+.sir-dashboard .main-content{
+  border-top: 0 !important;
+}
+
+/* agar kisi layout me <hr> aata ho to wo bhi gayab */
+.sir-dashboard hr{
+  display: none !important;
+}
+
+/* ================================
+   FIX 2: Filters header single-line (no wrap)
+================================ */
+.sir-dashboard .filters-row{
+  display: flex !important;
+  flex-wrap: nowrap !important;
+  align-items: center;
+  gap: 12px;
+
+  padding: 12px 14px;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  box-shadow: var(--shadow);
+
+  overflow-x: auto !important;
+  overflow-y: hidden !important;
+  white-space: nowrap;
+  scrollbar-width: none;      /* Firefox */
+}
+.sir-dashboard .filters-row::-webkit-scrollbar{
+  height: 0;                 /* Chrome */
+}
+
+/* tumhare CSS me ::before "Filters:" add ho raha tha — double label + wrap issues */
+.sir-dashboard .filters-row::before{
+  content: none !important;
+  display: none !important;
+}
+
+/* sab controls shrink na ho / line break na ho */
+.sir-dashboard .filters-label,
+.sir-dashboard .filters-row select,
+.sir-dashboard .filters-row input[type="date"],
+.sir-dashboard .filters-row .btn-primary{
+  flex: 0 0 auto;
+}
+
+/* Apply button right end pe rahe */
+.sir-dashboard .filters-row .btn-primary{
+  margin-left: auto;
+}
 
