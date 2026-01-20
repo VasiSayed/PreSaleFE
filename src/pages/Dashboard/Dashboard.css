@@ -1672,3 +1672,23 @@ body {
   margin-left: auto;
 }
 
+
+/* ✅ KPI: add spacing between main value and sub text */
+.sir-dashboard .kpi-value{
+  margin-top: 6px;      /* title -> value gap */
+  margin-bottom: 12px;  /* ✅ value -> prev/diff/pct gap */
+  line-height: 1.05;
+}
+
+/* sub line ko thoda breathable */
+.sir-dashboard .kpi-sub{
+  margin-top: 0;        /* value already giving gap */
+  line-height: 1.35;
+  letter-spacing: 0.1px;
+}
+
+/* optional: agar N/A case me bhi spacing tight lagti ho */
+.sir-dashboard .kpi-card{
+  padding-bottom: 18px;
+}
+
