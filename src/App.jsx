@@ -428,7 +428,8 @@ import {
   CommsSurveysPage,
   CommsGroupsPage,
   CommsEventTypesPage,
-} from "./pages/PostSales/Communication/CommunicationsAdminPages";
+} from "./pages/PostSales/Communication/admin";
+
 
 export default function App() {
   return (
@@ -650,14 +651,6 @@ export default function App() {
               />
 
               <Route
-                path="/post-sales/communication/admin/groups"
-                element={<CommsGroupsPage />}
-              />
-              <Route
-                path="/post-sales/communication/admin/event-types"
-                element={<CommsEventTypesPage />}
-              />
-              <Route
                 path="/post-sales/communication/admin/notices"
                 element={<CommsNoticesPage />}
               />
@@ -676,6 +669,14 @@ export default function App() {
               <Route
                 path="/post-sales/communication/admin/surveys"
                 element={<CommsSurveysPage />}
+              />
+              <Route
+                path="/post-sales/communication/admin/groups"
+                element={<CommsGroupsPage />}
+              />
+              <Route
+                path="/post-sales/communication/admin/event-types"
+                element={<CommsEventTypesPage />}
               />
 
               <Route

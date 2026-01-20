@@ -17,6 +17,8 @@
     "@mui/material": "^7.3.7",
     "axios": "^1.13.2",
     "browser-image-compression": "^2.0.2",
+    "date-fns": "^4.1.0",
+    "framer-motion": "^12.27.1",
     "html2canvas": "^1.4.1",
     "jspdf": "^3.0.4",
     "lucide-react": "^0.562.0",

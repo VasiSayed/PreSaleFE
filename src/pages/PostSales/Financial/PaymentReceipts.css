@@ -217,3 +217,42 @@
     grid-column: span 1;
   }
 }
+
+.payment-receipts-page .dn-modal-overlay{
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+  z-index: 99999;
+}
+
+.payment-receipts-page .dn-modal{
+  background: #fff;
+  border-radius: 16px;
+  width: min(1100px, 96vw);
+  max-height: 88vh;
+  overflow: hidden;
+  box-shadow: 0 12px 35px rgba(0,0,0,0.18);
+}
+
+.payment-receipts-page .dn-modal-wide{
+  width: min(1200px, 96vw);
+}
+
+.payment-receipts-page .dn-modal-header{
+  position: sticky;
+  top: 0;
+  background: #fff;
+  z-index: 2;
+  border-bottom: 1px solid #eef2f7;
+}
+
+.payment-receipts-page .dn-modal-body{
+  padding: 16px;
+  overflow: auto;
+  max-height: calc(88vh - 120px);
+}
+
