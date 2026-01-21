@@ -6,7 +6,8 @@ import "../Financial/DemandNotes.css";
 import "../../Booking/MyBookings.css";
 import "../../PreSalesCRM/Leads/LeadsList.css";
 import "../Financial/PaymentReceipts.css";
-/* ---------------- constants ---------------- */
+import "./CommunicationsAdminPages.css";
+
 const DEFAULT_PAGE_SIZE = 30;
 
 const API_SCOPE = "/client/my-scope/";
@@ -176,7 +177,7 @@ function MultiSelect({
 }) {
   return (
     <select
-      className="dn-select"
+      className="dn-select comm-select"
       multiple
       size={size}
       disabled={disabled}
@@ -201,7 +202,28 @@ function MultiSelect({
   );
 }
 
-/* ---------------- Audience Editor ---------------- */
+/* ---------------- segmented pills ---------------- */
+function SegPills({ value, onChange, items = [] }) {
+  return (
+    <div className="comm-seg" role="tablist" aria-label="Share With">
+      {items.map((it) => {
+        const active = value === it.value;
+        return (
+          <button
+            key={it.value}
+            type="button"
+            className={`comm-pill ${active ? "active" : ""}`}
+            onClick={() => onChange(it.value)}
+          >
+            {it.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+/* ---------------- Audience Editor (UPDATED UI) ---------------- */
 function AudienceEditor({
   scope,
   formProjectId,
@@ -214,6 +236,8 @@ function AudienceEditor({
   groupsForProject,
   groupsLoading,
 }) {
+  const [showAdvanced, setShowAdvanced] = useState(false);
+
   const towers = useMemo(
     () => flattenTowers(scope, formProjectId),
     [scope, formProjectId],
@@ -246,114 +270,209 @@ function AudienceEditor({
     label: u.__label || `Unit ${u.unit_no}`,
   }));
 
+  const mode =
+    audience?.share_mode ||
+    (audience?.all
+      ? "ALL"
+      : audience?.group_ids?.length
+        ? "GROUPS"
+        : "INDIVIDUALS");
+
   const set = (patch) => setAudience((prev) => ({ ...prev, ...patch }));
 
-  return (
-    <div
-      className="dn-field dn-span-3"
-      style={{ borderTop: "1px solid #eee", paddingTop: 10 }}
-    >
-      <div style={{ fontWeight: 800, marginBottom: 8 }}>Audience</div>
+  const switchMode = (nextMode) => {
+    setAudience((prev) => {
+      const n = { ...prev, share_mode: nextMode };
 
-      <div className="dn-grid">
-        <div className="dn-field">
-          <label>
-            <input
-              type="checkbox"
-              checked={!!audience.all}
-              onChange={(e) => set({ all: e.target.checked })}
-              style={{ marginRight: 8 }}
-            />
-            All (broadcast)
-          </label>
-          <div style={{ fontSize: 12, opacity: 0.7 }}>
-            All ON ho to bhi unit exclude kar sakte ho.
+      if (nextMode === "ALL") {
+        n.all = true; // broadcast
+        // keep both groups + individuals visible (as you asked)
+      } else if (nextMode === "GROUPS") {
+        n.all = false;
+        n.user_ids_text = ""; // only groups
+      } else if (nextMode === "INDIVIDUALS") {
+        n.all = false;
+        n.group_ids = []; // only individuals
+      }
+      return n;
+    });
+  };
+
+  return (
+    <div className="comm-section">
+      <div className="comm-section-head">
+        <div>
+          <div className="comm-section-title">Share With</div>
+          <div className="comm-section-sub">
+            All / Individuals / Groups — clean audience targeting
           </div>
         </div>
 
-        <div className="dn-field">
-          <label>User IDs (comma separated)</label>
-          <input
-            className="dn-input"
-            placeholder="12,15,21"
-            value={audience.user_ids_text || ""}
-            onChange={(e) => set({ user_ids_text: e.target.value })}
-          />
-        </div>
-
-        <div className="dn-field">
-          <label>Groups (include)</label>
-          <MultiSelect
-            disabled={!formProjectId || groupsLoading}
-            value={audience.group_ids || []}
-            onChange={(arr) => set({ group_ids: arr })}
-            options={groupOptions}
-            placeholder={
-              !formProjectId
-                ? "Select project first"
-                : groupsLoading
-                  ? "Loading..."
-                  : "No groups"
-            }
-          />
-        </div>
-
-        <div className="dn-field">
-          <label>Include Towers</label>
-          <MultiSelect
-            disabled={!formProjectId}
-            value={audience.tower_ids || []}
-            onChange={(arr) => set({ tower_ids: arr })}
-            options={towerOptions}
-            placeholder={!formProjectId ? "Select project first" : "No towers"}
-          />
-        </div>
-
-        <div className="dn-field">
-          <label>Form Tower (for Floor pick)</label>
-          <select
-            className="dn-select"
-            value={formTowerId}
-            onChange={(e) => {
-              setFormTowerId(e.target.value);
-              setFormFloorId("");
-            }}
-            disabled={!formProjectId}
+        <div className="comm-section-actions">
+          <button
+            type="button"
+            className="dn-btn dn-btn-light comm-adv-btn"
+            onClick={() => setShowAdvanced((s) => !s)}
           >
-            <option value="">
-              {!formProjectId ? "Select project first" : "Optional tower"}
-            </option>
-            {towers.map((t) => (
-              <option key={t.id} value={t.id}>
-                {toTitleCase(t.name)}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className="dn-field">
-          <label>Include Floors</label>
-          <MultiSelect
-            disabled={!formTowerId}
-            value={audience.floor_ids || []}
-            onChange={(arr) => set({ floor_ids: arr })}
-            options={floorOptions}
-            placeholder={!formTowerId ? "Pick Form Tower first" : "No floors"}
-          />
-        </div>
-
-        <div className="dn-field dn-span-3">
-          <label>Exclude Units</label>
-          <MultiSelect
-            disabled={!formProjectId}
-            value={audience.exclude_unit_ids || []}
-            onChange={(arr) => set({ exclude_unit_ids: arr })}
-            options={unitExcludeOptions}
-            placeholder={!formProjectId ? "Select project first" : "No units"}
-            size={8}
-          />
+            {showAdvanced ? "Hide Advanced" : "Advanced"}
+          </button>
         </div>
       </div>
+
+      <SegPills
+        value={mode}
+        onChange={switchMode}
+        items={[
+          { value: "ALL", label: "All" },
+          { value: "INDIVIDUALS", label: "Individuals" },
+          { value: "GROUPS", label: "Groups" },
+        ]}
+      />
+
+      {mode === "ALL" ? (
+        <div className="comm-note">
+          Broadcast to everyone in this project. (Optional) You can still pick
+          Groups + Individuals below.
+        </div>
+      ) : mode === "GROUPS" ? (
+        <div className="comm-note">Send only to selected Groups.</div>
+      ) : (
+        <div className="comm-note">
+          Send only to selected Individuals (Customers/User IDs).
+        </div>
+      )}
+
+      <div className="comm-aud-grid">
+        {mode === "ALL" || mode === "INDIVIDUALS" ? (
+          <div className="dn-field">
+            <label>Customers / Individuals (User IDs)</label>
+            <input
+              className="dn-input"
+              placeholder="12, 15, 21"
+              value={audience.user_ids_text || ""}
+              onChange={(e) => set({ user_ids_text: e.target.value })}
+            />
+            <div className="comm-help">
+              Tip: comma separated IDs. (Later we can convert this into
+              searchable picker.)
+            </div>
+          </div>
+        ) : null}
+
+        {mode === "ALL" || mode === "GROUPS" ? (
+          <div className="dn-field">
+            <label>Groups</label>
+            <MultiSelect
+              disabled={!formProjectId || groupsLoading}
+              value={audience.group_ids || []}
+              onChange={(arr) => set({ group_ids: arr })}
+              options={groupOptions}
+              placeholder={
+                !formProjectId
+                  ? "Select project first"
+                  : groupsLoading
+                    ? "Loading..."
+                    : "No groups"
+              }
+              size={7}
+            />
+            <div className="comm-help">Choose one or more groups.</div>
+          </div>
+        ) : null}
+      </div>
+
+      {showAdvanced ? (
+        <div className="comm-adv">
+          <div className="comm-adv-title">Advanced targeting (optional)</div>
+
+          <div className="dn-grid comm-adv-grid">
+            <div className="dn-field">
+              <label>
+                <input
+                  type="checkbox"
+                  checked={!!audience.all}
+                  onChange={(e) => set({ all: e.target.checked })}
+                  style={{ marginRight: 8 }}
+                />
+                Broadcast flag (all)
+              </label>
+              <div className="comm-help">
+                Normally: All tab → all=true. Groups/Individuals tabs →
+                all=false.
+              </div>
+            </div>
+
+            <div className="dn-field">
+              <label>Include Towers</label>
+              <MultiSelect
+                disabled={!formProjectId}
+                value={audience.tower_ids || []}
+                onChange={(arr) => set({ tower_ids: arr })}
+                options={towerOptions}
+                placeholder={
+                  !formProjectId ? "Select project first" : "No towers"
+                }
+                size={6}
+              />
+            </div>
+
+            <div className="dn-field">
+              <label>Form Tower (for Floor pick)</label>
+              <select
+                className="dn-select comm-select"
+                value={formTowerId}
+                onChange={(e) => {
+                  setFormTowerId(e.target.value);
+                  setFormFloorId("");
+                }}
+                disabled={!formProjectId}
+              >
+                <option value="">
+                  {!formProjectId ? "Select project first" : "Optional tower"}
+                </option>
+                {towers.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {toTitleCase(t.name)}
+                  </option>
+                ))}
+              </select>
+              {formFloorId ? (
+                <div className="comm-help">
+                  Selected Form Floor: {String(formFloorId)}
+                </div>
+              ) : null}
+            </div>
+
+            <div className="dn-field">
+              <label>Include Floors</label>
+              <MultiSelect
+                disabled={!formTowerId}
+                value={audience.floor_ids || []}
+                onChange={(arr) => set({ floor_ids: arr })}
+                options={floorOptions}
+                placeholder={
+                  !formTowerId ? "Pick Form Tower first" : "No floors"
+                }
+                size={6}
+              />
+            </div>
+
+            <div className="dn-field dn-span-3">
+              <label>Exclude Units</label>
+              <MultiSelect
+                disabled={!formProjectId}
+                value={audience.exclude_unit_ids || []}
+                onChange={(arr) => set({ exclude_unit_ids: arr })}
+                options={unitExcludeOptions}
+                placeholder={
+                  !formProjectId ? "Select project first" : "No units"
+                }
+                size={8}
+              />
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -411,7 +530,7 @@ function CommsCrudPage({
     return ps.length === 1 ? String(ps[0].id) : "";
   }, [scope]);
 
-  // list filters (list ke liye alag)
+  // list filters
   const [openFilter, setOpenFilter] = useState(false);
   const [projectId, setProjectId] = useState("");
   const [towerId, setTowerId] = useState("");
@@ -428,19 +547,20 @@ function CommsCrudPage({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  // form modal (add/edit ke liye alag)
+  // form modal
   const [openForm, setOpenForm] = useState(false);
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState({});
   const [saving, setSaving] = useState(false);
 
-  // form scope (add/edit)
+  // form scope
   const [formProjectId, setFormProjectId] = useState("");
   const [formTowerId, setFormTowerId] = useState("");
   const [formFloorId, setFormFloorId] = useState("");
 
   // audience form state
   const [audience, setAudience] = useState({
+    share_mode: "ALL",
     all: true,
     user_ids_text: "",
     group_ids: [],
@@ -486,7 +606,6 @@ function CommsCrudPage({
     setError("");
 
     try {
-      // pagination url already has params -> no need guard
       if (!urlOrNull) {
         const params = paramsOverride || buildParams();
         if (!params.project_id) {
@@ -525,7 +644,6 @@ function CommsCrudPage({
     }
   };
 
-  // auto select project & auto fetch if single project
   useEffect(() => {
     if (!scope || scopeLoading) return;
     if (!projectId && autoProjectId) {
@@ -538,7 +656,6 @@ function CommsCrudPage({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [scope, scopeLoading, autoProjectId]);
 
-  // reset dependent filters
   useEffect(() => {
     setTowerId("");
     setFloorId("");
@@ -602,6 +719,7 @@ function CommsCrudPage({
     setFormTowerId("");
     setFormFloorId("");
     setAudience({
+      share_mode: "ALL",
       all: true,
       user_ids_text: "",
       group_ids: [],
@@ -624,6 +742,7 @@ function CommsCrudPage({
     setFormFloorId("");
     setForm(item || {});
     setAudience({
+      share_mode: "INDIVIDUALS",
       all: false,
       user_ids_text: "",
       group_ids: [],
@@ -999,100 +1118,111 @@ function CommsCrudPage({
                 </button>
               </div>
 
-              <div className="dn-modal-body">
-                <div className="dn-grid">
-                  <div className="dn-field dn-span-3">
-                    <label>Project *</label>
-                    <select
-                      className="dn-select"
-                      value={formProjectId}
-                      onChange={(e) => setFormProjectId(e.target.value)}
-                      disabled={scopeLoading || !!autoProjectId}
-                    >
-                      <option value="">
-                        {scopeLoading ? "Loading..." : "Select Project"}
-                      </option>
-                      {(scope?.projects || []).map((p) => (
-                        <option key={p.id} value={p.id}>
-                          {toTitleCase(p.name)}
-                        </option>
-                      ))}
-                    </select>
+              <div className="dn-modal-body comm-form-body">
+                {/* Info section */}
+                <div className="comm-card">
+                  <div className="comm-card-head">
+                    <div className="comm-card-title">{pageTitle} Info</div>
+                    <div className="comm-card-sub">Fill the details below</div>
                   </div>
 
-                  {(formFields || []).map((f) => {
-                    const v = form?.[f.name] ?? "";
-                    const common = {
-                      key: f.name,
-                      className: `dn-field ${f.span3 ? "dn-span-3" : ""}`,
-                    };
+                  <div className="dn-grid comm-form-grid">
+                    <div className="dn-field dn-span-3">
+                      <label>Project *</label>
+                      <select
+                        className="dn-select"
+                        value={formProjectId}
+                        onChange={(e) => setFormProjectId(e.target.value)}
+                        disabled={scopeLoading || !!autoProjectId}
+                      >
+                        <option value="">
+                          {scopeLoading ? "Loading..." : "Select Project"}
+                        </option>
+                        {(scope?.projects || []).map((p) => (
+                          <option key={p.id} value={p.id}>
+                            {toTitleCase(p.name)}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
 
-                    if (f.type === "textarea") {
+                    {(formFields || []).map((f) => {
+                      const v = form?.[f.name] ?? "";
+                      const common = {
+                        key: f.name,
+                        className: `dn-field ${f.span3 ? "dn-span-3" : ""}`,
+                      };
+
+                      if (f.type === "textarea") {
+                        return (
+                          <div {...common}>
+                            <label>{f.label}</label>
+                            <textarea
+                              className="dn-input"
+                              rows={f.rows || 4}
+                              value={v}
+                              onChange={(e) => setField(f.name, e.target.value)}
+                            />
+                          </div>
+                        );
+                      }
+
+                      if (f.type === "select") {
+                        return (
+                          <div {...common}>
+                            <label>{f.label}</label>
+                            <select
+                              className="dn-select"
+                              value={v}
+                              onChange={(e) => setField(f.name, e.target.value)}
+                            >
+                              {(f.options || []).map((o) => (
+                                <option key={o.value} value={o.value}>
+                                  {o.label}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        );
+                      }
+
+                      if (f.type === "checkbox") {
+                        return (
+                          <div {...common}>
+                            <label className="comm-checkline">
+                              <input
+                                type="checkbox"
+                                checked={!!form?.[f.name]}
+                                onChange={(e) =>
+                                  setField(f.name, e.target.checked)
+                                }
+                                style={{ marginRight: 10 }}
+                              />
+                              {f.label}
+                            </label>
+                          </div>
+                        );
+                      }
+
                       return (
                         <div {...common}>
                           <label>{f.label}</label>
-                          <textarea
+                          <input
                             className="dn-input"
-                            rows={f.rows || 4}
+                            type={f.type || "text"}
                             value={v}
                             onChange={(e) => setField(f.name, e.target.value)}
+                            placeholder={f.placeholder || ""}
                           />
                         </div>
                       );
-                    }
+                    })}
+                  </div>
+                </div>
 
-                    if (f.type === "select") {
-                      return (
-                        <div {...common}>
-                          <label>{f.label}</label>
-                          <select
-                            className="dn-select"
-                            value={v}
-                            onChange={(e) => setField(f.name, e.target.value)}
-                          >
-                            {(f.options || []).map((o) => (
-                              <option key={o.value} value={o.value}>
-                                {o.label}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-                      );
-                    }
-
-                    if (f.type === "checkbox") {
-                      return (
-                        <div {...common}>
-                          <label>
-                            <input
-                              type="checkbox"
-                              checked={!!form?.[f.name]}
-                              onChange={(e) =>
-                                setField(f.name, e.target.checked)
-                              }
-                              style={{ marginRight: 8 }}
-                            />
-                            {f.label}
-                          </label>
-                        </div>
-                      );
-                    }
-
-                    return (
-                      <div {...common}>
-                        <label>{f.label}</label>
-                        <input
-                          className="dn-input"
-                          type={f.type || "text"}
-                          value={v}
-                          onChange={(e) => setField(f.name, e.target.value)}
-                          placeholder={f.placeholder || ""}
-                        />
-                      </div>
-                    );
-                  })}
-
-                  {withAudience ? (
+                {/* Audience section */}
+                {withAudience ? (
+                  <div className="comm-card">
                     <AudienceEditor
                       scope={scope}
                       formProjectId={formProjectId}
@@ -1105,11 +1235,11 @@ function CommsCrudPage({
                       groupsForProject={groupsForProject}
                       groupsLoading={groupsLoading}
                     />
-                  ) : null}
-                </div>
+                  </div>
+                ) : null}
               </div>
 
-              <div className="dn-modal-footer">
+              <div className="dn-modal-footer comm-modal-footer">
                 <button
                   className="dn-btn dn-btn-light"
                   onClick={closeForm}
@@ -1516,7 +1646,7 @@ export function CommsPollsPage() {
           question: form.question || "",
           allow_multi_select: !!form.allow_multi_select,
           audience: audPayload || { all: true },
-          ...(options.length ? { options } : {}), // change key if backend differs
+          ...(options.length ? { options } : {}),
         };
       }}
       buildUpdatePayload={({ form, formProjectId, audPayload }) => ({
