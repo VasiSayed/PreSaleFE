@@ -243,13 +243,14 @@ const Dashboard = () => {
 
   const [filters, setFilters] = useState({
     all: "ALL",
-    sites: "All Sites (Group View)",
-    towers: "All Towers",
-    config: "All Config",
-    leadSources: "All Lead Sources",
-    channelPartners: "All Channel Partners",
-    salesPeople: "All Sales People",
-    campaigns: "All Campaigns",
+    sites: "",
+    towers: "",
+    floors: "",
+    config: "",
+    leadSources: "",
+    channelPartners: "",
+    salesPeople: "",
+    campaigns: "",
   });
 
   const [periods, setPeriods] = useState({
@@ -265,6 +266,11 @@ const Dashboard = () => {
     order: "DESC", // ASC | DESC
     count: 10,
   });
+
+  const [unitConfigs, setUnitConfigs] = useState([]);
+  const [leadSources, setLeadSources] = useState([]);
+  const [salesUsers, setSalesUsers] = useState([]);
+  const [channelPartners, setChannelPartners] = useState([]);
 
   const fetchData = async () => {
     setLoading(true);
@@ -302,10 +308,12 @@ const response = await axiosInstance.get(
     const loadScope = async () => {
       try {
         const res = await axiosInstance.get("/client/my-scope/");
-        const projects = res.data?.projects || [];
+        const projects = normalizeScopeProjects(res.data || {});
         setScopeProjects(projects);
         if (!selectedProjectId && projects.length) {
-          setSelectedProjectId(String(projects[0].id));
+          const firstId = String(projects[0].id);
+          setSelectedProjectId(firstId);
+          setFilters((prev) => ({ ...prev, sites: firstId }));
         }
       } catch (err) {
         console.error("Scope Error:", err);
@@ -313,6 +321,86 @@ const response = await axiosInstance.get(
     };
     loadScope();
   }, []);
+
+  useEffect(() => {
+    if (!selectedProjectId) {
+      setUnitConfigs([]);
+      setLeadSources([]);
+      setSalesUsers([]);
+      setChannelPartners([]);
+      return;
+    }
+
+    let isActive = true;
+
+    const loadMasters = async () => {
+      try {
+        const res = await axiosInstance.get("/leadManagement/v2/leads/masters/", {
+          params: { project_id: selectedProjectId },
+        });
+        const payload = res.data || {};
+        if (!isActive) return;
+        setUnitConfigs(payload.unit_configurations || payload.unit_configs || []);
+        setLeadSources(payload.sources || payload.lead_sources || []);
+        setSalesUsers(
+          payload.assign_users || payload.assigned_users || payload.sales_users || [],
+        );
+      } catch (err) {
+        if (!isActive) return;
+        console.error("Lead masters error:", err);
+        setUnitConfigs([]);
+        setLeadSources([]);
+        setSalesUsers([]);
+      }
+    };
+
+    const loadChannelPartners = async () => {
+      try {
+        const res = await axiosInstance.get("/channel/partners/by-project/", {
+          params: { project_id: selectedProjectId },
+        });
+        const list =
+          res.data?.results || res.data?.data || res.data?.rows || res.data || [];
+        if (!isActive) return;
+        setChannelPartners(Array.isArray(list) ? list : []);
+      } catch (err) {
+        if (!isActive) return;
+        console.error("Channel partner error:", err);
+        setChannelPartners([]);
+      }
+    };
+
+    loadMasters();
+    loadChannelPartners();
+
+    return () => {
+      isActive = false;
+    };
+  }, [selectedProjectId]);
+
+  const selectedProject = useMemo(
+    () =>
+      scopeProjects.find((p) => String(p.id) === String(selectedProjectId)) ||
+      null,
+    [scopeProjects, selectedProjectId],
+  );
+
+  const availableTowers = useMemo(
+    () => (selectedProject?.towers ? selectedProject.towers : []),
+    [selectedProject],
+  );
+
+  const selectedTower = useMemo(
+    () =>
+      availableTowers.find((t) => String(t.id) === String(filters.towers)) || null,
+    [availableTowers, filters.towers],
+  );
+
+  const availableFloors = useMemo(() => {
+    if (!selectedProject) return [];
+    if (selectedTower) return selectedTower.floors || [];
+    return (selectedProject.towers || []).flatMap((t) => t.floors || []);
+  }, [selectedProject, selectedTower]);
 
   useEffect(() => {
     if (!scopeProjects.length && !selectedProjectId) {
@@ -324,6 +412,15 @@ const response = await axiosInstance.get(
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedProjectId, scopeProjects.length]);
+
+  useEffect(() => {
+    setFilters((prev) => ({
+      ...prev,
+      sites: selectedProjectId ? String(selectedProjectId) : "",
+      towers: "",
+      floors: "",
+    }));
+  }, [selectedProjectId]);
 
   const tabs = [
     { id: "overview", label: "Overview", icon: "📊" },
@@ -416,17 +513,42 @@ const response = await axiosInstance.get(
           <select
             className="filter-dropdown"
             value={filters.sites}
-            onChange={(e) => setFilters({ ...filters, sites: e.target.value })}
+            onChange={(e) => {
+              const value = e.target.value;
+              setFilters((prev) => ({
+                ...prev,
+                sites: value,
+                towers: "",
+                floors: "",
+              }));
+              setSelectedProjectId(value);
+            }}
           >
-            <option>All Sites (Group View)</option>
+            <option value="">All Sites (Group View)</option>
+            {scopeProjects.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name || `Project ${p.id}`}
+              </option>
+            ))}
           </select>
 
           <select
             className="filter-dropdown"
             value={filters.towers}
-            onChange={(e) => setFilters({ ...filters, towers: e.target.value })}
+            onChange={(e) =>
+              setFilters((prev) => ({
+                ...prev,
+                towers: e.target.value,
+                floors: "",
+              }))
+            }
           >
-            <option>All Towers</option>
+            <option value="">All Towers</option>
+            {availableTowers.map((tower, idx) => (
+              <option key={tower.id ?? idx} value={tower.id}>
+                {tower.name || `Tower ${idx + 1}`}
+              </option>
+            ))}
           </select>
 
           <select
@@ -434,7 +556,12 @@ const response = await axiosInstance.get(
             value={filters.config}
             onChange={(e) => setFilters({ ...filters, config: e.target.value })}
           >
-            <option>All Config</option>
+            <option value="">All Config</option>
+            {unitConfigs.map((cfg) => (
+              <option key={cfg.id} value={cfg.id}>
+                {cfg.name || cfg.code || `Config ${cfg.id}`}
+              </option>
+            ))}
           </select>
 
           <select
@@ -444,7 +571,12 @@ const response = await axiosInstance.get(
               setFilters({ ...filters, leadSources: e.target.value })
             }
           >
-            <option>All Lead Sources</option>
+            <option value="">All Lead Sources</option>
+            {leadSources.map((src) => (
+              <option key={src.id} value={src.id}>
+                {src.name || src.label || `Source ${src.id}`}
+              </option>
+            ))}
           </select>
 
           <select
@@ -454,7 +586,17 @@ const response = await axiosInstance.get(
               setFilters({ ...filters, channelPartners: e.target.value })
             }
           >
-            <option>All Channel Partners</option>
+            <option value="">All Channel Partners</option>
+            {channelPartners.map((cp, idx) => (
+              <option key={cp.id ?? idx} value={cp.id ?? cp.partner_id ?? cp.cp_id}>
+                {cp.full_name ||
+                  cp.company_name ||
+                  cp.name ||
+                  cp.partner_name ||
+                  cp.cp_name ||
+                  `Partner ${idx + 1}`}
+              </option>
+            ))}
           </select>
 
           <select
@@ -464,7 +606,12 @@ const response = await axiosInstance.get(
               setFilters({ ...filters, salesPeople: e.target.value })
             }
           >
-            <option>All Sales People</option>
+            <option value="">All Sales People</option>
+            {salesUsers.map((user, idx) => (
+              <option key={user.id ?? idx} value={user.id}>
+                {user.name || user.username || `Sales ${idx + 1}`}
+              </option>
+            ))}
           </select>
 
           <select
@@ -474,7 +621,7 @@ const response = await axiosInstance.get(
               setFilters({ ...filters, campaigns: e.target.value })
             }
           >
-            <option>All Campaigns</option>
+            <option value="">All Campaigns</option>
           </select>
         </div>
 
@@ -1676,6 +1823,81 @@ const OverviewChartCard = ({
 /* =========================================================
    Helpers
    ========================================================= */
+const toArray = (val) => (Array.isArray(val) ? val : []);
+
+const normalizeScopeProjects = (scopeData = {}) => {
+  const rawProjects = Array.isArray(scopeData.projects)
+    ? scopeData.projects
+    : Array.isArray(scopeData.accesses)
+      ? scopeData.accesses
+      : [];
+
+  return rawProjects
+    .map((proj, pIdx) => {
+      const id = proj?.id ?? proj?.project_id ?? proj?.project;
+      if (!id) return null;
+      const name =
+        proj?.name ??
+        proj?.project_name ??
+        proj?.project_label ??
+        `Project ${id}`;
+
+      const towersRaw =
+        proj?.towers ||
+        proj?.tower ||
+        proj?.project_towers ||
+        proj?.tower_list ||
+        proj?.towers_list ||
+        proj?.tower_details ||
+        [];
+
+      const towers = toArray(towersRaw).map((tower, tIdx) => {
+        const towerId =
+          tower?.id ??
+          tower?.tower_id ??
+          tower?.tower ??
+          tower?.name ??
+          `${id}-tower-${tIdx}`;
+        const towerName =
+          tower?.name ??
+          tower?.tower_name ??
+          tower?.label ??
+          tower?.tower ??
+          `Tower ${tIdx + 1}`;
+
+        const floorsRaw =
+          tower?.floors ||
+          tower?.floor ||
+          tower?.floor_list ||
+          tower?.floors_list ||
+          tower?.floor_details ||
+          tower?.levels ||
+          [];
+
+        const floors = toArray(floorsRaw).map((floor, fIdx) => ({
+          id:
+            floor?.id ??
+            floor?.floor_id ??
+            floor?.level_id ??
+            floor?.name ??
+            `${towerId}-floor-${fIdx}`,
+          name:
+            floor?.name ??
+            floor?.floor_name ??
+            floor?.label ??
+            floor?.level ??
+            floor?.floor ??
+            `Floor ${fIdx + 1}`,
+        }));
+
+        return { id: towerId, name: towerName, floors };
+      });
+
+      return { id, name, towers };
+    })
+    .filter(Boolean);
+};
+
 const getKPIColor = (index) => {
   const colors = [
     "#CDDCF6",
