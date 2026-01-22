@@ -46,6 +46,7 @@ const AUTO_FETCH_ON_CHANGE = true;
 /* ---------------- helpers ---------------- */
 const upper = (v) => (v == null ? "" : String(v).trim().toUpperCase());
 const safeArr = (v) => (Array.isArray(v) ? v : []);
+const toArray = (val) => (Array.isArray(val) ? val : []);
 const uniq = (arr) => [
   ...new Set((arr || []).filter((x) => x != null && x !== "")),
 ];
@@ -104,6 +105,54 @@ const pickAny = (obj, keys, fallback = null) => {
     if (obj?.[k] !== undefined && obj?.[k] !== null) return obj[k];
   }
   return fallback;
+};
+
+const normalizeScopeProjects = (scopeData = {}) => {
+  const rawProjects = Array.isArray(scopeData.projects)
+    ? scopeData.projects
+    : Array.isArray(scopeData.accesses)
+      ? scopeData.accesses
+      : [];
+
+  return rawProjects
+    .map((proj) => {
+      const id = proj?.id ?? proj?.project_id ?? proj?.project;
+      if (!id) return null;
+      const name =
+        proj?.name ??
+        proj?.project_name ??
+        proj?.project_label ??
+        `Project ${id}`;
+
+      const towersRaw =
+        proj?.towers ||
+        proj?.tower ||
+        proj?.project_towers ||
+        proj?.tower_list ||
+        proj?.towers_list ||
+        proj?.tower_details ||
+        [];
+
+      const towers = toArray(towersRaw).map((tower, tIdx) => {
+        const towerId =
+          tower?.id ??
+          tower?.tower_id ??
+          tower?.tower ??
+          tower?.name ??
+          `${id}-tower-${tIdx}`;
+        const towerName =
+          tower?.name ??
+          tower?.tower_name ??
+          tower?.label ??
+          tower?.tower ??
+          `Tower ${tIdx + 1}`;
+
+        return { id: towerId, name: towerName };
+      });
+
+      return { id, name, towers };
+    })
+    .filter(Boolean);
 };
 
 const normalizeApiEnvelope = (payload) => {
@@ -1033,6 +1082,7 @@ export default function SirDashboard() {
   const { user } = useAuth();
 
   const [scope, setScope] = useState(null);
+  const [scopeProjects, setScopeProjects] = useState([]);
   const [dash, setDash] = useState(null);
 
   const [loadingScope, setLoadingScope] = useState(true);
@@ -1051,6 +1101,11 @@ export default function SirDashboard() {
   const [salesUserId, setSalesUserId] = useState("ALL");
   const [campaignId, setCampaignId] = useState("ALL");
 
+  const [unitConfigs, setUnitConfigs] = useState([]);
+  const [leadSources, setLeadSources] = useState([]);
+  const [channelPartners, setChannelPartners] = useState([]);
+  const [salesPeople, setSalesPeople] = useState([]);
+
   const secOverviewRef = useRef(null);
   const secChartsRef = useRef(null);
   const secInvWidgetsRef = useRef(null);
@@ -1068,7 +1123,9 @@ export default function SirDashboard() {
       setError("");
       try {
         const res = await axiosInstance.get(SCOPE_URL);
-        setScope(res.data || null);
+        const scopePayload = res.data || null;
+        setScope(scopePayload);
+        setScopeProjects(normalizeScopeProjects(scopePayload || {}));
         setSiteId("ALL");
       } catch (e) {
         setError(e?.response?.data?.detail || "Unable to load scope.");
@@ -1078,6 +1135,62 @@ export default function SirDashboard() {
     };
     run();
   }, []);
+
+  useEffect(() => {
+    if (!siteId || siteId === "ALL") {
+      setUnitConfigs([]);
+      setLeadSources([]);
+      setChannelPartners([]);
+      setSalesPeople([]);
+      return;
+    }
+
+    let isActive = true;
+
+    const loadMasters = async () => {
+      try {
+        const res = await axiosInstance.get("/leadManagement/v2/leads/masters/", {
+          params: { project_id: siteId },
+        });
+        const payload = res.data || {};
+        if (!isActive) return;
+        setUnitConfigs(payload.unit_configurations || payload.unit_configs || []);
+        setLeadSources(payload.sources || payload.lead_sources || []);
+        setSalesPeople(
+          payload.assign_users || payload.assigned_users || payload.sales_users || [],
+        );
+      } catch (err) {
+        if (!isActive) return;
+        console.error("Lead masters error:", err);
+        setUnitConfigs([]);
+        setLeadSources([]);
+        setSalesPeople([]);
+      }
+    };
+
+    const loadChannelPartners = async () => {
+      try {
+        const res = await axiosInstance.get("/channel/partners/by-project/", {
+          params: { project_id: siteId },
+        });
+        const list =
+          res.data?.results || res.data?.data || res.data?.rows || res.data || [];
+        if (!isActive) return;
+        setChannelPartners(Array.isArray(list) ? list : []);
+      } catch (err) {
+        if (!isActive) return;
+        console.error("Channel partner error:", err);
+        setChannelPartners([]);
+      }
+    };
+
+    loadMasters();
+    loadChannelPartners();
+
+    return () => {
+      isActive = false;
+    };
+  }, [siteId]);
 
   // build params
   const buildParams = useCallback(() => {
@@ -1255,14 +1368,23 @@ export default function SirDashboard() {
     });
   }, [dash]);
 
-  const sites = safeArr(
-    fo?.sites || scope?.projects || meta?.project_debug?.projects || [],
+  const sites = safeArr(scopeProjects);
+  const selectedProject = useMemo(
+    () => sites.find((p) => String(p.id) === String(siteId)) || null,
+    [sites, siteId],
   );
-  const towers = uniq(safeArr(fo?.towers || []));
-  const configs = uniq(safeArr(fo?.configurations || []));
-  const leadSources = uniq(safeArr(fo?.lead_sources || []));
-  const cps = safeArr(fo?.channel_partners || []);
-  const salesPeople = safeArr(fo?.sales_people || []);
+  const towersFromScope = useMemo(
+    () => (selectedProject?.towers ? selectedProject.towers : []),
+    [selectedProject],
+  );
+  const towers = towersFromScope.length
+    ? towersFromScope
+    : safeArr(fo?.towers || []);
+
+  const configs = unitConfigs.length ? unitConfigs : safeArr(fo?.configurations || []);
+  const leadSourcesList = leadSources.length ? leadSources : safeArr(fo?.lead_sources || []);
+  const cps = channelPartners.length ? channelPartners : safeArr(fo?.channel_partners || []);
+  const salesPeopleList = salesPeople.length ? salesPeople : safeArr(fo?.sales_people || []);
   const campaigns = safeArr(fo?.campaigns || []);
 
   const charts = dash?.charts || {};
@@ -1519,11 +1641,11 @@ export default function SirDashboard() {
               style={{ minWidth: 200 }}
             >
               <option value="ALL">All Sites (Group View)</option>
-              {sites.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.label || p.name || p.project_name || `Project #${p.id}`}
-                </option>
-              ))}
+            {sites.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.label || p.name || p.project_name || `Project #${p.id}`}
+              </option>
+            ))}
             </select>
 
             <select
@@ -1532,11 +1654,20 @@ export default function SirDashboard() {
               style={{ minWidth: 150 }}
             >
               <option value="ALL">All Towers</option>
-              {towers.map((t) => (
-                <option key={t} value={t}>
-                  {t}
+            {towers.map((t, idx) => {
+              if (typeof t === "string" || typeof t === "number") {
+                return (
+                  <option key={t} value={t}>
+                    {t}
+                  </option>
+                );
+              }
+              return (
+                <option key={t.id ?? idx} value={t.id ?? t.name}>
+                  {t.name || `Tower ${idx + 1}`}
                 </option>
-              ))}
+              );
+            })}
             </select>
 
             <select
@@ -1545,11 +1676,20 @@ export default function SirDashboard() {
               style={{ minWidth: 150 }}
             >
               <option value="ALL">All Config</option>
-              {configs.map((c) => (
-                <option key={c} value={c}>
-                  {c}
+            {configs.map((c, idx) => {
+              if (typeof c === "string" || typeof c === "number") {
+                return (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                );
+              }
+              return (
+                <option key={c.id ?? idx} value={c.id}>
+                  {c.name || c.code || `Config ${idx + 1}`}
                 </option>
-              ))}
+              );
+            })}
             </select>
 
             <select
@@ -1558,11 +1698,20 @@ export default function SirDashboard() {
               style={{ minWidth: 170 }}
             >
               <option value="ALL">All Lead Sources</option>
-              {leadSources.map((s) => (
-                <option key={s} value={s}>
-                  {s}
+            {leadSourcesList.map((s, idx) => {
+              if (typeof s === "string" || typeof s === "number") {
+                return (
+                  <option key={s} value={s}>
+                    {s}
+                  </option>
+                );
+              }
+              return (
+                <option key={s.id ?? idx} value={s.id}>
+                  {s.name || s.label || `Source ${idx + 1}`}
                 </option>
-              ))}
+              );
+            })}
             </select>
 
             <select
@@ -1571,25 +1720,35 @@ export default function SirDashboard() {
               style={{ minWidth: 190 }}
             >
               <option value="ALL">All Channel Partners</option>
-              {cps.map((cp) => (
-                <option key={cp.id} value={cp.id}>
-                  {cp.label || cp.name || `CP #${cp.id}`}
-                </option>
-              ))}
+            {cps.map((cp, idx) => (
+              <option key={cp.id ?? idx} value={cp.id ?? cp.partner_id ?? cp.cp_id}>
+                {cp.full_name ||
+                  cp.company_name ||
+                  cp.label ||
+                  cp.name ||
+                  `CP #${cp.id ?? idx + 1}`}
+              </option>
+            ))}
             </select>
 
-            <select
+            {/* <select
               value={salesUserId}
               onChange={(e) => setSalesUserId(e.target.value)}
               style={{ minWidth: 170 }}
             >
               <option value="ALL">All Sales People</option>
-              {salesPeople.map((sp) => (
-                <option key={sp.id} value={sp.id}>
-                  {sp.label || sp.name || `User #${sp.id}`}
+              {salesPeopleList.map((sp, idx) => (
+                <option
+                  key={sp.id ?? idx}
+                  value={sp.id ?? sp.user_id ?? sp.username}
+                >
+                  {sp.name ||
+                    sp.username ||
+                    sp.label ||
+                    `User #${sp.id ?? idx + 1}`}
                 </option>
               ))}
-            </select>
+            </select> */}
 
             <select
               value={campaignId}
