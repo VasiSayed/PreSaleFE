@@ -82,7 +82,7 @@ body {
   align-items:center;
   gap: 12px;
 
-  padding: 12px 14px;
+  padding: 12px 18px;
   background: #fff;
   border: 1px solid var(--border);
   border-radius: 18px;
@@ -90,6 +90,7 @@ body {
 
   overflow-x: auto;       /* small screens pe scroll */
   white-space: nowrap;
+  scroll-padding-left: 18px;
 }
 
 /* hide horizontal scrollbar (clean look) */
@@ -135,11 +136,15 @@ body {
   gap: 12px;
   align-items: center;
 
-  padding: 14px 14px;
+  padding: 14px 18px;
   background: var(--card);
   border: 1px solid var(--border);
   border-radius: 16px;
   box-shadow: var(--shadow);
+
+  overflow-x: auto;
+  white-space: nowrap;
+  scroll-padding-left: 18px;
 }
 
 /* "Filters:" label via CSS (since JSX doesn’t have it) */
@@ -681,7 +686,7 @@ body {
 .flip-inner {
   position: relative;
   transform-style: preserve-3d;
-  min-height: 290px;
+  min-height: 310px;
 }
 
 .flip-face {
@@ -789,7 +794,7 @@ body {
 /* Back side */
 .flip-back {
   transform: rotateY(180deg);
-  padding: 18px;
+  padding: 18px 18px 26px;
 }
 
 .flip-back-head {
@@ -810,7 +815,7 @@ body {
 
 .mini-chart {
   margin-top: 10px;
-  height: 200px;
+  height: 190px;
 }
 
 .flip-back-hint {
