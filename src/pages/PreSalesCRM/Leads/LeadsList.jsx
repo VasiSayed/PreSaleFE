@@ -47,6 +47,22 @@ function getInputValue(val) {
   return "";
 }
 
+/* ✅ NEW: priority normalize -> only digits CSV */
+function normalizePriority(raw) {
+  if (!raw) return "";
+  const nums = String(raw).match(/\d+/g) || [];
+  const seen = new Set();
+  const out = [];
+  for (const n of nums) {
+    const x = String(parseInt(n, 10));
+    if (!seen.has(x)) {
+      seen.add(x);
+      out.push(x);
+    }
+  }
+  return out.join(",");
+}
+
 export default function LeadsList() {
   const navigate = useNavigate();
 
@@ -59,12 +75,27 @@ export default function LeadsList() {
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [count, setCount] = useState(0);
+  const [dealLoadingIds, setDealLoadingIds] = useState(() => new Set());
 
-  // ✅ Filters state FIRST
+  // ✅ Filters state FIRST (extended - OG keys kept)
   const [filters, setFilters] = useState({
     status: "",
     source: "",
     project: "",
+
+    // ✅ NEW (column dropdown filters)
+    name: "",
+    email: "",
+    number: "",
+    assign_to: "",
+    is_deal: "",
+  });
+
+  // ✅ NEW: Priority text (only sends if filled)
+  const [priorityText, setPriorityText] = useState({
+    status_priority: "",
+    classification_priority: "",
+    sub_status_priority: "",
   });
 
   // ✅ Sorting state (API ordering)
@@ -94,8 +125,18 @@ export default function LeadsList() {
   // ✅ keep latest values for stable debounce + fetchList
   const qRef = useRef("");
   const pageRef = useRef(1);
-  const filtersRef = useRef({ status: "", source: "", project: "" });
+  const filtersRef = useRef({
+    status: "",
+    source: "",
+    project: "",
+    name: "",
+    email: "",
+    number: "",
+    assign_to: "",
+    is_deal: "",
+  });
   const orderingRef = useRef("");
+  const priorityRef = useRef(priorityText);
 
   useEffect(() => {
     qRef.current = q;
@@ -112,6 +153,10 @@ export default function LeadsList() {
   useEffect(() => {
     orderingRef.current = ordering;
   }, [ordering]);
+
+  useEffect(() => {
+    priorityRef.current = priorityText;
+  }, [priorityText]);
 
   const [modalOpen, setModalOpen] = useState(false);
 
@@ -160,12 +205,12 @@ export default function LeadsList() {
   }, []);
 
   // ✅ Columns config (label + backend ordering token)
-  // NOTE: backend must support these ordering keys; if not supported, button will still call API but ordering may fallback.
+  // NOTE: backend must support these ordering keys; if not supported, API may fallback.
   const COLS = useMemo(
     () => [
       { id: "id", label: "ID", orderingKey: "id" },
       { id: "lead_name", label: "Lead Name", orderingKey: "name" }, // if backend supports name
-      { id: "contact", label: "Contact", orderingKey: "" }, // optional: add backend ordering if needed
+      { id: "contact", label: "Contact", orderingKey: "" }, // optional
       { id: "email", label: "Email", orderingKey: "email" },
       { id: "source", label: "Source", orderingKey: "source" },
       { id: "project", label: "Project", orderingKey: "project" },
@@ -183,6 +228,267 @@ export default function LeadsList() {
     return 1 + visible; // + Actions
   }, [COLS, colVis]);
 
+  /* ✅ NEW: column -> backend filter param */
+  const COL_FILTER = useMemo(
+    () => ({
+      source: { param: "source", multi: false },
+      project: { param: "project", multi: false },
+      is_deal: { param: "is_deal", multi: false },
+      status: { param: "status", multi: true }, // supports CSV
+      assigned_to: { param: "assign_to", multi: false },
+    }),
+    [],
+  );
+
+  const POPUP_DISABLED_COLS = useMemo(
+    () => new Set(["lead_name", "contact", "email", "latest_remarks"]),
+    [],
+  );
+
+  /* ✅ NEW: header dropdown state */
+  const [hdrMenu, setHdrMenu] = useState({
+    open: false,
+    colId: "",
+    label: "",
+    orderingKey: "",
+    x: 0,
+    y: 0,
+  });
+  const [hdrMenuSearch, setHdrMenuSearch] = useState("");
+  const [hdrMenuSelected, setHdrMenuSelected] = useState(new Set());
+  const hdrMenuRef = useRef(null);
+
+  useEffect(() => {
+    if (!hdrMenu.open) return;
+
+    const onDown = (e) => {
+      if (!hdrMenuRef.current) return;
+      if (!hdrMenuRef.current.contains(e.target)) {
+        setHdrMenu((p) => ({ ...p, open: false }));
+      }
+    };
+    const onKey = (e) => {
+      if (e.key === "Escape") {
+        setHdrMenu((p) => ({ ...p, open: false }));
+      }
+    };
+
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [hdrMenu.open]);
+
+  /* ✅ NEW: extract label/value from row per column */
+  const getCellMeta = useCallback((lead, colId) => {
+    const leadId = lead.lead_code || lead.code || `L-${lead.id}`;
+
+    const leadNameRaw =
+      lead.lead_name ||
+      [lead.first_name, lead.last_name].filter(Boolean).join(" ") ||
+      "-";
+    const leadName = leadNameRaw !== "-" ? toTitleCase(leadNameRaw) : "-";
+
+    const contact =
+      lead.mobile_number || lead.contact_number || lead.phone || "-";
+
+    const email = lead.email ? String(lead.email) : "-";
+
+    const sourceLabel =
+      lead.source_name || lead.lead_source_name || lead.source?.name || "-";
+    const sourceName = sourceLabel !== "-" ? toTitleCase(sourceLabel) : "-";
+    const sourceVal =
+      lead.source_id != null
+        ? String(lead.source_id)
+        : lead.source?.id != null
+          ? String(lead.source.id)
+          : sourceName;
+
+    const projectName =
+      lead.project_name ||
+      lead.project?.name ||
+      lead.project_lead?.project?.name ||
+      "-";
+    const projectVal =
+      lead.project_id != null
+        ? String(lead.project_id)
+        : lead.project?.id != null
+          ? String(lead.project.id)
+          : String(projectName);
+
+    const statusLabel =
+      lead.status_name ||
+      lead.status?.name ||
+      lead.stage_name ||
+      lead.sub_status?.name ||
+      "New";
+    const statusVal =
+      lead.status_id != null
+        ? String(lead.status_id)
+        : lead.status?.id != null
+          ? String(lead.status.id)
+          : String(statusLabel);
+
+    const assignedToLabel =
+      lead.assigned_to_name ||
+      lead.assign_to_name ||
+      lead.current_owner?.name ||
+      "-";
+    const assignedToVal =
+      lead.assign_to_id != null
+        ? String(lead.assign_to_id)
+        : lead.assign_to?.id != null
+          ? String(lead.assign_to.id)
+          : String(assignedToLabel);
+
+    const isDeal = !!lead.is_deal;
+
+    switch (colId) {
+      case "id":
+        return { label: String(leadId), value: String(leadId) };
+      case "lead_name":
+        return { label: String(leadName), value: String(leadName) };
+      case "contact":
+        return { label: String(contact), value: String(contact) };
+      case "email":
+        return { label: String(email), value: String(email) };
+      case "source":
+        return { label: String(sourceName), value: String(sourceVal) };
+      case "project":
+        return { label: String(projectName), value: String(projectVal) };
+      case "is_deal":
+        return {
+          label: isDeal ? "DEAL" : "NON-DEAL",
+          value: isDeal ? "1" : "0",
+        };
+      case "status":
+        return { label: String(statusLabel), value: String(statusVal) };
+      case "assigned_to":
+        return { label: String(assignedToLabel), value: String(assignedToVal) };
+      default:
+        return { label: "-", value: "-" };
+    }
+  }, []);
+
+  const buildUniqueOptions = useCallback(
+    (colId) => {
+      const map = new Map(); // value -> label
+      rows.forEach((lead) => {
+        const { label, value } = getCellMeta(lead, colId);
+        if (!value || value === "-" || value === "NA") return;
+        if (!map.has(value)) map.set(value, label);
+      });
+
+      const opts = Array.from(map.entries()).map(([value, label]) => ({
+        value: String(value),
+        label: String(label),
+      }));
+      opts.sort((a, b) => a.label.localeCompare(b.label));
+      return opts;
+    },
+    [rows, getCellMeta],
+  );
+
+  const openHdrMenu = (e, { colId, label, orderingKey }) => {
+    if (POPUP_DISABLED_COLS.has(colId)) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+
+    // preselect from current filters
+    const cfg = COL_FILTER[colId];
+    const cur = cfg?.param ? String(filtersRef.current?.[cfg.param] || "") : "";
+    const pre = new Set();
+    if (cur) {
+      if (cfg?.multi) {
+        cur
+          .split(",")
+          .map((x) => x.trim())
+          .filter(Boolean)
+          .forEach((x) => pre.add(x));
+      } else {
+        pre.add(cur.trim());
+      }
+    }
+
+    setHdrMenuSelected(pre);
+    setHdrMenuSearch("");
+    setHdrMenu({
+      open: true,
+      colId,
+      label,
+      orderingKey,
+      x: Math.min(rect.left, window.innerWidth - 280),
+      y: rect.bottom + 6,
+    });
+  };
+
+  const toggleHdrValue = (val) => {
+    const cfg = COL_FILTER[hdrMenu.colId];
+    setHdrMenuSelected((prev) => {
+      const next = new Set(prev);
+      if (cfg?.multi) {
+        if (next.has(val)) next.delete(val);
+        else next.add(val);
+      } else {
+        // single select
+        if (next.has(val)) next.clear();
+        else {
+          next.clear();
+          next.add(val);
+        }
+      }
+      return next;
+    });
+  };
+
+  const clearHdrFilter = () => {
+    const cfg = COL_FILTER[hdrMenu.colId];
+    if (cfg?.param) {
+      setFilters((prev) => ({ ...prev, [cfg.param]: "" }));
+      setPage(1);
+      // clear filter and refetch
+      fetchList({ page: 1, [cfg.param]: "" });
+    }
+    setHdrMenuSelected(new Set());
+    setHdrMenu((p) => ({ ...p, open: false }));
+  };
+
+  const applyHdrMenu = () => {
+    const cfg = COL_FILTER[hdrMenu.colId];
+    const selected = Array.from(hdrMenuSelected);
+    setPage(1);
+
+    // ✅ if selected -> send filter values
+    if (cfg?.param && selected.length > 0) {
+      const nextVal = cfg.multi ? selected.join(",") : selected[0];
+
+      setFilters((prev) => ({ ...prev, [cfg.param]: nextVal }));
+
+      fetchList({
+        page: 1,
+        [cfg.param]: nextVal,
+      });
+
+      setHdrMenu((p) => ({ ...p, open: false }));
+      return;
+    }
+
+    // ✅ if NOT selected -> "send only field not ids" => just apply ordering
+    if (hdrMenu.orderingKey) {
+      handleSort(hdrMenu.orderingKey);
+    }
+    setHdrMenu((p) => ({ ...p, open: false }));
+  };
+
+  const hdrMenuOptions = useMemo(() => {
+    if (!hdrMenu.open || !hdrMenu.colId) return [];
+    const opts = buildUniqueOptions(hdrMenu.colId);
+    const s = (hdrMenuSearch || "").trim().toLowerCase();
+    if (!s) return opts;
+    return opts.filter((o) => (o.label || "").toLowerCase().includes(s));
+  }, [hdrMenu.open, hdrMenu.colId, hdrMenuSearch, buildUniqueOptions]);
+
   // ---------- 1) Stable fetchList (no deps) ----------
   const fetchList = useCallback(async (opts = {}) => {
     setLoading(true);
@@ -193,8 +499,18 @@ export default function LeadsList() {
         status: "",
         source: "",
         project: "",
+        name: "",
+        email: "",
+        number: "",
+        assign_to: "",
+        is_deal: "",
       };
       const latestOrdering = orderingRef.current || "";
+      const latestPriority = priorityRef.current || {
+        status_priority: "",
+        classification_priority: "",
+        sub_status_priority: "",
+      };
 
       const searchParam = typeof opts.q === "string" ? opts.q : latestQ;
       const pageParam =
@@ -202,11 +518,36 @@ export default function LeadsList() {
 
       const params = {
         page: pageParam,
+
+        // OG filters
         status: opts.status ?? latestFilters.status,
         source: opts.source ?? latestFilters.source,
         project: opts.project ?? latestFilters.project,
-        ordering: opts.ordering ?? latestOrdering, // ✅ NEW
+
+        // ✅ NEW column dropdown filters
+        name: opts.name ?? latestFilters.name,
+        email: opts.email ?? latestFilters.email,
+        number: opts.number ?? latestFilters.number,
+        assign_to: opts.assign_to ?? latestFilters.assign_to,
+        is_deal: opts.is_deal ?? latestFilters.is_deal,
+
+        ordering: opts.ordering ?? latestOrdering, // ✅ ordering always
       };
+
+      // ✅ NEW: priority params (ONLY IF FILLED)
+      const sp = normalizePriority(
+        opts.status_priority ?? latestPriority.status_priority,
+      );
+      const cp = normalizePriority(
+        opts.classification_priority ?? latestPriority.classification_priority,
+      );
+      const ssp = normalizePriority(
+        opts.sub_status_priority ?? latestPriority.sub_status_priority,
+      );
+
+      if (sp) params.status_priority = sp;
+      if (cp) params.classification_priority = cp;
+      if (ssp) params.sub_status_priority = ssp;
 
       const cleanedQ = (searchParam || "").trim();
       if (cleanedQ) {
@@ -292,8 +633,57 @@ export default function LeadsList() {
     }
   };
 
+  const isDealLoading = (id) => dealLoadingIds.has(id);
+  const updateDealLoading = (id, isLoading) => {
+    setDealLoadingIds((prev) => {
+      const next = new Set(prev);
+      if (isLoading) next.add(id);
+      else next.delete(id);
+      return next;
+    });
+  };
+
+  const handleToggleDeal = async (lead) => {
+    if (!lead?.id || isDealLoading(lead.id)) return;
+
+    const nextIsDeal = !lead.is_deal;
+    const actionLabel = nextIsDeal ? "mark as deal" : "unmark deal";
+    const reason = window.prompt(`Please enter reason to ${actionLabel}:`);
+    if (!reason || !String(reason).trim()) return;
+
+    updateDealLoading(lead.id, true);
+    try {
+      const body = { reason: String(reason).trim(), comment: "" };
+      if (nextIsDeal) {
+        await LeadAPI.markDeal(lead.id, body);
+      } else {
+        await LeadAPI.unmarkDeal(lead.id, body);
+      }
+
+      setRows((prev) =>
+        prev.map((r) =>
+          r.id === lead.id ? { ...r, is_deal: nextIsDeal } : r,
+        ),
+      );
+    } catch (err) {
+      console.error("Failed to toggle deal status", err);
+      alert("Failed to update deal status. Please try again.");
+    } finally {
+      updateDealLoading(lead.id, false);
+    }
+  };
+
   const resetFilters = () => {
-    const cleared = { status: "", source: "", project: "" };
+    const cleared = {
+      status: "",
+      source: "",
+      project: "",
+      name: "",
+      email: "",
+      number: "",
+      assign_to: "",
+      is_deal: "",
+    };
     setFilters(cleared);
     setQ("");
     setPage(1);
@@ -312,6 +702,19 @@ export default function LeadsList() {
       status: filters.status,
       source: filters.source,
       project: filters.project,
+
+      // keep column filters too
+      name: filters.name,
+      email: filters.email,
+      number: filters.number,
+      assign_to: filters.assign_to,
+      is_deal: filters.is_deal,
+
+      // priority (from ref)
+      status_priority: priorityText.status_priority,
+      classification_priority: priorityText.classification_priority,
+      sub_status_priority: priorityText.sub_status_priority,
+
       q,
       page: 1,
     });
@@ -513,10 +916,15 @@ export default function LeadsList() {
     }
   };
 
-  // header cell with sort button
-  const HeaderCell = ({ label, orderingKey }) => {
+  // header cell with sort button (dropdown for allowed cols)
+  const HeaderCell = ({ label, orderingKey, colId }) => {
     const active = orderingKey && sortKey === orderingKey;
     const arrow = active ? (sortDir === "asc" ? "▲" : "▼") : "↕";
+
+    // enabled if ordering OR filter exists
+    const hasFilter = !!COL_FILTER[colId];
+    const popupDisabled = POPUP_DISABLED_COLS.has(colId);
+    const enabled = popupDisabled ? !!orderingKey : !!orderingKey || hasFilter;
 
     return (
       <div className="th-wrap">
@@ -524,12 +932,20 @@ export default function LeadsList() {
         <button
           type="button"
           className={`th-sort-btn ${active ? "active" : ""}`}
-          onClick={() => handleSort(orderingKey)}
-          disabled={!orderingKey || loading}
+          onClick={(e) => {
+            if (popupDisabled) {
+              if (orderingKey) handleSort(orderingKey);
+              return;
+            }
+            openHdrMenu(e, { colId, label, orderingKey });
+          }}
+          disabled={!enabled || loading}
           title={
-            orderingKey
-              ? `Sort by ${label}`
-              : "Sorting not available for this column"
+            enabled
+              ? popupDisabled
+                ? `Sort by ${label}`
+                : "Sort / Filter"
+              : "Sorting/filter not available for this column"
           }
         >
           {arrow}
@@ -537,6 +953,29 @@ export default function LeadsList() {
       </div>
     );
   };
+
+  const DealToggle = ({ checked, disabled, onChange }) => (
+    <button
+      type="button"
+      onClick={() => !disabled && onChange(!checked)}
+      disabled={disabled}
+      className={`deal-toggle ${checked ? "on" : "off"}`}
+      style={{
+        minWidth: 56,
+        padding: "6px 10px",
+        borderRadius: 999,
+        border: `1px solid ${checked ? "#16a34a" : "#d1d5db"}`,
+        background: checked ? "#16a34a" : "#f3f4f6",
+        color: checked ? "#fff" : "#6b7280",
+        fontSize: 12,
+        cursor: disabled ? "not-allowed" : "pointer",
+        opacity: disabled ? 0.7 : 1,
+      }}
+      title={checked ? "On" : "Off"}
+    >
+      {checked ? "ON" : "OFF"}
+    </button>
+  );
 
   return (
     <div className="leads-list-page">
@@ -621,57 +1060,97 @@ export default function LeadsList() {
 
                   {colVis.id && (
                     <th>
-                      <HeaderCell label="ID" orderingKey="id" />
+                      <HeaderCell label="ID" orderingKey="id" colId="id" />
                     </th>
                   )}
                   {colVis.lead_name && (
                     <th>
-                      <HeaderCell label="Lead Name" orderingKey="name" />
+                      <HeaderCell
+                        label="Lead Name"
+                        orderingKey="name"
+                        colId="lead_name"
+                      />
                     </th>
                   )}
                   {colVis.contact && (
                     <th>
-                      <HeaderCell label="Contact" orderingKey="" />
+                      <HeaderCell
+                        label="Contact"
+                        orderingKey=""
+                        colId="contact"
+                      />
                     </th>
                   )}
                   {colVis.email && (
                     <th>
-                      <HeaderCell label="Email" orderingKey="email" />
+                      <HeaderCell
+                        label="Email"
+                        orderingKey="email"
+                        colId="email"
+                      />
                     </th>
                   )}
                   {colVis.source && (
                     <th>
-                      <HeaderCell label="Source" orderingKey="source" />
+                      <HeaderCell
+                        label="Source"
+                        orderingKey="source"
+                        colId="source"
+                      />
                     </th>
                   )}
                   {colVis.project && (
                     <th>
-                      <HeaderCell label="Project" orderingKey="project" />
+                      <HeaderCell
+                        label="Project"
+                        orderingKey="project"
+                        colId="project"
+                      />
                     </th>
                   )}
                   {colVis.budget && (
                     <th>
-                      <HeaderCell label="Budget" orderingKey="budget" />
+                      <HeaderCell
+                        label="Budget"
+                        orderingKey="budget"
+                        colId="budget"
+                      />
                     </th>
                   )}
                   {colVis.is_deal && (
                     <th style={{ width: 80 }}>
-                      <HeaderCell label="IMP" orderingKey="deal" />
+                      <HeaderCell
+                        label="IMP"
+                        orderingKey="deal"
+                        colId="is_deal"
+                      />
                     </th>
                   )}
                   {colVis.status && (
                     <th>
-                      <HeaderCell label="Status" orderingKey="status" />
+                      <HeaderCell
+                        label="Status"
+                        orderingKey="status"
+                        colId="status"
+                      />
                     </th>
                   )}
                   {colVis.assigned_to && (
                     <th>
-                      <HeaderCell label="Assigned To" orderingKey="assign_to" />
+                      <HeaderCell
+                        label="Assigned To"
+                        orderingKey="assign_to"
+                        colId="assigned_to"
+                      />
                     </th>
                   )}
                   {colVis.latest_remarks && (
                     <th>
-                      <HeaderCell label="Latest Remarks" orderingKey="" />
+                      <HeaderCell
+                        label="Latest Remarks"
+                        orderingKey=""
+                        colId="latest_remarks"
+                      />
                     </th>
                   )}
                 </tr>
@@ -786,18 +1265,20 @@ export default function LeadsList() {
                         {/* ✅ NEW: IMP / is_deal */}
                         {colVis.is_deal && (
                           <td>
-                            <span
-                              className={`deal-pill ${isDeal ? "yes" : "no"}`}
-                            >
-                              {isDeal ? "DEAL" : "-"}
-                            </span>
+                            <DealToggle
+                              checked={isDeal}
+                              disabled={isDealLoading(lead.id)}
+                              onChange={() => handleToggleDeal(lead)}
+                            />
                           </td>
                         )}
 
                         {colVis.status && (
                           <td>
                             <span
-                              className={`status-badge ${getStatusBadgeClass(status)}`}
+                              className={`status-badge ${getStatusBadgeClass(
+                                status,
+                              )}`}
                             >
                               {status}
                             </span>
@@ -859,6 +1340,114 @@ export default function LeadsList() {
         </div>
       </div>
 
+      {/* ✅ NEW: Header Dropdown (Sort + Unique Filter) */}
+      {hdrMenu.open && (
+        <div
+          ref={hdrMenuRef}
+          className="col-menu"
+          style={{ left: hdrMenu.x, top: hdrMenu.y }}
+        >
+          <div className="col-menu-header">
+            <div className="col-menu-title">{hdrMenu.label}</div>
+            <button
+              type="button"
+              className="col-menu-close"
+              onClick={() => setHdrMenu((p) => ({ ...p, open: false }))}
+            >
+              ✕
+            </button>
+          </div>
+
+          <div className="col-menu-sort">
+            <button
+              type="button"
+              className="btn-secondary"
+              onClick={() => {
+                if (hdrMenu.orderingKey) handleSort(hdrMenu.orderingKey);
+              }}
+              disabled={!hdrMenu.orderingKey || loading}
+              title="Toggle sort (asc/desc)"
+            >
+              Sort{" "}
+              {sortKey === hdrMenu.orderingKey
+                ? sortDir === "asc"
+                  ? "▲"
+                  : "▼"
+                : "↕"}
+            </button>
+
+            <button
+              type="button"
+              className="btn-secondary"
+              onClick={clearHdrFilter}
+              disabled={loading}
+              title="Clear filter for this column"
+            >
+              Clear
+            </button>
+          </div>
+
+          {COL_FILTER[hdrMenu.colId] ? (
+            <>
+              <div className="col-menu-search">
+                <input
+                  className="filter-input"
+                  value={hdrMenuSearch}
+                  onChange={(e) => setHdrMenuSearch(e.target.value)}
+                  placeholder="Search values..."
+                />
+              </div>
+
+              <div className="col-menu-list">
+                {hdrMenuOptions.length ? (
+                  hdrMenuOptions.map((opt) => {
+                    const cfg = COL_FILTER[hdrMenu.colId];
+                    return (
+                      <label key={opt.value} className="col-menu-item">
+                        <input
+                          type={cfg?.multi ? "checkbox" : "radio"}
+                          checked={hdrMenuSelected.has(opt.value)}
+                          onChange={() => toggleHdrValue(opt.value)}
+                        />
+                        <span title={opt.label}>{opt.label}</span>
+                      </label>
+                    );
+                  })
+                ) : (
+                  <div className="col-menu-empty">No values</div>
+                )}
+              </div>
+
+              <div className="col-menu-actions">
+                <button
+                  type="button"
+                  className="btn-primary"
+                  onClick={applyHdrMenu}
+                  disabled={loading}
+                  title="Apply: selected => filter, none => only ordering"
+                >
+                  Apply
+                </button>
+              </div>
+            </>
+          ) : (
+            <div className="col-menu-empty">
+              No backend filter mapping for this column.
+              <div style={{ marginTop: 8 }}>
+                <button
+                  type="button"
+                  className="btn-primary"
+                  onClick={applyHdrMenu}
+                  disabled={loading}
+                >
+                  Apply (Ordering only)
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Filter Modal */}
       {modalOpen && (
         <div className="filter-modal-overlay">
@@ -892,6 +1481,52 @@ export default function LeadsList() {
                   </option>
                 ))}
               </select>
+
+              {/* ✅ NEW: Priority text inputs */}
+              <div style={{ marginTop: 12 }}>
+                <label className="filter-label">Status Priority (IDs)</label>
+                <input
+                  className="filter-input"
+                  value={priorityText.status_priority}
+                  onChange={(e) =>
+                    setPriorityText((prev) => ({
+                      ...prev,
+                      status_priority: e.target.value,
+                    }))
+                  }
+                  placeholder="ex: 1,3,4"
+                />
+
+                <label className="filter-label" style={{ marginTop: 10 }}>
+                  Classification Priority (IDs)
+                </label>
+                <input
+                  className="filter-input"
+                  value={priorityText.classification_priority}
+                  onChange={(e) =>
+                    setPriorityText((prev) => ({
+                      ...prev,
+                      classification_priority: e.target.value,
+                    }))
+                  }
+                  placeholder="ex: 10,7,2"
+                />
+
+                <label className="filter-label" style={{ marginTop: 10 }}>
+                  Sub Status Priority (IDs)
+                </label>
+                <input
+                  className="filter-input"
+                  value={priorityText.sub_status_priority}
+                  onChange={(e) =>
+                    setPriorityText((prev) => ({
+                      ...prev,
+                      sub_status_priority: e.target.value,
+                    }))
+                  }
+                  placeholder="ex: 5,2"
+                />
+              </div>
             </div>
 
             <div className="filter-actions">

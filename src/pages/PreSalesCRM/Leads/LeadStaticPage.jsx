@@ -3002,8 +3002,11 @@ useEffect(() => {
                               ...prev,
                               visit_type: "VISIT",
                               scheduled_at: nowForInput(),
-                              member_name: "",
-                              member_mobile_number: "",
+                              member_name: prev.member_name || rawFullName || "",
+                              member_mobile_number:
+                                prev.member_mobile_number ||
+                                lead?.mobile_number ||
+                                "",
                               notes: "",
                               unit_config_id: "",
                               unit_id: "",

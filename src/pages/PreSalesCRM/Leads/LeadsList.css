@@ -696,3 +696,95 @@
   pointer-events: auto;
 }
 
+
+
+.col-menu {
+  position: fixed;
+  width: 260px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  box-shadow: 0 12px 28px rgba(0,0,0,0.14);
+  z-index: 2500;
+  padding: 12px;
+}
+
+.col-menu-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.col-menu-title {
+  font-weight: 600;
+  font-size: 13px;
+  color: #111827;
+}
+
+.col-menu-close {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 16px;
+  color: #6b7280;
+}
+
+.col-menu-sort {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.col-menu-search {
+  margin-bottom: 8px;
+}
+
+.col-menu-list {
+  max-height: 180px;
+  overflow: auto;
+  border: 1px solid #f3f4f6;
+  border-radius: 8px;
+  padding: 8px;
+}
+
+.col-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 6px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.col-menu-item:hover {
+  background: #f9fafb;
+  border-radius: 6px;
+}
+
+.col-menu-empty {
+  font-size: 12px;
+  color: #6b7280;
+  padding: 10px;
+}
+
+.col-menu-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.data-table thead th .th-sort-btn {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease;
+}
+
+.data-table thead th:hover .th-sort-btn,
+.data-table thead th .th-sort-btn.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+

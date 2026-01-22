@@ -278,15 +278,18 @@ const Dashboard = () => {
       };
       if (selectedProjectId) params.project_id = Number(selectedProjectId);
 
-      const response = await axiosInstance.get(
-        "dashboard/vasi/admin/presales-exec/",
-        {
-          params,
-        },
-      );
+const response = await axiosInstance.get(
+  "dashboard/vasi/admin/presales-exec/",
+  {
+    params,
+  },
+);
 
-      if (response.data?.success) setData(response.data.data);
-      else throw new Error("API returned unsuccessful response");
+
+      const payload = response.data?.data ?? response.data;
+      if (response.data?.success === false)
+        throw new Error("API returned unsuccessful response");
+      setData(payload);
     } catch (err) {
       setError(err?.message || "Unknown error");
       console.error("API Error:", err);
@@ -548,7 +551,7 @@ const Dashboard = () => {
                     <Legend />
                     {Object.keys(data.site_visit_obj.current.categories).map(
                       (cat) => (
-                      <Line
+                        <Line
                           key={cat}
                           type="monotone"
                           dataKey={cat}
@@ -902,62 +905,65 @@ const Dashboard = () => {
           )}
 
         {/* 9. SITE SUMMARY CARDS */}
-        {activeTab === "overview" &&
-          siteSummaryRows.length > 0 && (
-            <div className="site-summary-section">
-              <div className="section-header-clean">
-                <div>
-                  <h2 className="section-title">Site Summary</h2>
-                  <p className="section-subtitle">
-                    Click a card to flip and view metrics
-                  </p>
-                </div>
-
-                <div className="site-summary-controls">
-                  <div className="period-tabs">
-                    <button className="period-tab">Day</button>
-                    <button className="period-tab active">Week</button>
-                    <button className="period-tab">Month</button>
-                    <button className="period-tab">Year</button>
-                  </div>
-                  <div className="site-summary-project">
-                    <span className="site-summary-label">Project</span>
-                    <select
-                      className="site-summary-select"
-                      value={selectedProjectId}
-                      onChange={(e) => setSelectedProjectId(e.target.value)}
-                    >
-                      {scopeProjects.map((project) => (
-                        <option key={project.id} value={project.id}>
-                          {project.name || `Project ${project.id}`}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
+        {activeTab === "overview" && siteSummaryRows.length > 0 && (
+          <div className="site-summary-section">
+            <div className="section-header-clean">
+              <div>
+                <h2 className="section-title">Site Summary</h2>
+                <p className="section-subtitle">
+                  Click a card to flip and view metrics
+                </p>
               </div>
 
-              <div className="site-summary-grid ss2-grid">
-                {siteSummaryRows.map((site, idx) => {
-                  const pid = site?.project_id;
-                  const seriesRow =
-                    ssSeriesRows.find((sr) => sr?.project_id === pid) || null;
-                  const variant = ["green", "blue", "purple"][idx % 3];
-
-                  return (
-                    <SiteSummaryCardV2
-                      key={`${pid || idx}`}
-                      row={site}
-                      labels={ssLabels}
-                      seriesRow={seriesRow}
-                      variant={variant}
-                      start="trend"
-                    />
-                  );
-                })}
+              <div className="site-summary-controls">
+                <div className="period-tabs">
+                  <button className="period-tab">Day</button>
+                  <button className="period-tab active">Week</button>
+                  <button className="period-tab">Month</button>
+                  <button className="period-tab">Year</button>
+                </div>
+                <div className="site-summary-project">
+                  <span className="site-summary-label">Project</span>
+                  <select
+                    className="site-summary-select"
+                    value={selectedProjectId}
+                    onChange={(e) => setSelectedProjectId(e.target.value)}
+                  >
+                    {scopeProjects.map((project) => (
+                      <option key={project.id} value={project.id}>
+                        {project.name || `Project ${project.id}`}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
             </div>
-          )}
+
+            <div
+              className={`site-summary-grid ss2-grid ${
+                siteSummaryRows.length === 1 ? "ss2-single" : ""
+              }`}
+            >
+              {siteSummaryRows.map((site, idx) => {
+                const pid = site?.project_id;
+                const seriesRow =
+                  ssSeriesRows.find((sr) => sr?.project_id === pid) || null;
+                const variant = ["green", "blue", "purple"][idx % 3];
+
+                return (
+                  <SiteSummaryCardV2
+                    key={`${pid || idx}`}
+                    row={site}
+                    labels={ssLabels}
+                    seriesRow={seriesRow}
+                    variant={variant}
+                    start="trend"
+                  />
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {/* 10. OVERVIEW CHARTS */}
         {activeTab === "overview" && (
@@ -1019,7 +1025,7 @@ const Dashboard = () => {
         {(activeTab === "overview" || activeTab === "config") &&
           Array.isArray(data?.config_matrix?.rows) &&
           data.config_matrix.rows.length > 0 && (
-            <div className="config-matrix-section">
+            <div className="chart-section config-matrix-section">
               <div className="section-header-clean">
                 <div>
                   <h2 className="section-title">Configuration Matrix</h2>
@@ -1030,66 +1036,60 @@ const Dashboard = () => {
               <div className="config-cards-grid">
                 {data.config_matrix.rows.map((config, idx) => (
                   <ConfigCard
-                    key={`${config.configuration_id || idx}`}
+                    key={config.configuration_id ?? idx}
                     title={config.configuration_name || `Config ${idx + 1}`}
                     subtitle="Inventory + Leads + Bookings"
                     metrics={[
                       {
                         label: "Inventory Total",
-                        value: String(config.inventory?.total || 0),
+                        value: String(config.inventory?.total ?? 0),
                         icon: "📦",
                       },
                       {
                         label: "Available",
-                        value: String(config.inventory?.available || 0),
+                        value: String(config.inventory?.available ?? 0),
                         icon: "✅",
                       },
                       {
                         label: "Leads",
-                        value: String(
-                          config.leads?.total ?? config.leads?.current ?? 0,
-                        ),
+                        value: String(config.leads?.current ?? 0),
                         icon: "👥",
                       },
                       {
                         label: "Bookings",
-                        value: String(
-                          config.bookings?.total ??
-                            config.bookings?.current ??
-                            0,
-                        ),
+                        value: String(config.bookings?.current ?? 0),
                         icon: "📋",
                       },
                     ]}
                     metricsBack={[
                       {
                         label: "Inventory Total",
-                        value: String(config.inventory?.total || 0),
+                        value: String(config.inventory?.total ?? 0),
                         icon: "📦",
                       },
                       {
-                        label: "Available",
-                        value: String(config.inventory?.available || 0),
-                        icon: "✅",
+                        label: "Booked",
+                        value: String(config.inventory?.booked ?? 0),
+                        icon: "🧾",
                       },
                       {
                         label: "Leads (Current)",
-                        value: String(config.leads?.current || 0),
+                        value: String(config.leads?.current ?? 0),
                         icon: "👥",
                       },
                       {
                         label: "Bookings (Current)",
-                        value: String(config.bookings?.current || 0),
+                        value: String(config.bookings?.current ?? 0),
                         icon: "📋",
                       },
                     ]}
                     conversion={{
                       label: "Lead→Book",
-                      value: `${Number(config.lead_to_booking_pct || 0).toFixed(1)}%`,
+                      value: `${Number(config.lead_to_booking_pct ?? 0).toFixed(1)}%`,
                       label2: "Sold %",
                       value2: config.inventory?.total
                         ? `${(
-                            (Number(config.inventory?.booked || 0) /
+                            (Number(config.inventory?.booked ?? 0) /
                               Number(config.inventory?.total || 1)) *
                             100
                           ).toFixed(1)}%`

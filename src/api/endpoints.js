@@ -274,6 +274,14 @@ export const LeadAPI = {
     api.put(`${URLS.salesLeads}${id}/`, payload).then((r) => r.data),
 
   delete: (id) => api.delete(`${URLS.salesLeads}${id}/`).then((r) => r.data),
+
+  // Deal toggles
+  markDeal: (id, body = {}) =>
+    api.post(`${URLS.salesLeads}${id}/deal/mark/`, body).then((r) => r.data),
+  unmarkDeal: (id, body = {}) =>
+    api.post(`${URLS.salesLeads}${id}/deal/unmark/`, body).then((r) => r.data),
+  setDeal: (id, body = {}) =>
+    api.post(`${URLS.salesLeads}${id}/deal/`, body).then((r) => r.data),
 };
 
 export const BookingAPI = {
