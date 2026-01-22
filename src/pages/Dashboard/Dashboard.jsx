@@ -272,30 +272,69 @@ const Dashboard = () => {
   const [salesUsers, setSalesUsers] = useState([]);
   const [channelPartners, setChannelPartners] = useState([]);
 
+  const buildDashboardParams = () => {
+    const params = {
+      period: "week",
+      bucket: "day",
+      mode: "calendar",
+      as_of: new Date().toISOString().slice(0, 10),
+    };
+
+    if (selectedProjectId) params.project_ids = String(selectedProjectId);
+    if (filters.towers) params.tower_id = String(filters.towers);
+    if (filters.channelPartners)
+      params.cp_ids = String(filters.channelPartners);
+    if (filters.config) params.configuration_id = String(filters.config);
+    if (filters.leadSources) params.source_id = String(filters.leadSources);
+    if (filters.floors) params.floor_id = String(filters.floors);
+
+    return params;
+  };
+
   const fetchData = async () => {
     setLoading(true);
     setError(null);
 
     try {
-      const params = {
-        period: "week",
-        bucket_mode: "calendar",
-        year: 2026,
-      };
-      if (selectedProjectId) params.project_id = Number(selectedProjectId);
+      const params = buildDashboardParams();
+      const endpoints = [
+        "/dashboard/vasi/admin/presales-exec/",
+        "/dashboard/vasi/admin/presales-exec/kpis/",
+        "/dashboard/vasi/admin/presales-exec/config-matrix/",
+        "/dashboard/vasi/admin/presales-exec/sales-team-performance/",
+        "/dashboard/vasi/admin/presales-exec/charts/site-visits/",
+        "/dashboard/vasi/admin/presales-exec/charts/revisit/",
+        "/dashboard/vasi/admin/presales-exec/charts/active-cp/",
+        "/dashboard/vasi/admin/presales-exec/charts/inventory/",
+        "/dashboard/vasi/admin/presales-exec/charts/lead-funnel/",
+        "/dashboard/vasi/admin/presales-exec/charts/source-wise/",
+        "/dashboard/vasi/admin/presales-exec/charts/site-wise/",
+        "/dashboard/vasi/admin/presales-exec/charts/top-cp/",
+        "/dashboard/vasi/admin/presales-exec/charts/top-cp-by-leads/",
+      ];
 
-const response = await axiosInstance.get(
-  "dashboard/vasi/admin/presales-exec/",
-  {
-    params,
-  },
-);
+      const results = await Promise.allSettled(
+        endpoints.map((url) => axiosInstance.get(url, { params })),
+      );
 
+      const payloads = [];
+      results.forEach((res, idx) => {
+        if (res.status === "fulfilled") {
+          const payload = res.value?.data?.data ?? res.value?.data;
+          if (payload && typeof payload === "object") {
+            payloads.push(payload);
+          }
+        } else {
+          console.error("Dashboard endpoint failed:", endpoints[idx], res.reason);
+        }
+      });
 
-      const payload = response.data?.data ?? response.data;
-      if (response.data?.success === false)
-        throw new Error("API returned unsuccessful response");
-      setData(payload);
+      if (!payloads.length) {
+        throw new Error("No dashboard data returned");
+      }
+
+      const merged = payloads.reduce((acc, cur) => ({ ...acc, ...cur }), {});
+      setData(merged);
     } catch (err) {
       setError(err?.message || "Unknown error");
       console.error("API Error:", err);
