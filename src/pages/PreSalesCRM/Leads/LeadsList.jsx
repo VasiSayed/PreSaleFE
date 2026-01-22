@@ -1,29 +1,26 @@
+// src/pages/PreSalesCRM/Leads/LeadsList.jsx
 import { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { LeadAPI } from "../../../api/endpoints";
 import SearchBar from "../../../common/SearchBar";
 import "./LeadsList.css";
 
-const SEARCH_DELAY_MS = 5000; // ✅ Auto search after 5 sec
-const MIN_AUTO_CHARS = 2; // ✅ 2 chars se kam pe auto hit nahi
+const SEARCH_DELAY_MS = 5000; // auto search after 5 sec
+const MIN_AUTO_CHARS = 2;
 
 function debounce(fn, delay) {
   let timeoutId;
-
   const debounced = (...args) => {
     if (timeoutId) clearTimeout(timeoutId);
     timeoutId = setTimeout(() => fn(...args), delay);
   };
-
   debounced.cancel = () => {
     if (timeoutId) clearTimeout(timeoutId);
     timeoutId = null;
   };
-
   return debounced;
 }
 
-// Helper: Convert text to title case (first letter of every word capitalized)
 function toTitleCase(text) {
   if (!text || typeof text !== "string") return text;
   return text
@@ -33,8 +30,6 @@ function toTitleCase(text) {
     .join(" ");
 }
 
-// ✅ SearchBar kabhi string deta hai, kabhi event (e.target.value)
-// Is helper se dono case safe ho jaate.
 function getInputValue(val) {
   if (typeof val === "string") return val;
   if (
@@ -53,8 +48,7 @@ export default function LeadsList() {
 
   const userData = JSON.parse(localStorage.getItem("user") || "{}");
   const userRole = (userData?.role || "").toUpperCase();
-
-  const canDelete = userRole === "ADMIN"; // ✅ only ADMIN
+  const canDelete = userRole === "ADMIN";
 
   const [rows, setRows] = useState([]);
   const [q, setQ] = useState("");
@@ -62,21 +56,48 @@ export default function LeadsList() {
   const [page, setPage] = useState(1);
   const [count, setCount] = useState(0);
 
-  // ✅ Filters state FIRST
+  // Filters
   const [filters, setFilters] = useState({
     status: "",
     source: "",
     project: "",
   });
 
-  // ✅ keep latest values for stable debounce + fetchList
+  // ✅ Sorting state (ONLY send backend-supported keys)
+  // backend-supported: id, deal, deal_marked_at, classification, status, sub_status (and - versions)
+  const [sortKey, setSortKey] = useState(""); // e.g. "status"
+  const [sortDir, setSortDir] = useState("asc"); // "asc" | "desc"
+  const [ordering, setOrdering] = useState(""); // final param
+
+  // ✅ Hide Columns state
+  const DEFAULT_VISIBLE = {
+    id: true,
+    lead_name: true,
+    contact: true,
+    email: true,
+
+    // these may be present in response; show as needed
+    classification: true, // ✅ backend supports ordering=classification
+    source: true,
+    project: true,
+    budget: true,
+
+    is_deal: true, // ✅ IMP column
+    status: true, // ✅ backend supports ordering=status
+    sub_status: false, // ✅ backend supports ordering=sub_status (optional)
+    assigned_to: true,
+    latest_remarks: true,
+  };
+
+  const [colVis, setColVis] = useState(DEFAULT_VISIBLE);
+  const [colsModalOpen, setColsModalOpen] = useState(false);
+  const [tempColVis, setTempColVis] = useState(DEFAULT_VISIBLE);
+
+  // keep latest values for stable debounce + fetchList
   const qRef = useRef("");
   const pageRef = useRef(1);
-  const filtersRef = useRef({
-    status: "",
-    source: "",
-    project: "",
-  });
+  const filtersRef = useRef({ status: "", source: "", project: "" });
+  const orderingRef = useRef("");
 
   useEffect(() => {
     qRef.current = q;
@@ -90,15 +111,19 @@ export default function LeadsList() {
     filtersRef.current = filters;
   }, [filters]);
 
+  useEffect(() => {
+    orderingRef.current = ordering;
+  }, [ordering]);
+
   const [modalOpen, setModalOpen] = useState(false);
 
-  // 🔹 NEW: Import Excel modal state
+  // Import Excel modal state
   const [importModalOpen, setImportModalOpen] = useState(false);
   const [scopeProjects, setScopeProjects] = useState([]);
   const [importProjectId, setImportProjectId] = useState("");
   const [importFile, setImportFile] = useState(null);
   const [importLoading, setImportLoading] = useState(false);
-  const [importResult, setImportResult] = useState(null); // API ka full response
+  const [importResult, setImportResult] = useState(null);
 
   const statusOptions = [
     { value: "", label: "All Status" },
@@ -109,7 +134,7 @@ export default function LeadsList() {
     { value: "lost", label: "Lost" },
   ];
 
-  // ---------- MY_SCOPE se projects load karo ----------
+  // MY_SCOPE projects
   useEffect(() => {
     const raw = localStorage.getItem("MY_SCOPE");
     if (!raw) return;
@@ -118,18 +143,14 @@ export default function LeadsList() {
       const scope = JSON.parse(raw);
 
       let projects = [];
-      if (Array.isArray(scope.projects)) {
-        projects = scope.projects;
-      } else if (Array.isArray(scope.project_scope)) {
+      if (Array.isArray(scope.projects)) projects = scope.projects;
+      else if (Array.isArray(scope.project_scope))
         projects = scope.project_scope;
-      } else if (Array.isArray(scope.project_list)) {
-        projects = scope.project_list;
-      }
+      else if (Array.isArray(scope.project_list)) projects = scope.project_list;
 
       setScopeProjects(projects || []);
 
       if (projects && projects.length === 1) {
-        // ek hi project hai -> auto select
         setImportProjectId(String(projects[0].id));
       }
     } catch (err) {
@@ -137,7 +158,37 @@ export default function LeadsList() {
     }
   }, []);
 
-  // ---------- 1) Stable fetchList (no deps) ----------
+  // Column defs (orderingKey must match backend ORDER_MAP)
+  // NOTE: Keep orderingKey="" for columns backend doesn't support.
+  const COLS = useMemo(
+    () => [
+      { id: "id", label: "ID", orderingKey: "id" },
+      { id: "lead_name", label: "Lead Name", orderingKey: "" }, // backend not supporting "name" currently
+      { id: "contact", label: "Contact", orderingKey: "" },
+      { id: "email", label: "Email", orderingKey: "" }, // backend not mapped (avoid sending ordering=email)
+      {
+        id: "classification",
+        label: "Classification",
+        orderingKey: "classification",
+      }, // ✅ supported
+      { id: "source", label: "Source", orderingKey: "" }, // backend not mapped
+      { id: "project", label: "Project", orderingKey: "" }, // backend not mapped
+      { id: "budget", label: "Budget", orderingKey: "" }, // backend not mapped
+      { id: "is_deal", label: "IMP", orderingKey: "deal" }, // ✅ supported alias: deal / -deal
+      { id: "status", label: "Status", orderingKey: "status" }, // ✅ supported
+      { id: "sub_status", label: "Sub Status", orderingKey: "sub_status" }, // ✅ supported
+      { id: "assigned_to", label: "Assigned To", orderingKey: "" }, // backend not mapped
+      { id: "latest_remarks", label: "Latest Remarks", orderingKey: "" },
+    ],
+    [],
+  );
+
+  const visibleColCount = useMemo(() => {
+    const visible = COLS.filter((c) => colVis[c.id]).length;
+    return 1 + visible; // + Actions
+  }, [COLS, colVis]);
+
+  // ---------- fetchList ----------
   const fetchList = useCallback(async (opts = {}) => {
     setLoading(true);
     try {
@@ -148,6 +199,7 @@ export default function LeadsList() {
         source: "",
         project: "",
       };
+      const latestOrdering = orderingRef.current || "";
 
       const searchParam = typeof opts.q === "string" ? opts.q : latestQ;
       const pageParam =
@@ -160,18 +212,22 @@ export default function LeadsList() {
         project: opts.project ?? latestFilters.project,
       };
 
+      const ord = (opts.ordering ?? latestOrdering ?? "").trim();
+      if (ord) params.ordering = ord; // ✅ only send when non-empty (backend safe)
+
       const cleanedQ = (searchParam || "").trim();
       if (cleanedQ) {
-        // ✅ send both to be safe (backend q OR search)
         params.q = cleanedQ;
         params.search = cleanedQ;
       }
 
       const data = await LeadAPI.list(params);
 
-      const items = Array.isArray(data) ? data : data.results ?? [];
+      const items = Array.isArray(data) ? data : (data.results ?? []);
       setRows(items);
-      setCount(Array.isArray(data) ? items.length : data.count ?? items.length);
+      setCount(
+        Array.isArray(data) ? items.length : (data.count ?? items.length),
+      );
     } catch (e) {
       console.error("Failed to load leads", e);
     } finally {
@@ -179,29 +235,25 @@ export default function LeadsList() {
     }
   }, []);
 
-  // ---------- 2) Debounced search (1.5 sec) ----------
-  // ---------- 2) Debounced search (5 sec) ----------
+  // Debounced search
   const debouncedSearch = useMemo(() => {
     return debounce((val) => {
       fetchList({ q: val, page: 1 });
     }, SEARCH_DELAY_MS);
   }, [fetchList]);
 
-  // cleanup (avoid extra API call on unmount)
   useEffect(() => {
-    return () => {
-      debouncedSearch.cancel?.();
-    };
+    return () => debouncedSearch.cancel?.();
   }, [debouncedSearch]);
 
-  // ---------- 3) Initial load ----------
+  // Initial load
   useEffect(() => {
     fetchList({ page: 1 });
   }, [fetchList]);
 
   const totalPages = useMemo(() => Math.max(1, Math.ceil(count / 10)), [count]);
 
-  // ---------- 4) Search handlers ----------
+  // Search handlers
   const handleSearchChange = (valueOrEvent) => {
     const v = getInputValue(valueOrEvent);
     setQ(v);
@@ -209,24 +261,20 @@ export default function LeadsList() {
 
     const trimmed = v.trim();
 
-    // ✅ blank => debounce cancel + reset list (1 API hit)
     if (!trimmed) {
       debouncedSearch.cancel?.();
       fetchList({ q: "", page: 1 });
       return;
     }
 
-    // ✅ 2 char se kam pe auto hit nahi
     if (trimmed.length < MIN_AUTO_CHARS) {
       debouncedSearch.cancel?.();
       return;
     }
 
-    // ✅ auto hit after 5 sec idle
     debouncedSearch(trimmed);
   };
 
-  // ✅ Instant Search button / (optional) manual trigger
   const handleSearchNow = () => {
     debouncedSearch.cancel?.();
     const trimmed = (q || "").trim();
@@ -235,9 +283,7 @@ export default function LeadsList() {
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm("Are you sure you want to delete this lead?")) {
-      return;
-    }
+    if (!window.confirm("Are you sure you want to delete this lead?")) return;
 
     try {
       await LeadAPI.delete(id);
@@ -285,6 +331,53 @@ export default function LeadsList() {
       return "badge-converted";
     if (statusLower.includes("lost")) return "badge-lost";
     return "badge-default";
+  };
+
+  // ✅ sorting (backend-safe)
+  const buildOrderingParam = (key, dir) => {
+    if (!key) return "";
+    // backend: deal => deals first, -deal => deals last
+    if (key === "deal") return dir === "asc" ? "deal" : "-deal";
+    return dir === "asc" ? key : `-${key}`;
+  };
+
+  const handleSort = (orderingKey) => {
+    if (!orderingKey || loading) return;
+
+    const nextDir =
+      sortKey === orderingKey ? (sortDir === "asc" ? "desc" : "asc") : "asc";
+
+    const nextOrdering = buildOrderingParam(orderingKey, nextDir);
+
+    setSortKey(orderingKey);
+    setSortDir(nextDir);
+    setOrdering(nextOrdering);
+    setPage(1);
+
+    fetchList({ page: 1, ordering: nextOrdering });
+  };
+
+  // Hide columns modal helpers
+  const openColsModal = () => {
+    setTempColVis(colVis);
+    setColsModalOpen(true);
+  };
+
+  const applyCols = () => {
+    setColVis(tempColVis);
+    setColsModalOpen(false);
+  };
+
+  const selectAllCols = () => {
+    const all = {};
+    COLS.forEach((c) => (all[c.id] = true));
+    setTempColVis(all);
+  };
+
+  const clearAllCols = () => {
+    const none = {};
+    COLS.forEach((c) => (none[c.id] = false));
+    setTempColVis(none);
   };
 
   const handleDownloadSample = () => {
@@ -335,7 +428,6 @@ export default function LeadsList() {
     ];
 
     const csvContent = `${header.join(",")}\n${sampleRow.join(",")}`;
-
     const blob = new Blob([csvContent], {
       type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=utf-8;",
     });
@@ -349,7 +441,7 @@ export default function LeadsList() {
     URL.revokeObjectURL(url);
   };
 
-  // ---------- Import Excel helpers ----------
+  // Import Excel helpers
   const openImportModal = () => {
     setImportResult(null);
     setImportFile(null);
@@ -413,6 +505,37 @@ export default function LeadsList() {
     }
   };
 
+  // ✅ Header cell: hover-only sort UI + shows ordering key badge
+  const HeaderCell = ({ label, orderingKey }) => {
+    const canSort = !!orderingKey;
+    const active = canSort && sortKey === orderingKey;
+    const arrow = active ? (sortDir === "asc" ? "▲" : "▼") : "↕";
+
+    const tip = canSort
+      ? `ordering=${orderingKey} (click to toggle)`
+      : "Sorting not available (backend not supported)";
+
+    return (
+      <div className="th-wrap" title={tip}>
+        <span className="th-label">{label}</span>
+
+        <span className="th-actions">
+          {canSort && <span className="th-key">{orderingKey}</span>}
+
+          <button
+            type="button"
+            className={`th-sort-btn ${active ? "active" : ""}`}
+            onClick={() => handleSort(orderingKey)}
+            disabled={!canSort || loading}
+            aria-label={tip}
+          >
+            {arrow}
+          </button>
+        </span>
+      </div>
+    );
+  };
+
   return (
     <div className="leads-list-page">
       <div className="leads-list-container">
@@ -427,7 +550,6 @@ export default function LeadsList() {
               wrapperClassName="search-box"
             />
 
-            {/* ✅ Optional Instant Search button */}
             <button
               type="button"
               className="filter-btn"
@@ -439,7 +561,7 @@ export default function LeadsList() {
             </button>
           </div>
 
-          {/* RIGHT: Filters + Excel + Add Lead */}
+          {/* RIGHT */}
           <div className="list-header-right">
             <button
               type="button"
@@ -465,6 +587,16 @@ export default function LeadsList() {
               📥 Import Excel
             </button>
 
+            {/* Hide Columns */}
+            <button
+              type="button"
+              className="filter-btn"
+              onClick={openColsModal}
+              title="Show/Hide table columns"
+            >
+              👁️ Columns
+            </button>
+
             <button
               className="filter-btn"
               onClick={() => navigate("/leads/new")}
@@ -484,23 +616,96 @@ export default function LeadsList() {
               <thead>
                 <tr>
                   <th style={{ width: "120px" }}>Actions</th>
-                  <th>ID</th>
-                  <th>Lead Name</th>
-                  <th>Contact</th>
-                  <th>Email</th>
-                  <th>Source</th>
-                  <th>Project</th>
-                  <th>Budget</th>
-                  <th>Status</th>
-                  <th>Assigned To</th>
-                  <th>Latest Remarks</th>
+
+                  {colVis.id && (
+                    <th>
+                      <HeaderCell label="ID" orderingKey="id" />
+                    </th>
+                  )}
+
+                  {colVis.lead_name && (
+                    <th>
+                      <HeaderCell label="Lead Name" orderingKey="" />
+                    </th>
+                  )}
+
+                  {colVis.contact && (
+                    <th>
+                      <HeaderCell label="Contact" orderingKey="" />
+                    </th>
+                  )}
+
+                  {colVis.email && (
+                    <th>
+                      <HeaderCell label="Email" orderingKey="" />
+                    </th>
+                  )}
+
+                  {colVis.classification && (
+                    <th>
+                      <HeaderCell
+                        label="Classification"
+                        orderingKey="classification"
+                      />
+                    </th>
+                  )}
+
+                  {colVis.source && (
+                    <th>
+                      <HeaderCell label="Source" orderingKey="" />
+                    </th>
+                  )}
+
+                  {colVis.project && (
+                    <th>
+                      <HeaderCell label="Project" orderingKey="" />
+                    </th>
+                  )}
+
+                  {colVis.budget && (
+                    <th>
+                      <HeaderCell label="Budget" orderingKey="" />
+                    </th>
+                  )}
+
+                  {colVis.is_deal && (
+                    <th style={{ width: 90 }}>
+                      <HeaderCell label="IMP" orderingKey="deal" />
+                    </th>
+                  )}
+
+                  {colVis.status && (
+                    <th>
+                      <HeaderCell label="Status" orderingKey="status" />
+                    </th>
+                  )}
+
+                  {colVis.sub_status && (
+                    <th>
+                      <HeaderCell label="Sub Status" orderingKey="sub_status" />
+                    </th>
+                  )}
+
+                  {colVis.assigned_to && (
+                    <th>
+                      <HeaderCell label="Assigned To" orderingKey="" />
+                    </th>
+                  )}
+
+                  {colVis.latest_remarks && (
+                    <th>
+                      <HeaderCell label="Latest Remarks" orderingKey="" />
+                    </th>
+                  )}
                 </tr>
               </thead>
+
               <tbody>
                 {rows.length > 0 ? (
                   rows.map((lead) => {
                     const leadId =
                       lead.lead_code || lead.code || `L-${lead.id}`;
+
                     const leadNameRaw =
                       lead.lead_name ||
                       [lead.first_name, lead.last_name]
@@ -509,26 +714,29 @@ export default function LeadsList() {
                       "-";
                     const leadName =
                       leadNameRaw !== "-" ? toTitleCase(leadNameRaw) : "-";
+
                     const contact =
                       lead.mobile_number ||
                       lead.contact_number ||
                       lead.phone ||
                       "-";
-                    const email = lead.email ? toTitleCase(lead.email) : "-";
+
+                    const email = lead.email ? String(lead.email) : "-";
+
+                    const classification =
+                      lead.classification_name ||
+                      lead.classification?.name ||
+                      lead.classification?.title ||
+                      lead.classification?.code ||
+                      "-";
+
                     const source =
                       lead.source_name ||
                       lead.lead_source_name ||
                       lead.source?.name ||
                       "-";
                     const sourceFormatted =
-                      source !== "-" ? toTitleCase(source) : "-";
-                    const latestRemarksRaw =
-                      (lead.latest_remarks && lead.latest_remarks.trim()) ||
-                      "NA";
-                    const latestRemarks =
-                      latestRemarksRaw !== "NA"
-                        ? toTitleCase(latestRemarksRaw)
-                        : "NA";
+                      source !== "-" ? toTitleCase(String(source)) : "-";
 
                     const project =
                       lead.project_name ||
@@ -544,15 +752,35 @@ export default function LeadsList() {
                     const status =
                       lead.status_name ||
                       lead.status?.name ||
+                      lead.status?.title ||
+                      lead.status?.code ||
                       lead.stage_name ||
-                      lead.sub_status?.name ||
                       "New";
+
+                    const subStatus =
+                      lead.sub_status_name ||
+                      lead.sub_status?.name ||
+                      lead.sub_status?.title ||
+                      lead.sub_status?.code ||
+                      "-";
 
                     const assignedTo =
                       lead.assigned_to_name ||
                       lead.assign_to_name ||
+                      lead.assign_to?.name ||
                       lead.current_owner?.name ||
                       "-";
+
+                    const latestRemarksRaw =
+                      (lead.latest_remarks &&
+                        String(lead.latest_remarks).trim()) ||
+                      "NA";
+                    const latestRemarks =
+                      latestRemarksRaw !== "NA"
+                        ? toTitleCase(latestRemarksRaw)
+                        : "NA";
+
+                    const isDeal = !!lead.is_deal;
 
                     return (
                       <tr key={lead.id}>
@@ -581,30 +809,59 @@ export default function LeadsList() {
                             </button>
                           )}
                         </td>
-                        <td>{leadId}</td>
-                        <td className="lead-name">{leadName}</td>
-                        <td>{contact}</td>
-                        <td className="email-cell">{email}</td>
-                        <td>{sourceFormatted}</td>
-                        <td>{project}</td>
-                        <td>{budget}</td>
-                        <td>
-                          <span
-                            className={`status-badge ${getStatusBadgeClass(
-                              status
-                            )}`}
-                          >
-                            {status}
-                          </span>
-                        </td>
-                        <td>{assignedTo}</td>
-                        <td className="remarks-cell">{latestRemarks}</td>
+
+                        {colVis.id && <td>{leadId}</td>}
+                        {colVis.lead_name && (
+                          <td className="lead-name">{leadName}</td>
+                        )}
+                        {colVis.contact && <td>{contact}</td>}
+                        {colVis.email && (
+                          <td className="email-cell">{email}</td>
+                        )}
+
+                        {colVis.classification && (
+                          <td>{toTitleCase(String(classification))}</td>
+                        )}
+
+                        {colVis.source && <td>{sourceFormatted}</td>}
+                        {colVis.project && <td>{project}</td>}
+                        {colVis.budget && <td>{budget}</td>}
+
+                        {colVis.is_deal && (
+                          <td>
+                            <span
+                              className={`deal-pill ${isDeal ? "yes" : "no"}`}
+                            >
+                              {isDeal ? "DEAL" : "-"}
+                            </span>
+                          </td>
+                        )}
+
+                        {colVis.status && (
+                          <td>
+                            <span
+                              className={`status-badge ${getStatusBadgeClass(status)}`}
+                            >
+                              {String(status)}
+                            </span>
+                          </td>
+                        )}
+
+                        {colVis.sub_status && (
+                          <td>{toTitleCase(String(subStatus))}</td>
+                        )}
+
+                        {colVis.assigned_to && <td>{assignedTo}</td>}
+
+                        {colVis.latest_remarks && (
+                          <td className="remarks-cell">{latestRemarks}</td>
+                        )}
                       </tr>
                     );
                   })
                 ) : (
                   <tr>
-                    <td colSpan="11" className="empty-state">
+                    <td colSpan={visibleColCount} className="empty-state">
                       No leads found
                     </td>
                   </tr>
@@ -614,7 +871,7 @@ export default function LeadsList() {
           )}
         </div>
 
-        {/* Pagination BELOW table */}
+        {/* Pagination */}
         <div className="pagination-info">
           {count > 0 ? (
             <>
@@ -623,6 +880,7 @@ export default function LeadsList() {
           ) : (
             "No results"
           )}
+
           <button
             className="pagination-btn"
             onClick={() => {
@@ -634,6 +892,7 @@ export default function LeadsList() {
           >
             ❮
           </button>
+
           <button
             className="pagination-btn"
             onClick={() => {
@@ -703,7 +962,75 @@ export default function LeadsList() {
         </div>
       )}
 
-      {/* 🔹 Import Excel Modal */}
+      {/* Columns Modal */}
+      {colsModalOpen && (
+        <div className="filter-modal-overlay">
+          <div className="filter-modal">
+            <div className="filter-modal-header">
+              <h3>👁️ Columns</h3>
+              <button
+                className="filter-close"
+                onClick={() => setColsModalOpen(false)}
+                type="button"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="filter-body">
+              <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={selectAllCols}
+                >
+                  Select All
+                </button>
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={clearAllCols}
+                >
+                  Clear All
+                </button>
+              </div>
+
+              <div className="cols-grid">
+                {COLS.map((c) => (
+                  <label key={c.id} className="col-check">
+                    <input
+                      type="checkbox"
+                      checked={!!tempColVis[c.id]}
+                      onChange={(e) =>
+                        setTempColVis((prev) => ({
+                          ...prev,
+                          [c.id]: e.target.checked,
+                        }))
+                      }
+                    />
+                    <span>{c.label}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            <div className="filter-actions">
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={() => setColsModalOpen(false)}
+              >
+                Cancel
+              </button>
+              <button type="button" className="btn-primary" onClick={applyCols}>
+                Apply
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Import Excel Modal */}
       {importModalOpen && (
         <div className="filter-modal-overlay">
           <div className="filter-modal">
