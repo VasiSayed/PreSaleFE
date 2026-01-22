@@ -253,6 +253,11 @@ const Dashboard = () => {
     campaigns: "",
   });
 
+  const [periodFilter, setPeriodFilter] = useState("month");
+  const [bucketFilter, setBucketFilter] = useState("day");
+  const [modeFilter, setModeFilter] = useState("calendar");
+  const [asOf, setAsOf] = useState("");
+
   const [periods, setPeriods] = useState({
     siteVisit: "Weekly",
     reVisit: "Monthly",
@@ -274,16 +279,17 @@ const Dashboard = () => {
 
   const buildDashboardParams = () => {
     const params = {
-      period: "week",
-      bucket: "day",
-      mode: "calendar",
-      as_of: new Date().toISOString().slice(0, 10),
+      period: periodFilter,
+      bucket: bucketFilter,
+      mode: modeFilter,
     };
 
+    if (asOf) params.as_of = asOf;
     if (selectedProjectId) params.project_ids = String(selectedProjectId);
     if (filters.towers) params.tower_id = String(filters.towers);
     if (filters.channelPartners)
       params.cp_ids = String(filters.channelPartners);
+    if (filters.salesPeople) params.sales_ids = String(filters.salesPeople);
     if (filters.config) params.configuration_id = String(filters.config);
     if (filters.leadSources) params.source_id = String(filters.leadSources);
     if (filters.floors) params.floor_id = String(filters.floors);
@@ -442,15 +448,11 @@ const Dashboard = () => {
   }, [selectedProject, selectedTower]);
 
   useEffect(() => {
-    if (!scopeProjects.length && !selectedProjectId) {
-      fetchData();
-      return;
-    }
-    if (selectedProjectId) {
-      fetchData();
-    }
+    fetchData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedProjectId, scopeProjects.length]);
+  }, []);
+
+  // fetch only on Apply click
 
   useEffect(() => {
     setFilters((prev) => ({
@@ -667,6 +669,47 @@ const Dashboard = () => {
         <button className="apply-button" onClick={fetchData}>
           <span>✨</span> Apply
         </button>
+      </div>
+
+      <div className="time-controls-bar">
+        <span className="time-controls-label">Time:</span>
+        <select
+          className="filter-dropdown"
+          value={periodFilter}
+          onChange={(e) => setPeriodFilter(e.target.value)}
+        >
+          <option value="day">Day</option>
+          <option value="week">Week</option>
+          <option value="month">Month</option>
+          <option value="year">Year</option>
+        </select>
+
+        <select
+          className="filter-dropdown"
+          value={bucketFilter}
+          onChange={(e) => setBucketFilter(e.target.value)}
+        >
+          <option value="day">Day</option>
+          <option value="week">Week</option>
+          <option value="month">Month</option>
+          <option value="year">Year</option>
+        </select>
+
+        <select
+          className="filter-dropdown"
+          value={modeFilter}
+          onChange={(e) => setModeFilter(e.target.value)}
+        >
+          <option value="calendar">Calendar</option>
+          <option value="rolling">Rolling</option>
+        </select>
+
+        <input
+          className="filter-dropdown"
+          type="date"
+          value={asOf}
+          onChange={(e) => setAsOf(e.target.value)}
+        />
       </div>
 
       {/* Main Content */}
