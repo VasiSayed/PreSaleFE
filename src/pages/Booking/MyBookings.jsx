@@ -577,6 +577,19 @@ const MyBookings = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
+  // ✅ Hide Columns state
+  const DEFAULT_VISIBLE = {
+    booking_id: true,
+    customer_name: true,
+    project: true,
+    unit: true,
+    advance_amount: true,
+    signed_form: true,
+    status: true,
+  };
+  const [colVis, setColVis] = useState(DEFAULT_VISIBLE);
+  const [colsModalOpen, setColsModalOpen] = useState(false);
+  const [tempColVis, setTempColVis] = useState(DEFAULT_VISIBLE);
 
   // 🔹 upload related
   const fileInputRef = useRef(null);
@@ -625,9 +638,50 @@ const MyBookings = () => {
     []
   );
 
+  const COLS = useMemo(
+    () => [
+      { id: "booking_id", label: "Booking ID" },
+      { id: "customer_name", label: "Customer Name" },
+      { id: "project", label: "Project" },
+      { id: "unit", label: "Unit" },
+      { id: "advance_amount", label: "Advance Amount" },
+      { id: "signed_form", label: "Signed Form" },
+      { id: "status", label: "Status" },
+    ],
+    []
+  );
+
+  const visibleColCount = useMemo(() => {
+    const visible = COLS.filter((c) => colVis[c.id]).length;
+    return 1 + visible; // + Actions
+  }, [COLS, colVis]);
+
   const handleSearchChange = (value) => {
     setSearch(value);
     debouncedSearch(value);
+  };
+
+  // ---------- Hide columns modal helpers ----------
+  const openColsModal = () => {
+    setTempColVis(colVis);
+    setColsModalOpen(true);
+  };
+
+  const applyCols = () => {
+    setColVis(tempColVis);
+    setColsModalOpen(false);
+  };
+
+  const selectAllCols = () => {
+    const all = {};
+    COLS.forEach((c) => (all[c.id] = true));
+    setTempColVis(all);
+  };
+
+  const clearAllCols = () => {
+    const none = {};
+    COLS.forEach((c) => (none[c.id] = false));
+    setTempColVis(none);
   };
 
   const formatAmount = (value) => {
@@ -826,6 +880,14 @@ const MyBookings = () => {
 
           {/* RIGHT: Buttons */}
           <div className="list-header-right">
+            <button
+              type="button"
+              className="filter-btn"
+              onClick={openColsModal}
+              title="Show/Hide table columns"
+            >
+              👁️ Columns
+            </button>
             <button type="button" className="filter-btn" onClick={handleAddClick}>
               <i className="fa fa-plus" style={{ marginRight: "6px" }} />
               New Booking
@@ -849,20 +911,20 @@ const MyBookings = () => {
                 <thead>
                   <tr>
                     <th style={{ width: 130 }}>Action</th>
-                    <th>Booking ID</th>
-                    <th>Customer Name</th>
-                    <th>Project</th>
-                    <th>Unit</th>
-                    <th>Advance Amount</th>
-                    <th>Signed Form</th>
-                    <th>Status</th>
+                    {colVis.booking_id && <th>Booking ID</th>}
+                    {colVis.customer_name && <th>Customer Name</th>}
+                    {colVis.project && <th>Project</th>}
+                    {colVis.unit && <th>Unit</th>}
+                    {colVis.advance_amount && <th>Advance Amount</th>}
+                    {colVis.signed_form && <th>Signed Form</th>}
+                    {colVis.status && <th>Status</th>}
                   </tr>
                 </thead>
 
                 <tbody>
                   {filtered.length === 0 ? (
                     <tr>
-                      <td colSpan={8} className="booking-empty-row">
+                      <td colSpan={visibleColCount} className="booking-empty-row">
                         No bookings found.
                       </td>
                     </tr>
@@ -937,59 +999,78 @@ const MyBookings = () => {
                             )}
                           </td>
 
-                          <td>{bookingId}</td>
+                          {colVis.booking_id && <td>{bookingId}</td>}
 
-                          <td>{b.primary_full_name ? toTitleCase(b.primary_full_name) : "-"}</td>
+                          {colVis.customer_name && (
+                            <td>
+                              {b.primary_full_name ? toTitleCase(b.primary_full_name) : "-"}
+                            </td>
+                          )}
 
-                          <td>
-                            {b.project_name || b.project
-                              ? toTitleCase(b.project_name || b.project)
-                              : "-"}
-                          </td>
+                          {colVis.project && (
+                            <td>
+                              {b.project_name || b.project
+                                ? toTitleCase(b.project_name || b.project)
+                                : "-"}
+                            </td>
+                          )}
 
-                          <td>{unitLabel !== "-" ? toTitleCase(unitLabel) : "-"}</td>
+                          {colVis.unit && (
+                            <td>{unitLabel !== "-" ? toTitleCase(unitLabel) : "-"}</td>
+                          )}
 
-                          <td className="booking-amount-cell">
-                            {b.total_advance != null && b.total_advance !== "" ? (
-                              <>
-                                <span className="rupee-symbol">₹</span>{" "}
-                                {formatAmount(b.total_advance)}
-                              </>
-                            ) : (
-                              "-"
-                            )}
-                          </td>
+                          {colVis.advance_amount && (
+                            <td className="booking-amount-cell">
+                              {b.total_advance != null && b.total_advance !== "" ? (
+                                <>
+                                  <span className="rupee-symbol">₹</span>{" "}
+                                  {formatAmount(b.total_advance)}
+                                </>
+                              ) : (
+                                "-"
+                              )}
+                            </td>
+                          )}
 
                           {/* Signed form column */}
-                          <td className="booking-actions-cell">
-                            <button
-                              type="button"
-                              className="booking-icon-btn"
-                              title={isUploading ? "Uploading..." : "Upload signed booking form"}
-                              onClick={() => handleUploadClick(b.id)}
-                              disabled={isUploading}
-                            >
-                              {isUploading ? "⏳" : "📤"}
-                            </button>
-
-                            {b.signed_booking_file_url && (
-                              <a
-                                href={b.signed_booking_file_url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="booking-icon-btn booking-link-btn"
-                                title="View signed form"
+                          {colVis.signed_form && (
+                            <td className="booking-actions-cell">
+                              <button
+                                type="button"
+                                className="booking-icon-btn"
+                                title={
+                                  isUploading ? "Uploading..." : "Upload signed booking form"
+                                }
+                                onClick={() => handleUploadClick(b.id)}
+                                disabled={isUploading}
                               >
-                                📄
-                              </a>
-                            )}
-                          </td>
+                                {isUploading ? "⏳" : "📤"}
+                              </button>
 
-                          <td>
-                            <span className="booking-status-pill" style={getStatusColor(b.status)}>
-                              {getStatusLabel(b.status)}
-                            </span>
-                          </td>
+                              {b.signed_booking_file_url && (
+                                <a
+                                  href={b.signed_booking_file_url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="booking-icon-btn booking-link-btn"
+                                  title="View signed form"
+                                >
+                                  📄
+                                </a>
+                              )}
+                            </td>
+                          )}
+
+                          {colVis.status && (
+                            <td>
+                              <span
+                                className="booking-status-pill"
+                                style={getStatusColor(b.status)}
+                              >
+                                {getStatusLabel(b.status)}
+                              </span>
+                            </td>
+                          )}
                         </tr>
                       );
                     })
@@ -1029,6 +1110,74 @@ const MyBookings = () => {
         loading={regLoading}
         onRefresh={() => regBooking && fetchRegTimeline(regBooking)}
       />
+
+      {/* ✅ Columns Modal */}
+      {colsModalOpen && (
+        <div className="filter-modal-overlay">
+          <div className="filter-modal">
+            <div className="filter-modal-header">
+              <h3>👁️ Columns</h3>
+              <button
+                className="filter-close"
+                onClick={() => setColsModalOpen(false)}
+                type="button"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="filter-body">
+              <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={selectAllCols}
+                >
+                  Select All
+                </button>
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={clearAllCols}
+                >
+                  Clear All
+                </button>
+              </div>
+
+              <div className="cols-grid">
+                {COLS.map((c) => (
+                  <label key={c.id} className="col-check">
+                    <input
+                      type="checkbox"
+                      checked={!!tempColVis[c.id]}
+                      onChange={(e) =>
+                        setTempColVis((prev) => ({
+                          ...prev,
+                          [c.id]: e.target.checked,
+                        }))
+                      }
+                    />
+                    <span>{c.label}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            <div className="filter-actions">
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={() => setColsModalOpen(false)}
+              >
+                Cancel
+              </button>
+              <button type="button" className="btn-primary" onClick={applyCols}>
+                Apply
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

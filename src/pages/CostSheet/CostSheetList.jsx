@@ -45,6 +45,18 @@ export default function CostSheetList() {
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [count, setCount] = useState(0);
+  // ✅ Hide Columns state
+  const DEFAULT_VISIBLE = {
+    quotation_no: true,
+    customer_name: true,
+    project_name: true,
+    sales_executive: true,
+    validity_date: true,
+    attachments: true,
+  };
+  const [colVis, setColVis] = useState(DEFAULT_VISIBLE);
+  const [colsModalOpen, setColsModalOpen] = useState(false);
+  const [tempColVis, setTempColVis] = useState(DEFAULT_VISIBLE);
 
   const fetchList = async (opts = {}) => {
     setLoading(true);
@@ -105,11 +117,50 @@ export default function CostSheetList() {
     []
   );
 
+  const COLS = useMemo(
+    () => [
+      { id: "quotation_no", label: "Quotation No" },
+      { id: "customer_name", label: "Customer Name" },
+      { id: "project_name", label: "Project Name" },
+      { id: "sales_executive", label: "Sales Executive" },
+      { id: "validity_date", label: "Validity Date" },
+      { id: "attachments", label: "Attachments" },
+    ],
+    []
+  );
+
+  const visibleColCount = useMemo(() => {
+    const visible = COLS.filter((c) => colVis[c.id]).length;
+    return 1 + visible; // + Action
+  }, [COLS, colVis]);
 
   
   const handleSearchChange = (value) => {
     setQ(value);
     debouncedFetchList(value);
+  };
+
+  // ---------- Hide columns modal helpers ----------
+  const openColsModal = () => {
+    setTempColVis(colVis);
+    setColsModalOpen(true);
+  };
+
+  const applyCols = () => {
+    setColVis(tempColVis);
+    setColsModalOpen(false);
+  };
+
+  const selectAllCols = () => {
+    const all = {};
+    COLS.forEach((c) => (all[c.id] = true));
+    setTempColVis(all);
+  };
+
+  const clearAllCols = () => {
+    const none = {};
+    COLS.forEach((c) => (none[c.id] = false));
+    setTempColVis(none);
   };
 
 
@@ -139,6 +190,13 @@ export default function CostSheetList() {
           <div className="list-header-right">
             <button
               className="filter-btn"
+              onClick={openColsModal}
+              title="Show/Hide table columns"
+            >
+              👁️ Columns
+            </button>
+            <button
+              className="filter-btn"
               onClick={() => navigate("/costsheet/new")}
             >
               <i className="fa fa-plus" style={{ marginRight: "6px" }} />
@@ -153,18 +211,20 @@ export default function CostSheetList() {
             <thead>
               <tr>
                 <th style={{ width: 120, textAlign: "center" }}>Action</th>
-                <th>Quotation No</th>
-                <th>Customer Name</th>
-                <th>Project Name</th>
-                <th>Sales Executive</th>
-                <th>Validity Date</th>
-                <th style={{ textAlign: "center" }}>Attachments</th>
+                {colVis.quotation_no && <th>Quotation No</th>}
+                {colVis.customer_name && <th>Customer Name</th>}
+                {colVis.project_name && <th>Project Name</th>}
+                {colVis.sales_executive && <th>Sales Executive</th>}
+                {colVis.validity_date && <th>Validity Date</th>}
+                {colVis.attachments && (
+                  <th style={{ textAlign: "center" }}>Attachments</th>
+                )}
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={7}>Loading…</td>
+                  <td colSpan={visibleColCount}>Loading…</td>
                 </tr>
               ) : rows.length ? (
                 rows.map((t) => (
@@ -200,50 +260,58 @@ export default function CostSheetList() {
                     </td>
 
                     {/* QUOTATION NO */}
-                    <td>{t.quotation_no || "-"}</td>
+                    {colVis.quotation_no && <td>{t.quotation_no || "-"}</td>}
 
                     {/* CUSTOMER NAME */}
-                    <td>
-                      {t.customer_name ? toTitleCase(t.customer_name) : "-"}
-                    </td>
+                    {colVis.customer_name && (
+                      <td>{t.customer_name ? toTitleCase(t.customer_name) : "-"}</td>
+                    )}
 
-                    <td>
-                      {t.project_name || t.project?.name
-                        ? toTitleCase(t.project_name || t.project?.name)
-                        : "-"}
-                    </td>
+                    {colVis.project_name && (
+                      <td>
+                        {t.project_name || t.project?.name
+                          ? toTitleCase(t.project_name || t.project?.name)
+                          : "-"}
+                      </td>
+                    )}
 
-                    <td>
-                      {t.prepared_by_name ||
-                      t.prepared_by_username ||
-                      t.prepared_by
-                        ? toTitleCase(
-                            t.prepared_by_name ||
-                              t.prepared_by_username ||
-                              t.prepared_by
-                          )
-                        : "-"}
-                    </td>
+                    {colVis.sales_executive && (
+                      <td>
+                        {t.prepared_by_name ||
+                        t.prepared_by_username ||
+                        t.prepared_by
+                          ? toTitleCase(
+                              t.prepared_by_name ||
+                                t.prepared_by_username ||
+                                t.prepared_by
+                            )
+                          : "-"}
+                      </td>
+                    )}
                     {/* VALIDITY DATE */}
-                    <td title={t.valid_till || t.validity_date || "-"}>
-                      {formatDMY(t.valid_till || t.validity_date || "-")}
-                    </td>
+                    {colVis.validity_date && (
+                      <td title={t.valid_till || t.validity_date || "-"}>
+                        {formatDMY(t.valid_till || t.validity_date || "-")}
+                      </td>
+                    )}
 
                     {/* ATTACHMENTS COUNT */}
-                    <td style={{ textAlign: "center" }}>
-                      {typeof t.attachments_count === "number"
-                        ? t.attachments_count === 0
-                          ? "-"
-                          : `${t.attachments_count} file${
-                              t.attachments_count > 1 ? "s" : ""
-                            }`
-                        : "-"}
-                    </td>
+                    {colVis.attachments && (
+                      <td style={{ textAlign: "center" }}>
+                        {typeof t.attachments_count === "number"
+                          ? t.attachments_count === 0
+                            ? "-"
+                            : `${t.attachments_count} file${
+                                t.attachments_count > 1 ? "s" : ""
+                              }`
+                          : "-"}
+                      </td>
+                    )}
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan={7}>No quotations found</td>
+                  <td colSpan={visibleColCount}>No quotations found</td>
                 </tr>
               )}
             </tbody>
@@ -283,6 +351,74 @@ export default function CostSheetList() {
           </button>
         </div>
       </div>
+
+      {/* ✅ Columns Modal */}
+      {colsModalOpen && (
+        <div className="filter-modal-overlay">
+          <div className="filter-modal">
+            <div className="filter-modal-header">
+              <h3>👁️ Columns</h3>
+              <button
+                className="filter-close"
+                onClick={() => setColsModalOpen(false)}
+                type="button"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="filter-body">
+              <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={selectAllCols}
+                >
+                  Select All
+                </button>
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={clearAllCols}
+                >
+                  Clear All
+                </button>
+              </div>
+
+              <div className="cols-grid">
+                {COLS.map((c) => (
+                  <label key={c.id} className="col-check">
+                    <input
+                      type="checkbox"
+                      checked={!!tempColVis[c.id]}
+                      onChange={(e) =>
+                        setTempColVis((prev) => ({
+                          ...prev,
+                          [c.id]: e.target.checked,
+                        }))
+                      }
+                    />
+                    <span>{c.label}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            <div className="filter-actions">
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={() => setColsModalOpen(false)}
+              >
+                Cancel
+              </button>
+              <button type="button" className="btn-primary" onClick={applyCols}>
+                Apply
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -70,6 +70,22 @@ export default function OppurnityList() {
   const [projects, setProjects] = useState([]);
   const [excelUploading, setExcelUploading] = useState(false);
   const [theme, setTheme] = useState(() => getBrandTheme());
+  // ✅ Hide Columns state
+  const DEFAULT_VISIBLE = {
+    full_name: true,
+    contact: true,
+    email: true,
+    source_system: true,
+    source_name: true,
+    project: true,
+    owner: true,
+    status: true,
+    remark: true,
+    created_at: true,
+  };
+  const [colVis, setColVis] = useState(DEFAULT_VISIBLE);
+  const [colsModalOpen, setColsModalOpen] = useState(false);
+  const [tempColVis, setTempColVis] = useState(DEFAULT_VISIBLE);
 
   // filters
   const [q, setQ] = useState("");
@@ -100,6 +116,27 @@ export default function OppurnityList() {
     if (!arr.length) return undefined;
     return arr.join(","); // backend expects comma-separated string
   };
+
+  const COLS = useMemo(
+    () => [
+      { id: "full_name", label: "Full Name" },
+      { id: "contact", label: "Contact" },
+      { id: "email", label: "Email" },
+      { id: "source_system", label: "Source System" },
+      { id: "source_name", label: "Source Name" },
+      { id: "project", label: "Project" },
+      { id: "owner", label: "Lead Owner" },
+      { id: "status", label: "Status" },
+      { id: "remark", label: "Remark" },
+      { id: "created_at", label: "Created At" },
+    ],
+    []
+  );
+
+  const visibleColCount = useMemo(() => {
+    const visible = COLS.filter((c) => colVis[c.id]).length;
+    return 1 + visible; // + Actions
+  }, [COLS, colVis]);
 
   // ---- helper: status label from configs / fallback ----
   const statusLabelForCode = (code) => {
@@ -506,6 +543,29 @@ const downloadSampleExcel = () => {
     });
   };
 
+  // ---------- Hide columns modal helpers ----------
+  const openColsModal = () => {
+    setTempColVis(colVis);
+    setColsModalOpen(true);
+  };
+
+  const applyCols = () => {
+    setColVis(tempColVis);
+    setColsModalOpen(false);
+  };
+
+  const selectAllCols = () => {
+    const all = {};
+    COLS.forEach((c) => (all[c.id] = true));
+    setTempColVis(all);
+  };
+
+  const clearAllCols = () => {
+    const none = {};
+    COLS.forEach((c) => (none[c.id] = false));
+    setTempColVis(none);
+  };
+
   // ---- convert API call (manual convert) ----
   // ---- convert API call (manual convert) ----
   // const handleConvert = async (oppId) => {
@@ -745,6 +805,20 @@ const downloadSampleExcel = () => {
             </button>
 
             <button
+              type="button"
+              className="filter-btn"
+              onClick={openColsModal}
+              title="Show/Hide table columns"
+              style={{
+                backgroundColor: theme.button_primary_bg,
+                color: theme.button_primary_text,
+                fontFamily: fontFamilyStr,
+              }}
+            >
+              👁️ Columns
+            </button>
+
+            <button
               className="filter-btn"
               onClick={() => navigate("/sales/opportunities/add")}
               style={{
@@ -796,23 +870,23 @@ const downloadSampleExcel = () => {
             <thead>
               <tr>
                 <th style={{ width: 140 }}>Actions</th>
-                <th>Full Name</th>
-                <th>Contact</th>
-                <th>Email</th>
-                <th>Source System</th>
-                <th>Source Name</th>
-                <th>Project</th>
-                <th>Lead Owner</th>
-                <th>Status</th>
-                <th>Remark</th>
-                <th>Created At</th>
+                {colVis.full_name && <th>Full Name</th>}
+                {colVis.contact && <th>Contact</th>}
+                {colVis.email && <th>Email</th>}
+                {colVis.source_system && <th>Source System</th>}
+                {colVis.source_name && <th>Source Name</th>}
+                {colVis.project && <th>Project</th>}
+                {colVis.owner && <th>Lead Owner</th>}
+                {colVis.status && <th>Status</th>}
+                {colVis.remark && <th>Remark</th>}
+                {colVis.created_at && <th>Created At</th>}
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 <tr>
                   <td
-                    colSpan={11}
+                    colSpan={visibleColCount}
                     style={{ textAlign: "center", padding: "40px" }}
                   >
                     <div className="loading-spinner"></div>
@@ -866,42 +940,50 @@ const downloadSampleExcel = () => {
                       </td>
 
                       {/* ✅ Title Case */}
-                      <td>{asTitle(o.full_name)}</td>
+                      {colVis.full_name && <td>{asTitle(o.full_name)}</td>}
 
                       {/* mobile number same */}
                       {/* <td>📱 {contact}</td> */}
                       <td>{contact}</td>
 
                       {/* ⚠️ email ko title-case mat karo; email always lowercase best */}
-                      <td>{o.email ? String(o.email).toLowerCase() : "-"}</td>
+                      {colVis.email && (
+                        <td>{o.email ? String(o.email).toLowerCase() : "-"}</td>
+                      )}
 
-                      <td>{asTitle(o.source_system)}</td>
-                      <td>{asTitle(o.source_name)}</td>
+                      {colVis.source_system && <td>{asTitle(o.source_system)}</td>}
+                      {colVis.source_name && <td>{asTitle(o.source_name)}</td>}
 
-                      <td>{projectName}</td>
+                      {colVis.project && <td>{projectName}</td>}
 
                       {/* owner email also lowercase */}
-                      <td style={{ maxWidth: 220 }}>
-                        {o.owner_email ? (
-                          <span title={o.owner_email}>
-                            {String(o.owner_email).toLowerCase()}
-                          </span>
-                        ) : (
-                          "-"
-                        )}
-                      </td>
+                      {colVis.owner && (
+                        <td style={{ maxWidth: 220 }}>
+                          {o.owner_email ? (
+                            <span title={o.owner_email}>
+                              {String(o.owner_email).toLowerCase()}
+                            </span>
+                          ) : (
+                            "-"
+                          )}
+                        </td>
+                      )}
 
-                      <td>
-                        <span className="status-badge">{statusText}</span>
-                      </td>
+                      {colVis.status && (
+                        <td>
+                          <span className="status-badge">{statusText}</span>
+                        </td>
+                      )}
 
-                      <td style={{ maxWidth: 260 }}>
-                        {remarkRaw ? (
-                          <span title={remarkRaw}>{remarkShown}</span>
-                        ) : (
-                          "-"
-                        )}
-                      </td>
+                      {colVis.remark && (
+                        <td style={{ maxWidth: 260 }}>
+                          {remarkRaw ? (
+                            <span title={remarkRaw}>{remarkShown}</span>
+                          ) : (
+                            "-"
+                          )}
+                        </td>
+                      )}
 
                       {/* <td title={formatDT(o.created_at)}>
                         {formatDMY(o.created_at)}
@@ -913,7 +995,7 @@ const downloadSampleExcel = () => {
               ) : (
                 <tr>
                   <td
-                    colSpan={11}
+                    colSpan={visibleColCount}
                     style={{ textAlign: "center", padding: "40px" }}
                   >
                     <div style={{ fontSize: "48px", marginBottom: "12px" }}>
@@ -1070,6 +1152,84 @@ const downloadSampleExcel = () => {
                 }}
               >
                 Apply filters
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ✅ Columns Modal */}
+      {colsModalOpen && (
+        <div className="filter-modal-overlay">
+          <div className="filter-modal">
+            <div className="filter-modal-header">
+              <h3>👁️ Columns</h3>
+              <button
+                className="filter-close"
+                onClick={() => setColsModalOpen(false)}
+                type="button"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="filter-body">
+              <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={selectAllCols}
+                >
+                  Select All
+                </button>
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={clearAllCols}
+                >
+                  Clear All
+                </button>
+              </div>
+
+              <div className="cols-grid">
+                {COLS.map((c) => (
+                  <label key={c.id} className="col-check">
+                    <input
+                      type="checkbox"
+                      checked={!!tempColVis[c.id]}
+                      onChange={(e) =>
+                        setTempColVis((prev) => ({
+                          ...prev,
+                          [c.id]: e.target.checked,
+                        }))
+                      }
+                    />
+                    <span>{c.label}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            <div className="filter-actions">
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={() => setColsModalOpen(false)}
+                style={{ fontFamily: fontFamilyStr }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="btn-primary"
+                onClick={applyCols}
+                style={{
+                  backgroundColor: theme.button_primary_bg,
+                  color: theme.button_primary_text,
+                  fontFamily: fontFamilyStr,
+                }}
+              >
+                Apply
               </button>
             </div>
           </div>

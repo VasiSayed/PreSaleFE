@@ -321,9 +321,9 @@
 //   );
 // }
 
-import React from "react";
+import React, { useMemo } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { AuthProvider } from "./context/AuthContext";
+import { AuthProvider, useAuth } from "./context/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 import MasterLayout from "./layouts/MasterLayout";
 
@@ -336,6 +336,7 @@ import ForgotPassword from "./features/auth/ForgotPassword";
 import ChannelPartnerChat from "./pages/ChannelPartner/ChannelPartnerChat";
 import ChannelPartnerProfile from "./pages/ChannelPartner/ChannelPartnerProfile";
 import Dashboard from "./pages/Dashboard/Dashboard";
+import SalesDashboard from "./pages/Dashboard/SalesDashboard";
 import ChannelPartnerList from "./pages/Dashboard/ChannelPartnerList";
 import ProjectSetupDetail from "./pages/Setup/ProjectSetupDetail";
 
@@ -396,6 +397,7 @@ import SirDashboard from "./pages/SirDashboard";
 import { Toaster } from "react-hot-toast";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import { getStoredUser, isAdminUser } from "./components/commsUtils";
 
 /* =========================
    ✅ POST-SALES COMMUNICATION
@@ -430,6 +432,31 @@ import {
   CommsEventTypesPage,
 } from "./pages/PostSales/Communication/admin";
 
+
+const getDashboardComponent = (user) => {
+  const resolved = user || getStoredUser();
+  if (!resolved) return Dashboard;
+
+  const role = String(resolved.role || resolved.custom_role || "")
+    .replace(/_/g, " ")
+    .trim()
+    .toUpperCase();
+
+  const isAdminOrFull =
+    isAdminUser(resolved) || role === "ADMIN" || role === "FULL CONTROL";
+
+  return isAdminOrFull ? Dashboard : SalesDashboard;
+};
+
+function DashboardGate() {
+  const { user } = useAuth();
+  const DashboardHome = useMemo(
+    () => getDashboardComponent(user),
+    [user]
+  );
+
+  return <DashboardHome />;
+}
 
 export default function App() {
   return (
@@ -467,8 +494,8 @@ export default function App() {
           <Route element={<ProtectedRoute />}>
             <Route element={<MasterLayout />}>
               {/* Dashboard */}
-              <Route path="/" element={<Dashboard />} />
-              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/" element={<DashboardGate />} />
+              <Route path="/dashboard" element={<DashboardGate />} />
               <Route
                 path="/channel-partners"
                 element={<ChannelPartnerList />}
