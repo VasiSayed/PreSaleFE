@@ -48,6 +48,7 @@
   overflow-x: auto;
   scrollbar-width: thin;
   background: #ffffff;
+  position: relative;
 }
 
 .sales-navigation__secondary::-webkit-scrollbar {
@@ -99,53 +100,282 @@
    SAME LOOK as secondary: text + underline (no pill buttons) */
 .sales-navigation__tertiary {
   display: flex;
-  gap: 4px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
   padding: 8px 24px;
-  overflow-x: auto;
-  scrollbar-width: thin;
   background: #ffffff;
   border-top: 1px solid #e5e7eb;
+  position: relative;
+}
+
+.sales-navigation__tertiary-left {
+  display: flex;
+  gap: 4px;
+  flex: 1;
+  overflow-x: auto;
+  scrollbar-width: none; /* Hide scrollbar */
+  -ms-overflow-style: none; /* Hide scrollbar for IE and Edge */
+  min-width: 0;
+  align-items: center;
+}
+
+.sales-navigation__tertiary-left::-webkit-scrollbar {
+  display: none; /* Hide scrollbar for Chrome, Safari, Opera */
+}
+
+.sales-navigation__tertiary {
+  scrollbar-width: none; /* Hide scrollbar */
+  -ms-overflow-style: none; /* Hide scrollbar for IE and Edge */
 }
 
 .sales-navigation__tertiary::-webkit-scrollbar {
-  height: 4px;
+  display: none; /* Hide scrollbar for Chrome, Safari, Opera */
 }
 
-.sales-navigation__tertiary::-webkit-scrollbar-thumb {
-  background: #d1d5db;
-  border-radius: 2px;
-}
-
-/* ✅ Subtabs: keep same as nav-tab-btn but slightly tighter (so “zoom” issue gone) */
+/* ✅ Subtabs: keep same as nav-tab-btn but slightly tighter (so "zoom" issue gone) */
 .nav-subtab-btn {
   padding: 7px 14px;   /* smaller than main tabs */
   font-size: 0.88rem;  /* close to pre-sales */
   font-weight: 500;
 }
 
-/* Responsive */
+/* Saved Items Icon Button */
+.nav-saved-items-btn {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  color: #6b7280;
+  cursor: pointer;
+  transition: all 0.2s;
+  flex-shrink: 0;
+  padding: 0;
+}
+
+.nav-saved-items-btn:hover {
+  background: #f9fafb;
+  border-color: #102a54;
+  color: #102a54;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.nav-saved-items-icon {
+  width: 18px;
+  height: 18px;
+  stroke-width: 2;
+}
+
+.nav-saved-items-badge {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  background: #ef4444;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  min-width: 18px;
+  height: 18px;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 5px;
+  border: 2px solid #fff;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+  line-height: 1;
+}
+
+/* Responsive for saved items button */
 @media (max-width: 768px) {
+  .nav-saved-items-btn {
+    width: 32px;
+    height: 32px;
+  }
+
+  .nav-saved-items-icon {
+    width: 16px;
+    height: 16px;
+  }
+
+  .nav-saved-items-badge {
+    min-width: 16px;
+    height: 16px;
+    font-size: 9px;
+    top: -5px;
+    right: -5px;
+  }
+}
+
+/* Responsive */
+@media (max-width: 992px) {
   .sales-navigation__primary {
     padding: 10px 16px;
+    gap: 6px;
   }
 
   .sales-navigation__secondary,
   .sales-navigation__tertiary {
-    padding: 6px 16px;
+    padding: 8px 16px;
+    -webkit-overflow-scrolling: touch;
+    scroll-behavior: smooth;
   }
 
   .nav-section-btn {
     padding: 8px 16px;
     font-size: 0.9rem;
+    min-width: fit-content;
   }
 
   .nav-tab-btn {
-    padding: 6px 12px;
+    padding: 8px 14px;
     font-size: 0.85rem;
+    min-width: fit-content;
   }
 
   .nav-subtab-btn {
+    padding: 7px 12px;
+    font-size: 0.82rem;
+    min-width: fit-content;
+  }
+}
+
+@media (max-width: 768px) {
+  .sales-navigation {
+    position: sticky;
+    top: 0;
+    z-index: 99;
+  }
+
+  .sales-navigation__primary {
+    padding: 8px 12px;
+    gap: 4px;
+    overflow-x: auto;
+    scrollbar-width: thin;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .sales-navigation__primary::-webkit-scrollbar {
+    height: 3px;
+  }
+
+  .sales-navigation__primary::-webkit-scrollbar-thumb {
+    background: #d1d5db;
+    border-radius: 2px;
+  }
+
+  .sales-navigation__secondary,
+  .sales-navigation__tertiary {
     padding: 6px 12px;
+    -webkit-overflow-scrolling: touch;
+    scroll-behavior: smooth;
+  }
+
+  .nav-section-btn {
+    padding: 8px 14px;
+    font-size: 0.88rem;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .nav-tab-btn {
+    padding: 7px 12px;
+    font-size: 0.82rem;
+    white-space: nowrap;
+    flex-shrink: 0;
+    min-height: 36px;
+    display: inline-flex;
+    align-items: center;
+  }
+
+  .nav-subtab-btn {
+    padding: 6px 10px;
+    font-size: 0.8rem;
+    white-space: nowrap;
+    flex-shrink: 0;
+    min-height: 34px;
+    display: inline-flex;
+    align-items: center;
+  }
+
+  /* Better touch targets */
+  .nav-section-btn:active,
+  .nav-tab-btn:active,
+  .nav-subtab-btn:active {
+    transform: scale(0.98);
+    opacity: 0.8;
+  }
+}
+
+@media (max-width: 480px) {
+  .sales-navigation__primary {
+    padding: 6px 8px;
+  }
+
+  .sales-navigation__secondary,
+  .sales-navigation__tertiary {
+    padding: 6px 8px;
+  }
+
+  .nav-section-btn {
+    padding: 7px 12px;
     font-size: 0.85rem;
+  }
+
+  .nav-tab-btn {
+    padding: 6px 10px;
+    font-size: 0.8rem;
+  }
+
+  .nav-subtab-btn {
+    padding: 6px 9px;
+    font-size: 0.78rem;
+  }
+
+  /* Ensure active indicator is visible on small screens */
+  .nav-tab-btn.active::after {
+    left: 4px;
+    right: 4px;
+  }
+}
+
+/* Smooth scrolling for mobile */
+@media (max-width: 768px) {
+  .sales-navigation__secondary,
+  .sales-navigation__tertiary {
+    scroll-padding-left: 12px;
+    scroll-padding-right: 12px;
+  }
+
+  /* Add fade effect at edges */
+  .sales-navigation__secondary::before,
+  .sales-navigation__secondary::after,
+  .sales-navigation__tertiary::before,
+  .sales-navigation__tertiary::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 20px;
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  .sales-navigation__secondary::before,
+  .sales-navigation__tertiary::before {
+    left: 0;
+    background: linear-gradient(to right, rgba(255, 255, 255, 1), transparent);
+  }
+
+  .sales-navigation__secondary::after,
+  .sales-navigation__tertiary::after {
+    right: 0;
+    background: linear-gradient(to left, rgba(255, 255, 255, 1), transparent);
   }
 }

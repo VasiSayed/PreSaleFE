@@ -430,6 +430,11 @@ import {
   CommsSurveysPage,
   CommsGroupsPage,
   CommsEventTypesPage,
+  CommsTemplatesPage,
+  CommsBroadcastPage,
+  CommsSavedItemPage,
+  CommsTemplateCategoriesPage,
+  CommsTemplateVariablesPage,
 } from "./pages/PostSales/Communication/admin";
 
 
@@ -678,6 +683,18 @@ export default function App() {
               />
 
               <Route
+                path="/post-sales/communication/admin/template-categories"
+                element={<CommsTemplateCategoriesPage />}
+              />
+              <Route
+                path="/post-sales/communication/admin/template-variables"
+                element={<CommsTemplateVariablesPage />}
+              />
+              <Route
+                path="/post-sales/communication/admin/templates"
+                element={<CommsTemplatesPage />}
+              />
+              <Route
                 path="/post-sales/communication/admin/notices"
                 element={<CommsNoticesPage />}
               />
@@ -686,16 +703,24 @@ export default function App() {
                 element={<CommsEventsPage />}
               />
               <Route
-                path="/post-sales/communication/admin/polls"
-                element={<CommsPollsPage />}
+                path="/post-sales/communication/admin/broadcast"
+                element={<CommsBroadcastPage />}
               />
               <Route
                 path="/post-sales/communication/admin/forums"
                 element={<CommsForumsPage />}
               />
               <Route
+                path="/post-sales/communication/admin/polls"
+                element={<CommsPollsPage />}
+              />
+              <Route
                 path="/post-sales/communication/admin/surveys"
                 element={<CommsSurveysPage />}
+              />
+              <Route
+                path="/post-sales/communication/admin/saved-items"
+                element={<CommsSavedItemPage />}
               />
               <Route
                 path="/post-sales/communication/admin/groups"
@@ -710,7 +735,7 @@ export default function App() {
                 path="/post-sales/communication/admin"
                 element={
                   <Navigate
-                    to="/post-sales/communication/admin/notices"
+                    to="/post-sales/communication/admin/template-categories"
                     replace
                   />
                 }

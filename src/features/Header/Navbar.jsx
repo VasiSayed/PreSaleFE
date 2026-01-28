@@ -4,6 +4,7 @@ import profileImg from "../../assets/profile.jpg";
 import "./Navbar.css";
 import { useAuth } from "../../context/AuthContext";
 import { getBrandTheme, getFontFamily, applyThemeToRoot } from "../../utils/theme";
+import { Menu, X } from "lucide-react";
 
 
 const BellIcon = ({ className = "", size = 20 }) => (
@@ -79,6 +80,7 @@ function Navbar({ currentUser, onLogout, showLogout = true }) {
   const [primaryColor, setPrimaryColor] = useState(DEFAULT_PRIMARY_COLOR);
   const [fontFamily, setFontFamily] = useState(DEFAULT_FONT_FAMILY);
   const [activeProjectName, setActiveProjectName] = useState("");
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // 1️⃣ Hydrate from localStorage on first load
   useEffect(() => {
@@ -134,91 +136,164 @@ const username = currentUser?.username || currentUser?.email || "";
     : brandName;
 
   return (
-    <nav
-      className="custom-navbar"
-      style={{
-        margin: 0,
-        padding: "12px 32px 12px 12px",
-        width: "100%",
-        backgroundColor: primaryColor,
-        borderRadius: 0,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        fontFamily: fontFamily,
-      }}
-    >
-      {/* LEFT SECTION */}
-      <div className="d-flex align-items-center">
-        <div
-          style={{
-            width: "60px",
-            height: "54px",
-            borderRadius: "50%",
-            backgroundColor: "white",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            overflow: "hidden",
-            marginLeft: 0,
-          }}
-          className="me-2"
-        >
-          <img
-            src={brandLogo || profileImg}
-            alt={headingText || "Company Logo"}
+    <>
+      <nav
+        className="custom-navbar"
+        style={{
+          margin: 0,
+          padding: "12px 32px 12px 12px",
+          width: "100%",
+          backgroundColor: primaryColor,
+          borderRadius: 0,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          fontFamily: fontFamily,
+        }}
+      >
+        {/* LEFT SECTION */}
+        <div className="d-flex align-items-center navbar-left">
+          <div
+            className="navbar-logo-container"
             style={{
-              width: "88%",
-              height: "100%",
-              objectFit: "contain", // ensures full image fits inside
+              width: "60px",
+              height: "54px",
+              borderRadius: "50%",
+              backgroundColor: "white",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              overflow: "hidden",
+              marginLeft: 0,
             }}
-          />
-        </div>
-        <span
-          className="text-white"
-          style={{
-            fontSize: "1.8rem",
-            fontWeight: "600",
-            fontFamily: fontFamily,
-            letterSpacing: "-0.5px",
-            marginLeft: 8,
-          }}
-        >
-          {headingText}
-        </span>
-      </div>
-
-      {/* RIGHT SECTION */}
-      <div className="ms-auto d-flex align-items-center gap-3">
-        {currentUser && (
-          <div className="nav-user-block me-2">
-            {roleLabel && <div className="nav-user-role">{roleLabel}</div>}
-            {username && <div className="nav-user-name">{username}</div>}
-          </div>
-        )}
-
-        <BellIcon className="icon" />
-
-        <Link to="/setup" aria-label="Open Setup">
-          <GearIcon className="icon" />
-        </Link>
-
-        <Link to="/profile" aria-label="Profile Page">
-          <ProfileIcon className="icon" />
-        </Link>
-
-        {showLogout && (
-          <button
-            onClick={onLogout}
-            className="logout-btn"
-            title="Logout"
-            style={{ fontFamily: fontFamily }}
           >
-            Logout
-          </button>
-        )}
+            <img
+              src={brandLogo || profileImg}
+              alt={headingText || "Company Logo"}
+              style={{
+                width: "88%",
+                height: "100%",
+                objectFit: "contain",
+              }}
+            />
+          </div>
+          <span
+            className="text-white navbar-brand-text"
+            style={{
+              fontSize: "1.8rem",
+              fontWeight: "600",
+              fontFamily: fontFamily,
+              letterSpacing: "-0.5px",
+              marginLeft: 8,
+            }}
+          >
+            {headingText}
+          </span>
+        </div>
+
+        {/* MOBILE MENU BUTTON */}
+        <button
+          className="mobile-menu-toggle"
+          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+          aria-label="Toggle menu"
+        >
+          {mobileMenuOpen ? (
+            <X className="mobile-menu-icon" />
+          ) : (
+            <Menu className="mobile-menu-icon" />
+          )}
+        </button>
+
+        {/* RIGHT SECTION - DESKTOP */}
+        <div className="ms-auto d-flex align-items-center gap-3 navbar-right-desktop">
+          {currentUser && (
+            <div className="nav-user-block me-2">
+              {roleLabel && <div className="nav-user-role">{roleLabel}</div>}
+              {username && <div className="nav-user-name">{username}</div>}
+            </div>
+          )}
+
+          <BellIcon className="icon" />
+
+          <Link to="/setup" aria-label="Open Setup">
+            <GearIcon className="icon" />
+          </Link>
+
+          <Link to="/profile" aria-label="Profile Page">
+            <ProfileIcon className="icon" />
+          </Link>
+
+          {showLogout && (
+            <button
+              onClick={onLogout}
+              className="logout-btn"
+              title="Logout"
+              style={{ fontFamily: fontFamily }}
+            >
+              Logout
+            </button>
+          )}
+        </div>
+      </nav>
+
+      {/* MOBILE MENU OVERLAY */}
+      {mobileMenuOpen && (
+        <div
+          className="mobile-menu-overlay"
+          onClick={() => setMobileMenuOpen(false)}
+        />
+      )}
+
+      {/* MOBILE MENU DRAWER */}
+      <div className={`mobile-menu-drawer ${mobileMenuOpen ? "open" : ""}`}>
+        <div className="mobile-menu-content">
+          {currentUser && (
+            <div className="mobile-nav-user-block">
+              {roleLabel && <div className="mobile-nav-user-role">{roleLabel}</div>}
+              {username && <div className="mobile-nav-user-name">{username}</div>}
+            </div>
+          )}
+
+          <div className="mobile-menu-items">
+            <Link
+              to="/setup"
+              className="mobile-menu-item"
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              <GearIcon className="mobile-menu-icon" />
+              <span>Setup</span>
+            </Link>
+
+            <Link
+              to="/profile"
+              className="mobile-menu-item"
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              <ProfileIcon className="mobile-menu-icon" />
+              <span>Profile</span>
+            </Link>
+
+            <div className="mobile-menu-item">
+              <BellIcon className="mobile-menu-icon" />
+              <span>Notifications</span>
+            </div>
+
+            {showLogout && (
+              <button
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  onLogout();
+                }}
+                className="mobile-logout-btn"
+                style={{ fontFamily: fontFamily }}
+              >
+                Logout
+              </button>
+            )}
+          </div>
+        </div>
       </div>
-    </nav>
+    </>
   );
 }
 

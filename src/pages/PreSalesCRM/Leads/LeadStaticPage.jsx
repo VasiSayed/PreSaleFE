@@ -3034,53 +3034,54 @@ useEffect(() => {
                 {/* ✅ Schedule form (show only when + clicked) */}
                 {showSiteVisitForm && (
                   <div className="activity-form-card" style={{ marginTop: 10 }}>
-                    <div className="field-full">
-                      <label>Visit Type</label>
-                      <select
-                        value={siteVisitForm.visit_type}
-                        onChange={(e) =>
-                          handleSiteVisitFormChange(
-                            "visit_type",
-                            e.target.value
-                          )
-                        }
-                        disabled={isLeadLocked}
-                      >
-                        <option value="VISIT">Visit</option>
-                        <option value="REVISIT">Revisit</option>
-                      </select>
-                    </div>
+                    <div className="field-grid-2">
+                      <div className="field-full">
+                        <label>Visit Type</label>
+                        <select
+                          value={siteVisitForm.visit_type}
+                          onChange={(e) =>
+                            handleSiteVisitFormChange(
+                              "visit_type",
+                              e.target.value
+                            )
+                          }
+                          disabled={isLeadLocked}
+                        >
+                          <option value="VISIT">Visit</option>
+                          <option value="REVISIT">Revisit</option>
+                        </select>
+                      </div>
 
-                    <div className="field-full">
-                      <label>Unit Configuration</label>
-                      <select
-                        value={siteVisitForm.unit_config_id || ""}
-                        onChange={(e) =>
-                          handleSiteVisitFormChange(
-                            "unit_config_id",
-                            e.target.value
-                          )
-                        }
-                        disabled={loadingLookups || isLeadLocked}
-                      >
-                        <option value="">
-                          {loadingLookups
-                            ? "Loading..."
-                            : "Select configuration"}
-                        </option>
-                        {unitConfigOptions.map((opt) => (
-                          <option key={opt.value} value={opt.value}>
-                            {opt.label}
+                      <div className="field-full">
+                        <label>Unit Configuration</label>
+                        <select
+                          value={siteVisitForm.unit_config_id || ""}
+                          onChange={(e) =>
+                            handleSiteVisitFormChange(
+                              "unit_config_id",
+                              e.target.value
+                            )
+                          }
+                          disabled={loadingLookups || isLeadLocked}
+                        >
+                          <option value="">
+                            {loadingLookups
+                              ? "Loading..."
+                              : "Select configuration"}
                           </option>
-                        ))}
-                      </select>
+                          {unitConfigOptions.map((opt) => (
+                            <option key={opt.value} value={opt.value}>
+                              {opt.label}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
                     </div>
 
-                    <div className="activity-form__grid3">
-                      <div className="activity-form__field">
+                    <div className="field-grid-2">
+                      <div className="field-full">
                         <label>Tower</label>
                         <select
-                          className="input-plain"
                           value={svTowerId}
                           onChange={(e) => onSvTowerChange(e.target.value)}
                           disabled={isLeadLocked}
@@ -3094,10 +3095,9 @@ useEffect(() => {
                         </select>
                       </div>
 
-                      <div className="activity-form__field">
+                      <div className="field-full">
                         <label>Floor</label>
                         <select
-                          className="input-plain"
                           value={svFloorId}
                           onChange={(e) => onSvFloorChange(e.target.value)}
                           disabled={!svTowerId || isLeadLocked}
@@ -3110,11 +3110,12 @@ useEffect(() => {
                           ))}
                         </select>
                       </div>
+                    </div>
 
-                      <div className="activity-form__field">
+                    <div className="field-grid-2">
+                      <div className="field-full">
                         <label>Unit</label>
                         <select
-                          className="input-plain"
                           value={siteVisitForm.unit_id || ""}
                           onChange={(e) => handleSvUnitChange(e.target.value)}
                           disabled={isLeadLocked}
@@ -3131,77 +3132,64 @@ useEffect(() => {
                           ))}
                         </select>
                       </div>
+
+                      <div className="field-full">
+                        <label>Scheduled At</label>
+                        <DatePicker
+                          selected={
+                            siteVisitForm.scheduled_at
+                              ? new Date(siteVisitForm.scheduled_at)
+                              : null
+                          }
+                          onChange={(date) =>
+                            handleSiteVisitFormChange("scheduled_at", date)
+                          }
+                          showTimeInput // let user type/select any time freely
+                          timeInputLabel="Time:" // optional label for input box
+                          timeFormat="hh:mm aa" // 12-hour format with AM/PM
+                          dateFormat="dd/MM/yyyy hh:mm aa" // full display format
+                          placeholderText="dd/MM/yyyy hh:mm AM/PM"
+                          disabled={isLeadLocked}
+                        />
+                      </div>
                     </div>
 
-                    <div
-                      className="field-full"
-                    >
-                      <label>Scheduled At</label>
-                      {/* <input
-                        type="datetime-local"
-                        className="input-plain"
-                        value={siteVisitForm.scheduled_at || ""}
-                        onChange={(e) =>
-                          handleSiteVisitFormChange(
-                            "scheduled_at",
-                            e.target.value
-                          )
-                        }
-                        disabled={isLeadLocked}
-                      /> */}
-                      <DatePicker
-                        selected={
-                          siteVisitForm.scheduled_at
-                            ? new Date(siteVisitForm.scheduled_at)
-                            : null
-                        }
-                        onChange={(date) =>
-                          handleSiteVisitFormChange("scheduled_at", date)
-                        }
-                        showTimeInput // let user type/select any time freely
-                        timeInputLabel="Time:" // optional label for input box
-                        timeFormat="hh:mm aa" // 12-hour format with AM/PM
-                        dateFormat="dd/MM/yyyy hh:mm aa" // full display format
-                        placeholderText="dd/MM/yyyy hh:mm AM/PM"
-                        className="input-plain"
-                        disabled={isLeadLocked}
-                      />
-                    </div>
+                    <div className="field-grid-2">
+                      <div className="field-full">
+                        <label>Member Name</label>
+                        <input
+                          className="input-plain"
+                          value={siteVisitForm.member_name || ""}
+                          onChange={(e) =>
+                            handleSiteVisitFormChange(
+                              "member_name",
+                              e.target.value
+                            )
+                          }
+                          disabled={isLeadLocked}
+                        />
+                      </div>
 
-                    <div className="field-full">
-                      <label>Member Name</label>
-                      <input
-                        className="input-plain"
-                        value={siteVisitForm.member_name || ""}
-                        onChange={(e) =>
-                          handleSiteVisitFormChange(
-                            "member_name",
-                            e.target.value
-                          )
-                        }
-                        disabled={isLeadLocked}
-                      />
-                    </div>
-
-                    <div className="field-full">
-                      <label>Member Mobile</label>
-                      <input
-                        className="input-plain"
-                        value={siteVisitForm.member_mobile_number || ""}
-                        onChange={(e) =>
-                          handleSiteVisitFormChange(
-                            "member_mobile_number",
-                            e.target.value.replace(/\D/g, "").slice(0, 10)
-                          )
-                        }
-                        disabled={isLeadLocked}
-                      />
+                      <div className="field-full">
+                        <label>Member Mobile</label>
+                        <input
+                          className="input-plain"
+                          value={siteVisitForm.member_mobile_number || ""}
+                          onChange={(e) =>
+                            handleSiteVisitFormChange(
+                              "member_mobile_number",
+                              e.target.value.replace(/\D/g, "").slice(0, 10)
+                            )
+                          }
+                          disabled={isLeadLocked}
+                        />
+                      </div>
                     </div>
 
                     <div className="field-full">
                       <label>Notes</label>
                       <textarea
-                        className="input-plain tall"
+                        className="input-plain"
                         value={siteVisitForm.notes || ""}
                         onChange={(e) =>
                           handleSiteVisitFormChange("notes", e.target.value)
@@ -3451,25 +3439,40 @@ useEffect(() => {
                 {/* Create Activity Form */}
                 {showActivityForm && (
                   <div className="activity-form-card">
-                    <div className="field-full">
-                      <label>Activity Type</label>
-                      <select
-                        value={activityForm.update_type || ""}
-                        disabled={isLeadLocked}
-                        onChange={(e) =>
-                          handleActivityChange("update_type", e.target.value)
-                        }
-                      >
-                        <option value="">Select type</option>
-                        <option value="FOLLOW_UP">Follow Up</option>
-                        <option value="REMINDER">Reminder</option>
-                        <option value="NOTE">Note</option>
-                        <option value="WHATSAPP">WhatsApp Message</option>
-                        <option value="EMAIL">Email</option>
-                        <option value="STATUS_CHANGE">Status Change</option>
-                        <option value="CALL">Call Log</option>
-                        <option value="OTHER">Other</option>
-                      </select>
+                    <div className="field-grid-2">
+                      <div className="field-full">
+                        <label>Activity Type</label>
+                        <select
+                          value={activityForm.update_type || ""}
+                          disabled={isLeadLocked}
+                          onChange={(e) =>
+                            handleActivityChange("update_type", e.target.value)
+                          }
+                        >
+                          <option value="">Select type</option>
+                          <option value="FOLLOW_UP">Follow Up</option>
+                          <option value="REMINDER">Reminder</option>
+                          <option value="NOTE">Note</option>
+                          <option value="WHATSAPP">WhatsApp Message</option>
+                          <option value="EMAIL">Email</option>
+                          <option value="STATUS_CHANGE">Status Change</option>
+                          <option value="CALL">Call Log</option>
+                          <option value="OTHER">Other</option>
+                        </select>
+                      </div>
+
+                      <div className="field-full">
+                        <label>Date</label>
+                        <input
+                          type="datetime-local"
+                          className="input-plain"
+                          value={activityForm.event_date}
+                          disabled={isLeadLocked}
+                          onChange={(e) =>
+                            handleActivityChange("event_date", e.target.value)
+                          }
+                        />
+                      </div>
                     </div>
 
                     <div className="field-full">
@@ -3495,19 +3498,6 @@ useEffect(() => {
                         }
                       />
                     </div> */}
-
-                    <div className="field-full">
-                      <label>Date</label>
-                      <input
-                        type="datetime-local"
-                        className="input-plain"
-                        value={activityForm.event_date}
-                        disabled={isLeadLocked}
-                        onChange={(e) =>
-                          handleActivityChange("event_date", e.target.value)
-                        }
-                      />
-                    </div>
 
                     <div className="activity-buttons">
                       <button
@@ -5551,12 +5541,12 @@ useEffect(() => {
           />
         )}
 
-        {svRescheduleModal.open && (
+        {svRescheduleModal.open && svRescheduleModal.visit?.id && (
           <SiteVisitRescheduleModal
-            isOpen={svRescheduleModal.open}
-            visit={svRescheduleModal.visit}
+            id={svRescheduleModal.visit.id}
+            currentScheduledAt={svRescheduleModal.visit?.scheduled_at}
             onClose={() => setSvRescheduleModal({ open: false, visit: null })}
-            onUpdated={fetchSiteVisits}
+            onRescheduled={fetchSiteVisits}
           />
         )}
 
@@ -5576,21 +5566,19 @@ useEffect(() => {
             }
           />
         )}
-        {rescheduleModal.open && (
+        {rescheduleModal.open && rescheduleModal.visit?.id && (
           <SiteVisitRescheduleModal
-            isOpen={rescheduleModal.open}
-            visit={rescheduleModal.visit}
-            new_scheduled_at={rescheduleModal.new_scheduled_at}
-            reason={rescheduleModal.reason}
+            id={rescheduleModal.visit.id}
+            currentScheduledAt={rescheduleModal.visit?.scheduled_at}
             onClose={() =>
               setRescheduleModal({
                 open: false,
                 visit: null,
-                new_scheduled_at: "",
+                new_scheduled_at: nowForInput(),
                 reason: "",
               })
             }
-            onUpdated={fetchSiteVisits}
+            onRescheduled={fetchSiteVisits}
           />
         )}
 

@@ -38,6 +38,7 @@ export default function CommsCrudPage({
   columns = [],
   formFields = [],
   withAudience = false,
+  readOnly = false,
 
   buildCreatePayload,
   buildUpdatePayload,
@@ -59,6 +60,7 @@ export default function CommsCrudPage({
 
   const me = useMemo(() => getStoredUser(), []);
   const canManage = isAdminUser(me);
+  const canEdit = canManage && !readOnly;
 
   const autoProjectId = useMemo(() => {
     const ps = scope?.projects || [];
@@ -395,7 +397,7 @@ export default function CommsCrudPage({
               Apply
             </button>
 
-            {canManage ? (
+            {canEdit ? (
               <button
                 type="button"
                 className="filter-btn"
@@ -465,7 +467,7 @@ export default function CommsCrudPage({
                   {(columns || []).map((c) => (
                     <th key={c.key}>{c.label}</th>
                   ))}
-                  {canManage ? <th>Actions</th> : null}
+                  {canEdit ? <th>Actions</th> : null}
                 </tr>
               </thead>
 
@@ -487,7 +489,7 @@ export default function CommsCrudPage({
                           {c.render ? c.render(r) : (r?.[c.key] ?? "-")}
                         </td>
                       ))}
-                      {canManage ? (
+                      {canEdit ? (
                         <td>
                           <button
                             className="dn-btn dn-btn-light"
@@ -652,7 +654,7 @@ export default function CommsCrudPage({
         ) : null}
 
         {/* Form Modal */}
-        {openForm ? (
+        {openForm && canEdit ? (
           <div className="dn-modal-overlay" onMouseDown={closeForm}>
             <div
               className="dn-modal dn-modal-wide"

@@ -713,6 +713,14 @@
   transition: all 0.2s ease;
 }
 
+/* Ensure consistent height for inputs and selects */
+.field-full input,
+.field-full select,
+.field-full input[type="datetime-local"] {
+  height: 26px;
+  line-height: 1.4;
+}
+
 .input-plain:focus,
 .field-full input:focus,
 .field-full select:focus,
@@ -2235,13 +2243,98 @@ select:disabled {
   }
 }
 
+/* 2 columns responsive grid for form fields */
+.field-grid-2 {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  margin-bottom: 6px;
+}
+
+/* Remove margin-bottom from field-full when inside grid */
+.field-grid-2 .field-full {
+  margin-bottom: 0;
+}
+
+/* Ensure DatePicker matches other inputs in grid */
+.field-grid-2 .field-full .react-datepicker-wrapper {
+  width: 100%;
+}
+
+.field-grid-2 .field-full .react-datepicker-wrapper input {
+  width: 100%;
+  border-radius: 5px;
+  border: 1px solid #d1d5db;
+  padding: 5px 7px;
+  font-size: 10px;
+  background: #ffffff;
+  box-sizing: border-box;
+  height: 26px;
+  line-height: 1.4;
+}
+
+/* Also ensure DatePicker matches outside grid */
+.field-full .react-datepicker-wrapper {
+  width: 100%;
+}
+
+.field-full .react-datepicker-wrapper input {
+  width: 100%;
+  border-radius: 5px;
+  border: 1px solid #d1d5db;
+  padding: 5px 7px;
+  font-size: 10px;
+  background: #ffffff;
+  box-sizing: border-box;
+  height: 26px;
+  line-height: 1.4;
+}
+
+.field-grid-2 .field-full .react-datepicker-wrapper input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px var(--primary-soft-strong);
+}
+
+@media (max-width: 768px) {
+  .field-grid-2 {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+}
+
 /* Optional: disabled options look */
 .activity-form__field option:disabled {
   color: #9aa4ad;
 }
 
 .react-datepicker-wrapper {
-display: block;
+  display: block;
+  width: 100%;
+}
+
+/* Ensure DatePicker input matches activity-form__field styling */
+.activity-form__field .react-datepicker-wrapper input {
+  width: 100%;
+  border: 1px solid #d7dde5;
+  border-radius: 10px;
+  padding: 10px 12px;
+  outline: none;
+  background: #fff;
+  font-size: 14px;
+  height: 44px;
+  box-sizing: border-box;
+}
+
+.activity-form__field .react-datepicker-wrapper input:disabled {
+  background: #f6f7f9;
+  cursor: not-allowed;
+  opacity: 0.85;
+}
+
+.activity-form__field .react-datepicker-wrapper input:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px var(--primary-soft-strong);
 }
 
 /* Example: add 8px space between date and time */

@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
+import { Bookmark } from "lucide-react";
+import axiosInstance from "../../api/axiosInstance";
 import "./SalesNavigation.css";
 
 export default function SalesNavigation() {
@@ -35,6 +37,8 @@ const sections = useMemo(() => {
   // ✅ Post-sales states
   const [activePostCategory, setActivePostCategory] = useState("registered");
   const [activePostSubTab, setActivePostSubTab] = useState("");
+  const [activePostSubCategory, setActivePostSubCategory] = useState("");
+  const [savedItemsCount, setSavedItemsCount] = useState(0);
 
   // ----------------------------
   // PRE-SALES NAV ITEMS (unchanged)
@@ -315,15 +319,35 @@ const sections = useMemo(() => {
   id: "communication",
   label: "Communication",
   route: "/post-sales/communication/admin/notices",
-  subTabs: [
-    { id: "com-notice", label: "Notices", route: "/post-sales/communication/admin/notices" },
-    { id: "com-events", label: "Events", route: "/post-sales/communication/admin/events" },
-    { id: "com-polls", label: "Polls", route: "/post-sales/communication/admin/polls" },
-    { id: "com-forums", label: "Forums", route: "/post-sales/communication/admin/forums" },
-    { id: "com-surveys", label: "Surveys", route: "/post-sales/communication/admin/surveys" },
-    { id: "com-groups", label: "Groups", route: "/post-sales/communication/admin/groups" },
-    { id: "com-event-types", label: "Event Types", route: "/post-sales/communication/admin/event-types" },
+  subCategories: [
+    {
+      id: "communication-main",
+      label: "Communication",
+      route: "/post-sales/communication/admin/notices",
+      subTabs: [
+        { id: "com-notice", label: "Notice", route: "/post-sales/communication/admin/notices" },
+        { id: "com-event", label: "Event", route: "/post-sales/communication/admin/events" },
+        { id: "com-broadcast", label: "Broadcast", route: "/post-sales/communication/admin/broadcast" },
+        { id: "com-forum-post", label: "ForumPost", route: "/post-sales/communication/admin/forums" },
+        { id: "com-poll", label: "Poll", route: "/post-sales/communication/admin/polls" },
+        { id: "com-survey", label: "Survey", route: "/post-sales/communication/admin/surveys" },
+      ],
+    },
+    {
+      id: "communication-setup",
+      label: "Communication Setup",
+      route: "/post-sales/communication/admin/template-categories",
+      subTabs: [
+        { id: "com-template-categories", label: "Template Categories", route: "/post-sales/communication/admin/template-categories" },
+        { id: "com-template-variables", label: "Template Variables", route: "/post-sales/communication/admin/template-variables" },
+        { id: "com-template", label: "Template", route: "/post-sales/communication/admin/templates" },
+        { id: "com-group", label: "Group", route: "/post-sales/communication/admin/groups" },
+        { id: "com-event-type", label: "Event Type", route: "/post-sales/communication/admin/event-types" },
+      ],
+    },
   ],
+  subTabs: [], // Empty for communication since we use subCategories
+  savedItemsRoute: "/post-sales/communication/admin/saved-items", // Route for saved items icon
 },
       {
         id: "helpdesk",
@@ -342,10 +366,29 @@ const sections = useMemo(() => {
     );
   }, [postSalesCategories, activePostCategory]);
 
-  const postSalesSubTabs = useMemo(
-    () => activePostCategoryObj?.subTabs || [],
+  // Get sub-categories if they exist (for Communication)
+  const postSalesSubCategories = useMemo(
+    () => activePostCategoryObj?.subCategories || [],
     [activePostCategoryObj]
   );
+
+  // Get active sub-category object
+  const activePostSubCategoryObj = useMemo(() => {
+    if (postSalesSubCategories.length === 0) return null;
+    return (
+      postSalesSubCategories.find((sc) => sc.id === activePostSubCategory) ||
+      postSalesSubCategories[0] ||
+      null
+    );
+  }, [postSalesSubCategories, activePostSubCategory]);
+
+  // Get sub-tabs from either sub-category or category
+  const postSalesSubTabs = useMemo(() => {
+    if (activePostSubCategoryObj) {
+      return activePostSubCategoryObj.subTabs || [];
+    }
+    return activePostCategoryObj?.subTabs || [];
+  }, [activePostCategoryObj, activePostSubCategoryObj]);
 
   // ----------------------------
   // Handlers
@@ -369,7 +412,23 @@ const sections = useMemo(() => {
   const handlePostCategoryClick = (cat) => {
     setActivePostCategory(cat.id);
     setActivePostSubTab("");
+    // If category has subCategories, set first one as active
+    if (cat.subCategories && cat.subCategories.length > 0) {
+      setActivePostSubCategory(cat.subCategories[0].id);
+      if (cat.subCategories[0].route) {
+        navigate(cat.subCategories[0].route);
+        return;
+      }
+    } else {
+      setActivePostSubCategory("");
+    }
     if (cat.route) navigate(cat.route);
+  };
+
+  const handlePostSubCategoryClick = (subCat) => {
+    setActivePostSubCategory(subCat.id);
+    setActivePostSubTab("");
+    if (subCat.route) navigate(subCat.route);
   };
 
   const handlePostSubTabClick = (sub) => {
@@ -386,19 +445,68 @@ const sections = useMemo(() => {
     if (path.startsWith("/post-sales")) {
       setActiveSection("post-sales");
 
-      const catMatch =
-        postSalesCategories.find((c) => path.startsWith(c.route)) ||
-        postSalesCategories.find((c) =>
-          c.subTabs?.some((s) => path.startsWith(s.route))
-        ) ||
-        null;
+      // Find matching category
+      let catMatch = null;
+      let subCatMatch = null;
+      let subTabMatch = null;
+
+      for (const cat of postSalesCategories) {
+        // Check for saved items route first
+        if (cat.savedItemsRoute && path.startsWith(cat.savedItemsRoute)) {
+          catMatch = cat;
+          // Find communication-main subcategory
+          subCatMatch = cat.subCategories?.find(sc => sc.id === "communication-main");
+          subTabMatch = { id: "com-saved-item", route: cat.savedItemsRoute };
+          break;
+        }
+        // Check if category has subCategories (like Communication)
+        if (cat.subCategories && cat.subCategories.length > 0) {
+          for (const subCat of cat.subCategories) {
+            const subTab = subCat.subTabs?.find((s) => path.startsWith(s.route));
+            if (subTab) {
+              catMatch = cat;
+              subCatMatch = subCat;
+              subTabMatch = subTab;
+              break;
+            }
+            if (path.startsWith(subCat.route)) {
+              catMatch = cat;
+              subCatMatch = subCat;
+              break;
+            }
+          }
+        } else {
+          // Regular category with subTabs
+          const subTab = cat.subTabs?.find((s) => path.startsWith(s.route));
+          if (subTab) {
+            catMatch = cat;
+            subTabMatch = subTab;
+            break;
+          }
+          if (path.startsWith(cat.route)) {
+            catMatch = cat;
+            break;
+          }
+        }
+        if (catMatch) break;
+      }
 
       const catId = catMatch?.id || "registered";
       setActivePostCategory(catId);
 
-      const catObj = postSalesCategories.find((c) => c.id === catId);
-      const subMatch = catObj?.subTabs?.find((s) => path.startsWith(s.route));
-      setActivePostSubTab(subMatch?.id || "");
+      if (subCatMatch) {
+        setActivePostSubCategory(subCatMatch.id);
+        if (subTabMatch) {
+          setActivePostSubTab(subTabMatch.id);
+        } else {
+          setActivePostSubTab("");
+        }
+      } else {
+        setActivePostSubCategory("");
+        const catObj = postSalesCategories.find((c) => c.id === catId);
+        const subMatch = catObj?.subTabs?.find((s) => path.startsWith(s.route));
+        setActivePostSubTab(subMatch?.id || "");
+      }
 
       setActiveTab("");
       return;
@@ -436,6 +544,31 @@ const sections = useMemo(() => {
   const preSalesFilteredItems = useMemo(() => {
     return preSalesItems.filter((item) => item.section === "pre-sales");
   }, [preSalesItems]);
+
+  // Fetch saved items count when on communication section
+  useEffect(() => {
+    if (activeSection === "post-sales" && activePostCategory === "communication") {
+      const fetchSavedItemsCount = async () => {
+        try {
+          // Try community endpoint first, fallback to communications
+          let response;
+          try {
+            response = await axiosInstance.get("community/saved-items/");
+          } catch {
+            response = await axiosInstance.get("communications/saved-items/");
+          }
+          const items = response.data?.results || response.data || [];
+          setSavedItemsCount(Array.isArray(items) ? items.length : 0);
+        } catch (error) {
+          console.error("Error fetching saved items count:", error);
+          setSavedItemsCount(0);
+        }
+      };
+      fetchSavedItemsCount();
+    } else {
+      setSavedItemsCount(0);
+    }
+  }, [activeSection, activePostCategory]);
 
   return (
     <nav className="sales-navigation">
@@ -490,21 +623,65 @@ const sections = useMemo(() => {
             ))}
           </div>
 
-          {/* ✅ Post-sales Sub bar (NOW SAME STYLE: text + underline, NOT pill buttons) */}
+          {/* ✅ Post-sales Sub Categories (for Communication) */}
+          {postSalesSubCategories.length > 0 && (
+            <div className="sales-navigation__tertiary">
+              <div className="sales-navigation__tertiary-left">
+                {postSalesSubCategories.map((subCat) => (
+                  <button
+                    key={subCat.id}
+                    type="button"
+                    className={`nav-tab-btn nav-subtab-btn ${
+                      activePostSubCategory === subCat.id ? "active" : ""
+                    }`}
+                    onClick={() => handlePostSubCategoryClick(subCat)}
+                  >
+                    {subCat.label}
+                  </button>
+                ))}
+              </div>
+              {/* Saved Items Icon - Only show for Communication category */}
+              {activePostCategory === "communication" && (
+                <button
+                  type="button"
+                  className="nav-saved-items-btn"
+                  onClick={() => {
+                    const savedRoute = postSalesCategories.find(c => c.id === "communication")?.savedItemsRoute;
+                    if (savedRoute) {
+                      navigate(savedRoute);
+                      // Set active tab to saved items
+                      setActivePostSubCategory("communication-main");
+                      setActivePostSubTab("com-saved-item");
+                    }
+                  }}
+                  title="Saved Items"
+                >
+                  <Bookmark className="nav-saved-items-icon" />
+                  {savedItemsCount > 0 && (
+                    <span className="nav-saved-items-badge">{savedItemsCount}</span>
+                  )}
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* ✅ Post-sales Sub Tabs (regular sub-tabs or sub-tabs from sub-category) */}
           {postSalesSubTabs.length > 0 && (
             <div className="sales-navigation__tertiary">
-              {postSalesSubTabs.map((sub) => (
-                <button
-                  key={sub.id}
-                  type="button"
-                  className={`nav-tab-btn nav-subtab-btn ${
-                    activePostSubTab === sub.id ? "active" : ""
-                  }`}
-                  onClick={() => handlePostSubTabClick(sub)}
-                >
-                  {sub.label}
-                </button>
-              ))}
+              <div className="sales-navigation__tertiary-left">
+                {postSalesSubTabs.map((sub) => (
+                  <button
+                    key={sub.id}
+                    type="button"
+                    className={`nav-tab-btn nav-subtab-btn ${
+                      activePostSubTab === sub.id ? "active" : ""
+                    }`}
+                    onClick={() => handlePostSubTabClick(sub)}
+                  >
+                    {sub.label}
+                  </button>
+                ))}
+              </div>
             </div>
           )}
         </>
